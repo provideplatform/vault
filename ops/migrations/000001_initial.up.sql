@@ -100,18 +100,6 @@ ALTER TABLE public.keys OWNER TO current_user;
 
 
 --
--- Name: schema_migrations; Type: TABLE; Schema: public; Owner: vault
---
-
-CREATE TABLE public.schema_migrations (
-    version bigint NOT NULL,
-    dirty boolean NOT NULL
-);
-
-
-ALTER TABLE public.schema_migrations OWNER TO current_user;
-
---
 -- Name: secrets; Type: TABLE; Schema: public; Owner: vault
 --
 

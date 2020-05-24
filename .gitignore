@@ -24,7 +24,6 @@ _cgo_export.*
 .idea/
 *.iml
 
-vault
 vault_api
 vault_migrate
 

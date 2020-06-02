@@ -26,12 +26,7 @@ var (
 )
 
 func init() {
-	lvl := os.Getenv("LOG_LEVEL")
-	if lvl == "" {
-		lvl = "INFO"
-	}
-	Log = logger.NewLogger("vault", lvl, true)
-
+	requireLogger()
 	requireGin()
 }
 
@@ -46,6 +41,21 @@ func requireGin() {
 	}
 
 	requireTLSConfiguration()
+}
+
+func requireLogger() {
+	lvl := os.Getenv("LOG_LEVEL")
+	if lvl == "" {
+		lvl = "INFO"
+	}
+
+	var endpoint *string
+	if os.Getenv("SYSLOG_ENDPOINT") != "" {
+		endpt := os.Getenv("SYSLOG_ENDPOINT")
+		endpoint = &endpt
+	}
+
+	Log = logger.NewLogger("vault", lvl, endpoint)
 }
 
 func requireTLSConfiguration() {

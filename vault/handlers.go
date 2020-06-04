@@ -70,6 +70,10 @@ func createVaultHandler(c *gin.Context) {
 		return
 	}
 
+	vault.ApplicationID = bearer.ApplicationID
+	vault.OrganizationID = bearer.OrganizationID
+	vault.UserID = bearer.UserID
+
 	if bearer.ApplicationID != nil && vault.ApplicationID != nil && bearer.ApplicationID.String() != vault.ApplicationID.String() {
 		err = errors.New("Failed to create vault; authorized application id did not match application_id provided in params")
 		common.Log.Warningf(err.Error())

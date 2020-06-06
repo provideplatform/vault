@@ -112,7 +112,8 @@ func deleteVaultHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
-	if bearer == nil || ((userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil)) {
+	orgID := bearer.OrganizationID
+	if bearer == nil || ((userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil)) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}

@@ -34,3 +34,10 @@ vault_migrate
 reports
 src/
 vendor/
+
+# dev files
+.vscode/launch.json
+*.env
+*.key
+*.crt
+

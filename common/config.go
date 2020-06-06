@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
 	selfsignedcert "github.com/kthomas/go-self-signed-cert"
 )
@@ -27,6 +28,13 @@ var (
 
 func init() {
 	requireLogger()
+
+	//godotenv load configuration for local development
+	var err = godotenv.Load()
+	if err != nil {
+		Log.Debugf("error loading env file %s", err)
+	}
+
 	requireGin()
 }
 

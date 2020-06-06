@@ -70,6 +70,11 @@ func createVaultHandler(c *gin.Context) {
 		return
 	}
 
+	//HACK: pull the vault information from the bearer token when creating a vault
+	vault.ApplicationID = bearer.ApplicationID
+	vault.OrganizationID = bearer.OrganizationID
+	vault.UserID = bearer.UserID
+
 	if bearer.ApplicationID != nil && vault.ApplicationID != nil && bearer.ApplicationID.String() != vault.ApplicationID.String() {
 		err = errors.New("Failed to create vault; authorized application id did not match application_id provided in params")
 		common.Log.Warningf(err.Error())
@@ -206,10 +211,11 @@ func createVaultKeyHandler(c *gin.Context) {
 	}
 
 	vault := &Vault{}
+
 	db := dbconf.DatabaseConnection()
 	var query *gorm.DB
 
-	query = db.Where("vault_id = ?", c.Param("id"))
+	query = db.Where("id = ?", c.Param("id"))
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		query = query.Where("application_id = ?", bearer.ApplicationID)
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {

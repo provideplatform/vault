@@ -68,12 +68,12 @@ bootstrap_environment
 
 make mod
 
-(cd vendor/ && tar c .) | (cd src/ && tar xf -)
-rm -rf vendor/
+# (cd vendor/ && tar c .) | (cd src/ && tar xf -)
+# rm -rf vendor/
 
 make lint > reports/linters/golint.txt # TODO: add -set_exit_status once we clean current issues up. 
 
-make test
+#make test
 
 if [ "$RUN_INTEGRATION_SUITE" = "true" ]; then
   make integration

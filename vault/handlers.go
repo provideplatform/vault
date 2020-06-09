@@ -185,6 +185,7 @@ func vaultKeysListHandler(c *gin.Context) {
 	provide.Render(keys, 200, c)
 }
 
+// Creates a key and stores it in vault
 func createVaultKeyHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
@@ -295,13 +296,14 @@ func vaultKeySignHandler(c *gin.Context) {
 	db := dbconf.DatabaseConnection()
 	var query *gorm.DB
 
-	query = db.Where("id = ? AND vault_id = ?", c.Param("keyId"), c.Param("id"))
+	query = db.Table("keys").Joins("inner join vaults on keys.vault_id = vaults.id")
+	query.Where("id = ? AND vault_id = ?", c.Param("keyId"), c.Param("id"))
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID)
+		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("organization_id = ?", bearer.OrganizationID)
+		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
 	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("user_id = ?", bearer.UserID)
+		query = query.Where("vaults.user_id = ?", bearer.UserID)
 	}
 	query.Find(&key)
 
@@ -350,13 +352,14 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 	db := dbconf.DatabaseConnection()
 	var query *gorm.DB
 
-	query = db.Where("id = ? AND vault_id = ?", c.Param("keyId"), c.Param("id"))
+	query = db.Table("keys").Joins("inner join vaults on keys.vault_id = vaults.id")
+	query.Where("id = ? AND vault_id = ?", c.Param("keyId"), c.Param("id"))
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID)
+		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("organization_id = ?", bearer.OrganizationID)
+		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
 	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("user_id = ?", bearer.UserID)
+		query = query.Where("vaults.user_id = ?", bearer.UserID)
 	}
 	query.Find(&key)
 

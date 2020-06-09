@@ -74,32 +74,22 @@ type KeySignVerifyRequestResponse struct {
 }
 
 // CreateBabyJubJubKeypair creates a keypair on the twisted edwards babyJubJub curve
-func (k *Key) CreateBabyJubJubKeypair(name, description string) (*Key, error) {
+func (k *Key) CreateBabyJubJubKeypair() error {
 	publicKey, privateKey, err := provide.TECGenerateKeyPair()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
+		return fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
 	}
 
 	publicKeyHex := hex.EncodeToString(publicKey)
 
-	babyJubJubKey := &Key{
-		VaultID:     k.VaultID,
-		Type:        common.StringOrNil(keyTypeAsymmetric),
-		Usage:       common.StringOrNil(keyUsageSignVerify),
-		Spec:        common.StringOrNil(keySpecECCBabyJubJub),
-		Name:        common.StringOrNil(name),
-		Description: common.StringOrNil(description),
-		PublicKey:   common.StringOrNil(publicKeyHex),
-		PrivateKey:  common.StringOrNil(string(privateKey)),
-	}
+	k.Type = common.StringOrNil(keyTypeAsymmetric)
+	k.Usage = common.StringOrNil(keyUsageSignVerify)
+	k.Spec = common.StringOrNil(keySpecECCBabyJubJub)
+	k.PublicKey = common.StringOrNil(publicKeyHex)
+	k.PrivateKey = common.StringOrNil(string(privateKey))
 
-	db := dbconf.DatabaseConnection()
-	if !babyJubJubKey.Create(db) {
-		return nil, fmt.Errorf("failed to create babyJubJub key in vault: %s; %s", k.VaultID, *babyJubJubKey.Errors[0].Message)
-	}
-
-	common.Log.Debugf("created babyJubJub key %s in vault: %s; public key: %s", babyJubJubKey.ID, k.VaultID, publicKeyHex)
-	return babyJubJubKey, nil
+	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, k.PublicKey)
+	return nil
 }
 
 // CreateDiffieHellmanSharedSecret creates a shared secret given a peer public key and signature
@@ -149,71 +139,52 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 }
 
 // CreateEd25519Keypair creates an Ed25519 keypair
-func (k *Key) CreateEd25519Keypair(name, description string) (*Key, error) {
+func (k *Key) CreateEd25519Keypair() error {
 	keypair, err := vaultcrypto.CreatePair(vaultcrypto.PrefixByteSeed)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Ed25519 keypair; %s", err.Error())
+		return fmt.Errorf("failed to create Ed25519 keypair; %s", err.Error())
 	}
 
 	seed, err := keypair.Seed()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read encoded seed of Ed25519 keypair; %s", err.Error())
+		return fmt.Errorf("failed to read encoded seed of Ed25519 keypair; %s", err.Error())
 	}
 
 	publicKey, err := keypair.PublicKey()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read public key of Ed25519 keypair; %s", err.Error())
+		return fmt.Errorf("failed to read public key of Ed25519 keypair; %s", err.Error())
 	}
 
-	ed25519Key := &Key{
-		VaultID:     k.VaultID,
-		Type:        common.StringOrNil(keyTypeAsymmetric),
-		Usage:       common.StringOrNil(keyUsageSignVerify),
-		Spec:        common.StringOrNil(keySpecECCEd25519),
-		Name:        common.StringOrNil(name),
-		Description: common.StringOrNil(description),
-		PublicKey:   common.StringOrNil(publicKey),
-		Seed:        common.StringOrNil(string(seed)),
-	}
+	k.Type = common.StringOrNil(keyTypeAsymmetric)
+	k.Usage = common.StringOrNil(keyUsageSignVerify)
+	k.Spec = common.StringOrNil(keySpecECCEd25519)
+	k.PublicKey = common.StringOrNil(publicKey)
+	k.Seed = common.StringOrNil(string(seed))
 
-	db := dbconf.DatabaseConnection()
-	if !ed25519Key.Create(db) {
-		return nil, fmt.Errorf("failed to create Ed25519 key in vault: %s; %s", k.VaultID, *ed25519Key.Errors[0].Message)
-	}
-
-	common.Log.Debugf("created Ed25519 key %s with %d-byte seed in vault: %s; public key: %s", ed25519Key.ID, len(seed), k.VaultID, *ed25519Key.PublicKey)
-	return ed25519Key, nil
+	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, k.PublicKey)
+	return nil
 }
 
 // CreateSecp256k1Keypair creates a keypair on the secp256k1 curve
-func (k *Key) CreateSecp256k1Keypair(name, description string) (*Key, error) {
+func (k *Key) CreateSecp256k1Keypair() error {
 	address, privkey, err := provide.EVMGenerateKeyPair()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
+		return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
 	}
 
 	publicKey := hex.EncodeToString(elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y))
 	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
-	desc := fmt.Sprintf("%s; address: %s", description, *address)
+	desc := fmt.Sprintf("%s; address: %s", *k.Description, *address)
 
-	secp256k1Key := &Key{
-		VaultID:     k.VaultID,
-		Type:        common.StringOrNil(keyTypeAsymmetric),
-		Usage:       common.StringOrNil(keyUsageSignVerify),
-		Spec:        common.StringOrNil(keySpecECCSecp256k1),
-		Name:        common.StringOrNil(name),
-		Description: common.StringOrNil(desc),
-		PublicKey:   common.StringOrNil(publicKey),
-		PrivateKey:  common.StringOrNil(string(privateKey)),
-	}
+	k.Description = common.StringOrNil(desc)
+	k.Type = common.StringOrNil(keyTypeAsymmetric)
+	k.Usage = common.StringOrNil(keyUsageSignVerify)
+	k.Spec = common.StringOrNil(keySpecECCSecp256k1)
+	k.PublicKey = common.StringOrNil(publicKey)
+	k.PrivateKey = common.StringOrNil(string(privateKey))
 
-	db := dbconf.DatabaseConnection()
-	if !secp256k1Key.Create(db) {
-		return nil, fmt.Errorf("failed to create secp256k1 key in vault: %s; %s", k.VaultID, *secp256k1Key.Errors[0].Message)
-	}
-
-	common.Log.Debugf("created secp256k1 key %s in vault: %s; public key: %s", secp256k1Key.ID, k.VaultID, publicKey)
-	return secp256k1Key, nil
+	common.Log.Debugf("created secp256k1 key for vault: %s; public key: %s", k.VaultID, publicKey)
+	return nil
 }
 
 func (k *Key) resolveMasterKey() (*Key, error) {

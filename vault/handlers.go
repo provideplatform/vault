@@ -233,6 +233,33 @@ func createVaultKeyHandler(c *gin.Context) {
 
 	key.VaultID = &vault.ID
 
+	switch *key.Spec {
+	case keySpecChaCha20:
+		provide.RenderError("implementation in progress", 422, c)
+	case keySpecAES256GCM:
+		provide.RenderError("implementation in progress", 422, c)
+	case keySpecECCSecp256k1:
+		err = key.CreateSecp256k1Keypair()
+		if err != nil {
+			common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
+			return
+		}
+	case keySpecECCEd25519:
+		err = key.CreateEd25519Keypair()
+		if err != nil {
+			common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
+			return
+		}
+	case "babyJubJub":
+		err = key.CreateBabyJubJubKeypair()
+		if err != nil {
+			common.Log.Warningf("failed to create babyjubjub keypair; %s", err.Error())
+			return
+		}
+	case "C25519":
+		provide.RenderError("implementation in progress", 422, c)
+	}
+
 	if key.Create(db) {
 		provide.Render(key, 201, c)
 	} else {

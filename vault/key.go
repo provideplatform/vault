@@ -60,9 +60,11 @@ type Key struct {
 	PublicKey   *string    `sql:"type:bytea" json:"public_key,omitempty"`
 	PrivateKey  *string    `sql:"type:bytea" json:"-"`
 
-	Address   *string    `sql:"-" json:"address,omitempty"`
-	encrypted *bool      `sql:"-"`
-	mutex     sync.Mutex `sql:"-"`
+	Address             *string    `sql:"-" json:"address,omitempty"`
+	Ephemeral           *string    `sql:"-" json:"ephemeral,omitempty"`
+	EphemeralPrivateKey *string    `sql:"-" json:"private_key,omitempty"`
+	encrypted           *bool      `sql:"-"`
+	mutex               sync.Mutex `sql:"-"`
 }
 
 // KeySignVerifyRequestResponse represents the API request/response parameters
@@ -130,8 +132,12 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 	}
 
 	db := dbconf.DatabaseConnection()
-	if !ecdhSecret.Create(db) {
+	if !ecdhSecret.create() {
 		return nil, fmt.Errorf("failed to create Diffie-Hellman shared secret in vault: %s; %s", k.VaultID, *ecdhSecret.Errors[0].Message)
+	}
+
+	if !ecdhSecret.save(db) {
+		return nil, fmt.Errorf("failed to save Diffie-Hellman shared secret in vault: %s; %s", k.VaultID, *ecdhSecret.Errors[0].Message)
 	}
 
 	common.Log.Debugf("created Diffie-Hellman shared secret %s in vault: %s; public key: %s", ecdhSecret.ID, k.VaultID, *ecdhSecret.PublicKey)
@@ -155,9 +161,6 @@ func (k *Key) CreateEd25519Keypair() error {
 		return fmt.Errorf("failed to read public key of Ed25519 keypair; %s", err.Error())
 	}
 
-	k.Type = common.StringOrNil(keyTypeAsymmetric)
-	k.Usage = common.StringOrNil(keyUsageSignVerify)
-	k.Spec = common.StringOrNil(keySpecECCEd25519)
 	k.PublicKey = common.StringOrNil(publicKey)
 	k.Seed = common.StringOrNil(string(seed))
 
@@ -177,13 +180,27 @@ func (k *Key) CreateSecp256k1Keypair() error {
 	desc := fmt.Sprintf("%s; address: %s", *k.Description, *address)
 
 	k.Description = common.StringOrNil(desc)
-	k.Type = common.StringOrNil(keyTypeAsymmetric)
-	k.Usage = common.StringOrNil(keyUsageSignVerify)
-	k.Spec = common.StringOrNil(keySpecECCSecp256k1)
 	k.PublicKey = common.StringOrNil(publicKey)
 	k.PrivateKey = common.StringOrNil(string(privateKey))
 
 	common.Log.Debugf("created secp256k1 key for vault: %s; public key: %s", k.VaultID, publicKey)
+	return nil
+}
+
+// CreateC25519Keypair creates an c25519 keypair suitable for Diffie-Hellman key exchange
+func (k *Key) CreateC25519Keypair() error {
+	publicKey, privateKey, err := provide.C25519GenerateKeyPair()
+	if err != nil {
+		return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
+	}
+
+	publicKeyHex := hex.EncodeToString(publicKey)
+
+	k.PublicKey = common.StringOrNil(publicKeyHex)
+	k.PrivateKey = common.StringOrNil(string(privateKey))
+
+	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
+
 	return nil
 }
 
@@ -352,11 +369,70 @@ func (k *Key) Enrich() {
 	}
 }
 
-// Create and persist a key
-func (k *Key) Create(db *gorm.DB) bool {
-	if !k.validate() {
+func (k *Key) create() bool {
+	// Generate the key/keypair based on Spec type
+	switch *k.Spec {
+	case keySpecChaCha20:
 		return false
+	case keySpecAES256GCM:
+		return false
+	case keySpecECCSecp256k1:
+		err := k.CreateSecp256k1Keypair()
+		if err != nil {
+			common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
+			return false
+		}
+	case keySpecECCEd25519:
+		err := k.CreateEd25519Keypair()
+		if err != nil {
+			common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
+			return false
+		}
+	case "babyJubJub":
+		err := k.CreateBabyJubJubKeypair()
+		if err != nil {
+			common.Log.Warningf("failed to create babyjubjub keypair; %s", err.Error())
+			return false
+		}
+	case "C25519":
+		err := k.CreateC25519Keypair()
+		if err != nil {
+			common.Log.Warningf("failed to create C25519 keypair; %s", err.Error())
+			return false
+		}
 	}
+
+	if k.Ephemeral != nil && *k.Ephemeral == "true" {
+		if k.Seed != nil {
+			EphemeralPrivateKey := *k.Seed
+			k.EphemeralPrivateKey = &EphemeralPrivateKey
+		}
+		if k.PrivateKey != nil {
+			EphemeralPrivateKey := hex.EncodeToString([]byte(*k.PrivateKey))
+			k.EphemeralPrivateKey = &EphemeralPrivateKey
+
+			// test code - remove
+			testKey, err := hex.DecodeString(EphemeralPrivateKey)
+			if err == nil {
+				fmt.Println((testKey))
+			}
+		}
+	}
+
+	if k.encrypted == nil || !*k.encrypted {
+		err := k.encryptFields()
+		if err != nil {
+			k.Errors = append(k.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
+		}
+	}
+
+	return true
+}
+
+// Create and persist a key
+func (k *Key) save(db *gorm.DB) bool {
 
 	if db.NewRecord(k) {
 		result := db.Create(&k)
@@ -506,8 +582,12 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 		}
 
 		db := dbconf.DatabaseConnection()
-		if !chacha20Key.Create(db) {
+		if !chacha20Key.create() {
 			return nil, fmt.Errorf("failed to create derived symmetric key from key: %s; %s", k.ID, *chacha20Key.Errors[0].Message)
+		}
+
+		if !chacha20Key.save(db) {
+			return nil, fmt.Errorf("failed to save derived symmetric key from key: %s; %s", k.ID, *chacha20Key.Errors[0].Message)
 		}
 		return chacha20Key, nil
 	}
@@ -756,15 +836,6 @@ func (k *Key) validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s, %s or %s", keyUsageSignVerify, keySpecECCBabyJubJub, keySpecECCC25519, keySpecECCEd25519, keySpecECCSecp256k1)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
 		})
-	}
-
-	if k.encrypted == nil || !*k.encrypted {
-		err := k.encryptFields()
-		if err != nil {
-			k.Errors = append(k.Errors, &provide.Error{
-				Message: common.StringOrNil(err.Error()),
-			})
-		}
 	}
 
 	return len(k.Errors) == 0

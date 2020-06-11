@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/jinzhu/gorm"
@@ -96,8 +95,14 @@ func (v *Vault) createMasterKey(tx *gorm.DB) error {
 		PrivateKey:  common.StringOrNil(string(seed[0:32])),
 	}
 
-	if !masterKey.Create(tx) {
+	if !masterKey.create() {
 		err := fmt.Errorf("failed to create master key for vault: %s; %s", v.ID, *masterKey.Errors[0].Message)
+		common.Log.Warning(err.Error())
+		return err
+	}
+
+	if !masterKey.save(tx) {
+		err := fmt.Errorf("failed to save master key for vault: %s; %s", v.ID, *masterKey.Errors[0].Message)
 		common.Log.Warning(err.Error())
 		return err
 	}
@@ -149,38 +154,6 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 	}
 
 	return false
-}
-
-// CreateC25519Keypair creates an c25519 keypair suitable for Diffie-Hellman key exchange
-func (v *Vault) CreateC25519Keypair(name, description string, ephemeral bool) (*Key, error) {
-	publicKey, privateKey, err := provide.C25519GenerateKeyPair()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
-	}
-
-	publicKeyHex := hex.EncodeToString(publicKey)
-
-	c25519Key := &Key{
-		VaultID:     &v.ID,
-		Type:        common.StringOrNil(keyTypeAsymmetric),
-		Usage:       common.StringOrNil(keyUsageSignVerify),
-		Spec:        common.StringOrNil(keySpecECCC25519),
-		Name:        common.StringOrNil(name),
-		Description: common.StringOrNil(description),
-		PublicKey:   common.StringOrNil(publicKeyHex),
-		PrivateKey:  common.StringOrNil(string(privateKey)),
-	}
-
-	if !ephemeral {
-		db := dbconf.DatabaseConnection()
-		if !c25519Key.Create(db) {
-			return nil, fmt.Errorf("failed to create C25519 key in vault: %s; %s", v.ID, *c25519Key.Errors[0].Message)
-		}
-
-		common.Log.Debugf("created C25519 key %s in vault: %s; public key: %s", c25519Key.ID, v.ID, publicKeyHex)
-	}
-
-	return c25519Key, nil
 }
 
 // Delete a vault

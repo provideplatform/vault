@@ -234,34 +234,29 @@ func createVaultKeyHandler(c *gin.Context) {
 
 	key.VaultID = &vault.ID
 
-	switch *key.Spec {
-	case keySpecChaCha20:
-		provide.RenderError("implementation in progress", 422, c)
-	case keySpecAES256GCM:
-		provide.RenderError("implementation in progress", 422, c)
-	case keySpecECCSecp256k1:
-		err = key.CreateSecp256k1Keypair()
-		if err != nil {
-			common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
-			return
-		}
-	case keySpecECCEd25519:
-		err = key.CreateEd25519Keypair()
-		if err != nil {
-			common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
-			return
-		}
-	case "babyJubJub":
-		err = key.CreateBabyJubJubKeypair()
-		if err != nil {
-			common.Log.Warningf("failed to create babyjubjub keypair; %s", err.Error())
-			return
-		}
-	case "C25519":
-		provide.RenderError("implementation in progress", 422, c)
+	// validate the input parameters
+	if !key.validate() {
+		obj := map[string]interface{}{}
+		obj["errors"] = key.Errors
+		provide.Render(obj, 422, c)
+		return
 	}
 
-	if key.Create(db) {
+	// create and encrypt the key
+	if !key.create() {
+		obj := map[string]interface{}{}
+		obj["errors"] = key.Errors
+		provide.Render(obj, 422, c)
+		return
+	}
+
+	// if ephemeral, return the key as is
+	if key.Ephemeral != nil && *key.Ephemeral == "true" {
+		provide.Render(key, 201, c)
+		return
+	}
+
+	if key.save(db) {
 		provide.Render(key, 201, c)
 	} else {
 		obj := map[string]interface{}{}

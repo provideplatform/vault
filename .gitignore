@@ -41,3 +41,5 @@ vendor/
 *.key
 *.crt
 
+coverage.txt
+profile.out

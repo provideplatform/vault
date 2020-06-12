@@ -135,8 +135,10 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 	}
 
 	db := dbconf.DatabaseConnection()
-	if !ecdhSecret.create() {
-		return fmt.Errorf("failed to create Diffie-Hellman shared secret in vault: %s; %s", k.VaultID, *ecdhSecret.Errors[0].Message)
+
+	err = ecdhSecret.create()
+	if err != nil {
+		return fmt.Errorf("failed to create Diffie-Hellman shared secret in vault: %s; %s", k.VaultID, err.Error())
 	}
 
 	if !ecdhSecret.save(db) {
@@ -381,50 +383,58 @@ func (k *Key) Enrich() {
 
 // Generate key material and persist the key to the vault
 func (k *Key) createPersisted(db *gorm.DB) bool {
-	return !!k.create() && !!k.save(db) // HACK or feature? :D
-}
-
-// Generate the key/keypair based on Spec type
-func (k *Key) create() bool {
-	if !k.validate() {
-		return false
-	}
-
-	if k.Seed != nil || k.PrivateKey != nil {
+	err := k.create()
+	if err != nil {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("attempted to regenerate key material for key: %s", k.ID)),
+			Message: common.StringOrNil(err.Error()),
 		})
 		return false
 	}
 
-	switch *k.Spec {
-	case keySpecAES256GCM:
-		return false
-	case keySpecChaCha20:
-		return false
-	case keySpecECCBabyJubJub:
-		err := k.CreateBabyJubJubKeypair()
-		if err != nil {
-			common.Log.Warningf("failed to create babyjubjub keypair; %s", err.Error())
-			return false
-		}
-	case keySpecECCC25519:
-		err := k.CreateC25519Keypair()
-		if err != nil {
-			common.Log.Warningf("failed to create C25519 keypair; %s", err.Error())
-			return false
-		}
-	case keySpecECCEd25519:
-		err := k.CreateEd25519Keypair()
-		if err != nil {
-			common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
-			return false
-		}
-	case keySpecECCSecp256k1:
-		err := k.CreateSecp256k1Keypair()
-		if err != nil {
-			common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
-			return false
+	return k.save(db)
+}
+
+// Generate the key/keypair based on Spec type
+func (k *Key) create() error {
+	if !k.validate() {
+		return nil
+	}
+
+	hasKeyMaterial := k.Seed != nil || k.PrivateKey != nil
+
+	if k.ID != uuid.Nil && hasKeyMaterial {
+		k.Errors = append(k.Errors, &provide.Error{
+			Message: common.StringOrNil(fmt.Sprintf("attempted to regenerate key material for key: %s", k.ID)),
+		})
+		return nil
+	}
+
+	if !hasKeyMaterial { // FIXME? this sucks :D
+		switch *k.Spec {
+		case keySpecAES256GCM:
+			return errors.New("not implemented")
+		case keySpecChaCha20:
+			return errors.New("not implemented")
+		case keySpecECCBabyJubJub:
+			err := k.CreateBabyJubJubKeypair()
+			if err != nil {
+				return fmt.Errorf("failed to create babyjubjub keypair; %s", err.Error())
+			}
+		case keySpecECCC25519:
+			err := k.CreateC25519Keypair()
+			if err != nil {
+				return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
+			}
+		case keySpecECCEd25519:
+			err := k.CreateEd25519Keypair()
+			if err != nil {
+				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
+			}
+		case keySpecECCSecp256k1:
+			err := k.CreateSecp256k1Keypair()
+			if err != nil {
+				return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
+			}
 		}
 	}
 
@@ -444,19 +454,17 @@ func (k *Key) create() bool {
 	if !isEphemeral && k.encrypted == nil || !*k.encrypted {
 		err := k.encryptFields()
 		if err != nil {
-			k.Errors = append(k.Errors, &provide.Error{
-				Message: common.StringOrNil(err.Error()),
-			})
+			return fmt.Errorf("failed to encrypt key material; %s", err.Error())
 		}
 	}
 
-	return true
+	return nil
 }
 
 // Create and persist a key
 func (k *Key) save(db *gorm.DB) bool {
 	if k.Ephemeral != nil && *k.Ephemeral {
-		common.Log.Debugf("short-circuit persisting ephemeral key: %s", k.ID)
+		common.Log.Debugf("short-circuiting attempt to persist ephemeral key: %s", k.ID)
 		return true
 	}
 
@@ -608,8 +616,10 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 		}
 
 		db := dbconf.DatabaseConnection()
-		if !chacha20Key.create() {
-			return nil, fmt.Errorf("failed to create derived symmetric key from key: %s; %s", k.ID, *chacha20Key.Errors[0].Message)
+
+		err = chacha20Key.create()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create derived symmetric key from key: %s; %s", k.ID, err.Error())
 		}
 
 		if !chacha20Key.save(db) {

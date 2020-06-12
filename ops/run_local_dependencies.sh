@@ -9,4 +9,8 @@ else
     sudo apt-get -y install postgresql
 fi
 
-pg_ctl -D /usr/local/var/postgres start > /dev/null 2>&1 &
+if [[ -z "${DATABASE_PORT}" ]]; then
+  DATABASE_PORT=5432
+fi
+
+pg_ctl -D /usr/local/var/postgres -p ${DATABASE_PORT} start > /dev/null 2>&1 &

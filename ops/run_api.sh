@@ -229,6 +229,7 @@ fi
 if [[ -z "${DATABASE_LOGGING}" ]]; then
   DATABASE_LOGGING=false
 fi
+
 if [[ -z "${GIN_MODE}" ]]; then
   GIN_MODE=debug
 fi

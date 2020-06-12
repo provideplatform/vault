@@ -60,11 +60,14 @@ type Key struct {
 	PublicKey   *string    `sql:"type:bytea" json:"public_key,omitempty"`
 	PrivateKey  *string    `sql:"type:bytea" json:"-"`
 
-	Address             *string    `sql:"-" json:"address,omitempty"`
-	Ephemeral           *string    `sql:"-" json:"ephemeral,omitempty"`
-	EphemeralPrivateKey *string    `sql:"-" json:"private_key,omitempty"`
-	encrypted           *bool      `sql:"-"`
-	mutex               sync.Mutex `sql:"-"`
+	Address             *string `sql:"-" json:"address,omitempty"`
+	Ephemeral           *bool   `sql:"-" json:"ephemeral,omitempty"`
+	EphemeralPrivateKey *string `sql:"-" json:"private_key,omitempty"`
+	EphemeralSeed       *string `sql:"-" json:"seed,omitempty"`
+
+	encrypted *bool      `sql:"-"`
+	mutex     sync.Mutex `sql:"-"`
+	vault     *Vault     `sql:"-"` // vault cache
 }
 
 // KeySignVerifyRequestResponse represents the API request/response parameters
@@ -205,19 +208,26 @@ func (k *Key) CreateC25519Keypair() error {
 }
 
 func (k *Key) resolveMasterKey() (*Key, error) {
+	var vault *Vault
 	var masterKey *Key
 	var err error
 
-	vault := &Vault{}
 	if k.VaultID == nil {
 		return nil, fmt.Errorf("unable to resolve master key without vault id for key: %s", k.ID)
 	}
 
 	db := dbconf.DatabaseConnection()
-	db.Where("id = ?", k.VaultID).Find(&vault)
-	if vault == nil || vault.ID == uuid.Nil {
-		return nil, fmt.Errorf("failed to resolve master key; no vault found for key: %s; vault id: %s", k.ID, k.VaultID)
+
+	if k.vault == nil {
+		vlt := &Vault{}
+		db.Where("id = ?", k.VaultID).Find(&vlt)
+		if vlt == nil || vlt.ID == uuid.Nil {
+			return nil, fmt.Errorf("failed to resolve master key; no vault found for key: %s; vault id: %s", k.ID, k.VaultID)
+		}
+		k.vault = vlt
 	}
+
+	vault = k.vault
 
 	if vault.MasterKeyID != nil && vault.MasterKeyID.String() == k.ID.String() {
 		return nil, fmt.Errorf("unable to resolve master key: %s; current key is master; vault id: %s", k.ID, k.VaultID)
@@ -369,17 +379,37 @@ func (k *Key) Enrich() {
 	}
 }
 
+// Generate key material and persist the key to the vault
+func (k *Key) createPersisted(db *gorm.DB) bool {
+	return !!k.create() && !!k.save(db) // HACK or feature? :D
+}
+
+// Generate the key/keypair based on Spec type
 func (k *Key) create() bool {
-	// Generate the key/keypair based on Spec type
-	switch *k.Spec {
-	case keySpecChaCha20:
+	if !k.validate() {
 		return false
+	}
+
+	if k.Seed != nil || k.PrivateKey != nil {
+		common.Log.Warningf("attempted to regenerate key material for key: %s", k.ID)
+		return false
+	}
+
+	switch *k.Spec {
 	case keySpecAES256GCM:
 		return false
-	case keySpecECCSecp256k1:
-		err := k.CreateSecp256k1Keypair()
+	case keySpecChaCha20:
+		return false
+	case keySpecECCBabyJubJub:
+		err := k.CreateBabyJubJubKeypair()
 		if err != nil {
-			common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
+			common.Log.Warningf("failed to create babyjubjub keypair; %s", err.Error())
+			return false
+		}
+	case keySpecECCC25519:
+		err := k.CreateC25519Keypair()
+		if err != nil {
+			common.Log.Warningf("failed to create C25519 keypair; %s", err.Error())
 			return false
 		}
 	case keySpecECCEd25519:
@@ -388,38 +418,28 @@ func (k *Key) create() bool {
 			common.Log.Warningf("failed to create Ed22519 keypair; %s", err.Error())
 			return false
 		}
-	case "babyJubJub":
-		err := k.CreateBabyJubJubKeypair()
+	case keySpecECCSecp256k1:
+		err := k.CreateSecp256k1Keypair()
 		if err != nil {
-			common.Log.Warningf("failed to create babyjubjub keypair; %s", err.Error())
-			return false
-		}
-	case "C25519":
-		err := k.CreateC25519Keypair()
-		if err != nil {
-			common.Log.Warningf("failed to create C25519 keypair; %s", err.Error())
+			common.Log.Warningf("failed to create secp256k1 keypair; %s", err.Error())
 			return false
 		}
 	}
 
-	if k.Ephemeral != nil && *k.Ephemeral == "true" {
+	isEphemeral := k.Ephemeral != nil && *k.Ephemeral
+
+	if isEphemeral {
 		if k.Seed != nil {
-			EphemeralPrivateKey := *k.Seed
-			k.EphemeralPrivateKey = &EphemeralPrivateKey
+			ephemeralSeed := *k.Seed
+			k.EphemeralSeed = &ephemeralSeed
 		}
 		if k.PrivateKey != nil {
-			EphemeralPrivateKey := hex.EncodeToString([]byte(*k.PrivateKey))
-			k.EphemeralPrivateKey = &EphemeralPrivateKey
-
-			// test code - remove
-			testKey, err := hex.DecodeString(EphemeralPrivateKey)
-			if err == nil {
-				fmt.Println((testKey))
-			}
+			ephemeralPrivateKey := hex.EncodeToString([]byte(*k.PrivateKey))
+			k.EphemeralPrivateKey = &ephemeralPrivateKey
 		}
 	}
 
-	if k.encrypted == nil || !*k.encrypted {
+	if !isEphemeral && k.encrypted == nil || !*k.encrypted {
 		err := k.encryptFields()
 		if err != nil {
 			k.Errors = append(k.Errors, &provide.Error{
@@ -433,7 +453,6 @@ func (k *Key) create() bool {
 
 // Create and persist a key
 func (k *Key) save(db *gorm.DB) bool {
-
 	if db.NewRecord(k) {
 		result := db.Create(&k)
 		rowsAffected := result.RowsAffected

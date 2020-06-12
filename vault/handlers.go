@@ -233,30 +233,9 @@ func createVaultKeyHandler(c *gin.Context) {
 	}
 
 	key.VaultID = &vault.ID
+	key.vault = vault
 
-	// validate the input parameters
-	if !key.validate() {
-		obj := map[string]interface{}{}
-		obj["errors"] = key.Errors
-		provide.Render(obj, 422, c)
-		return
-	}
-
-	// create and encrypt the key
-	if !key.create() {
-		obj := map[string]interface{}{}
-		obj["errors"] = key.Errors
-		provide.Render(obj, 422, c)
-		return
-	}
-
-	// if ephemeral, return the key as is
-	if key.Ephemeral != nil && *key.Ephemeral == "true" {
-		provide.Render(key, 201, c)
-		return
-	}
-
-	if key.save(db) {
+	if key.createPersisted(db) {
 		provide.Render(key, 201, c)
 	} else {
 		obj := map[string]interface{}{}

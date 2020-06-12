@@ -17,16 +17,16 @@
 -- SET client_min_messages = warning;
 -- SET row_security = off;
 
-DO
-$do$
-BEGIN
-   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'vault') THEN
-      CREATE ROLE vault WITH SUPERUSER LOGIN PASSWORD 'prvdvault';
-   END IF;
-END
-$do$;
+-- DO
+-- $do$
+-- BEGIN
+--    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE  rolname = 'vault') THEN
+--       CREATE ROLE vault WITH SUPERUSER LOGIN PASSWORD 'prvdvault';
+--    END IF;
+-- END
+-- $do$;
 
-SET ROLE vault;
+-- SET ROLE vault;
 
 --
 -- Name: plpgsql; Type: EXTENSION; Schema: -; Owner:

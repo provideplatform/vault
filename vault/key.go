@@ -455,6 +455,11 @@ func (k *Key) create() bool {
 
 // Create and persist a key
 func (k *Key) save(db *gorm.DB) bool {
+	if k.Ephemeral != nil && *k.Ephemeral {
+		common.Log.Debugf("short-circuit persisting ephemeral key: %s", k.ID)
+		return true
+	}
+
 	if db.NewRecord(k) {
 		result := db.Create(&k)
 		rowsAffected := result.RowsAffected

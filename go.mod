@@ -8,7 +8,7 @@ require (
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/jinzhu/gorm v1.9.12
 	github.com/joho/godotenv v1.3.0
-	github.com/kthomas/go-db-config v0.0.0-20190930131840-6f8768ecee4c
+	github.com/kthomas/go-db-config v0.0.0-20200612131637-ec0436a9685e
 	github.com/kthomas/go-logger v0.0.0-20200602072946-d7d72dfc2531
 	github.com/kthomas/go-pgputil v0.0.0-20200602073402-784e96083943
 	github.com/kthomas/go-self-signed-cert v0.0.0-20200602041729-f9878375d46e

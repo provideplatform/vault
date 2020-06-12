@@ -10,7 +10,7 @@ import (
 	"github.com/provideapp/vault/common"
 )
 
-var db = dbconf.DatabaseConnection()
+var keyDB = dbconf.DatabaseConnection()
 
 func vaultFactory() *Vault {
 	vault := &Vault{
@@ -21,7 +21,7 @@ func vaultFactory() *Vault {
 		Description:    common.StringOrNil("a test vault for key unit tests"),
 	}
 
-	vault.Create(db)
+	vault.Create(vaultDB)
 	return vault
 }
 
@@ -33,7 +33,7 @@ func TestCreateKeyAES256GCM(t *testing.T) {
 	}
 
 	// TODO!
-	// key, err := vault.CreateAES256GCMKey(db)
+	// key, err := vault.CreateAES256GCMKey(keyDB)
 
 	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
@@ -52,7 +52,7 @@ func TestCreateKeyChaCha20(t *testing.T) {
 	}
 
 	// TODO!
-	// key, err := vault.CreateChaCha20Key(db)
+	// key, err := vault.CreateChaCha20Key(keyDB)
 
 	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
@@ -71,7 +71,7 @@ func TestCreateKeyBabyJubJub(t *testing.T) {
 	}
 
 	// TODO!
-	// key, err := vault.CreateBabyJubJubKeypair(db)
+	// key, err := vault.CreateBabyJubJubKeypair(keyDB)
 
 	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
@@ -90,7 +90,7 @@ func TestCreateKeyC25519(t *testing.T) {
 	}
 
 	// TODO!
-	// key, err := vault.CreateC25519Keypair(db)
+	// key, err := vault.CreateC25519Keypair(keyDB)
 
 	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
@@ -109,7 +109,7 @@ func TestCreateKeyEd25519(t *testing.T) {
 	}
 
 	// TODO!
-	// key, err := vault.CreateEd25519Keypair(db)
+	// key, err := vault.CreateEd25519Keypair(keyDB)
 
 	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
@@ -128,7 +128,7 @@ func TestCreateKeySecp256k1(t *testing.T) {
 	}
 
 	// TODO!
-	// key, err := vault.CreateSecp256k1Keypair(db)
+	// key, err := vault.CreateSecp256k1Keypair(keyDB)
 
 	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {

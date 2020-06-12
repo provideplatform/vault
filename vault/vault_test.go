@@ -8,7 +8,7 @@ import (
 	"github.com/provideapp/vault/common"
 )
 
-var db = dbconf.DatabaseConnection()
+var vaultDB = dbconf.DatabaseConnection()
 
 func TestCreateVaultFailsWithoutValidAssociation(t *testing.T) {
 	vault := &Vault{
@@ -19,7 +19,7 @@ func TestCreateVaultFailsWithoutValidAssociation(t *testing.T) {
 		Description:    common.StringOrNil("a test vault with invalid app, org or user association"),
 	}
 
-	success := vault.Create(db)
+	success := vault.Create(vaultDB)
 	if success || vault.ID != uuid.Nil {
 		t.Error("failed! invalid vault was created anyway!")
 	}
@@ -46,7 +46,7 @@ func TestCreateVault(t *testing.T) {
 			vault.UserID = &associationUUID
 		}
 
-		success := vault.Create(db)
+		success := vault.Create(vaultDB)
 		if !success {
 			t.Errorf("failed to create vault with %s association! %s", assn, *vault.Errors[0].Message)
 			continue

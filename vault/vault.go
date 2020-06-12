@@ -23,8 +23,8 @@ type Vault struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 
-	MasterKey   *Key       `sql:"-" json:"master_key"`
-	MasterKeyID *uuid.UUID `sql:"type:uuid" json:"master_key_id"`
+	MasterKey   *Key       `sql:"-" json:"-"`
+	MasterKeyID *uuid.UUID `sql:"type:uuid" json:"-"`
 }
 
 // ListKeysQuery returns the fields to SELECT from vault keys table
@@ -95,14 +95,8 @@ func (v *Vault) createMasterKey(tx *gorm.DB) error {
 		PrivateKey:  common.StringOrNil(string(seed[0:32])),
 	}
 
-	if !masterKey.create() {
+	if !masterKey.createPersisted(tx) {
 		err := fmt.Errorf("failed to create master key for vault: %s; %s", v.ID, *masterKey.Errors[0].Message)
-		common.Log.Warning(err.Error())
-		return err
-	}
-
-	if !masterKey.save(tx) {
-		err := fmt.Errorf("failed to save master key for vault: %s; %s", v.ID, *masterKey.Errors[0].Message)
 		common.Log.Warning(err.Error())
 		return err
 	}

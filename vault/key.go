@@ -391,7 +391,9 @@ func (k *Key) create() bool {
 	}
 
 	if k.Seed != nil || k.PrivateKey != nil {
-		common.Log.Warningf("attempted to regenerate key material for key: %s", k.ID)
+		k.Errors = append(k.Errors, &provide.Error{
+			Message: common.StringOrNil(fmt.Sprintf("attempted to regenerate key material for key: %s", k.ID)),
+		})
 		return false
 	}
 

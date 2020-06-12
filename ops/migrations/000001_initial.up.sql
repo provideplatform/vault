@@ -226,14 +226,5 @@ ALTER TABLE ONLY public.secrets
 
 
 --
--- Name: vaults vaults_user_id_users_id_foreign; Type: FK CONSTRAINT; Schema: public; Owner: vault
---
-
---removing this constraint because the users table is in ident db, not vault
---ALTER TABLE ONLY public.vaults
-    --ADD CONSTRAINT vaults_user_id_users_id_foreign FOREIGN KEY (user_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
-
-
---
 -- PostgreSQL database dump complete
 --

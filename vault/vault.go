@@ -97,7 +97,6 @@ func (v *Vault) createMasterKey(tx *gorm.DB) error {
 
 	if !masterKey.createPersisted(tx) {
 		err := fmt.Errorf("failed to create master key for vault: %s; %s", v.ID, *masterKey.Errors[0].Message)
-		common.Log.Warning(err.Error())
 		return err
 	}
 

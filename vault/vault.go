@@ -90,7 +90,7 @@ func (v *Vault) createMasterKey(tx *gorm.DB) error {
 		Type:        common.StringOrNil(keyTypeSymmetric),
 		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
 		Spec:        common.StringOrNil(keySpecAES256GCM),
-		Name:        common.StringOrNil(fmt.Sprintf("master0")),
+		Name:        common.StringOrNil("master0"),
 		Description: common.StringOrNil(fmt.Sprintf("AES-256 GCM master key for vault %s", v.ID)),
 		PrivateKey:  common.StringOrNil(string(seed[0:32])),
 	}

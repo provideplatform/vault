@@ -90,7 +90,7 @@ func (k *Key) CreateBabyJubJubKeypair() error {
 	k.PublicKey = common.StringOrNil(publicKeyHex)
 	k.PrivateKey = common.StringOrNil(string(privateKey))
 
-	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, k.PublicKey)
+	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, *k.PublicKey)
 	return nil
 }
 
@@ -164,7 +164,7 @@ func (k *Key) CreateEd25519Keypair() error {
 	k.PublicKey = common.StringOrNil(publicKey)
 	k.Seed = common.StringOrNil(string(seed))
 
-	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, k.PublicKey)
+	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, *k.PublicKey)
 	return nil
 }
 

@@ -268,10 +268,12 @@ func vaultKeySignHandler(c *gin.Context) {
 	var key = &Key{}
 
 	db := dbconf.DatabaseConnection()
+	//db.LogMode(true)  //TODO this should be settable via the config but it's missing in the db factory
 	var query *gorm.DB
 
-	query = db.Table("keys").Joins("inner join vaults on keys.vault_id = vaults.id")
-	query.Where("id = ? AND vault_id = ?", c.Param("keyId"), c.Param("id"))
+	query = db.Table("keys")
+	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
+	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
@@ -326,8 +328,9 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 	db := dbconf.DatabaseConnection()
 	var query *gorm.DB
 
-	query = db.Table("keys").Joins("inner join vaults on keys.vault_id = vaults.id")
-	query.Where("id = ? AND vault_id = ?", c.Param("keyId"), c.Param("id"))
+	query = db.Table("keys")
+	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
+	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {

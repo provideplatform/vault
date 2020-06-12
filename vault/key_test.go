@@ -33,9 +33,9 @@ func TestCreateKeyAES256GCM(t *testing.T) {
 	}
 
 	// TODO!
-	// key := vault.CreateAES256GCMKey()
+	// key, err := vault.CreateAES256GCMKey(db)
 
-	// success := key.Create(db)
+	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
 	// 	t.Errorf("failed to create AES-256-GCM key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
 	// 	return
@@ -52,9 +52,9 @@ func TestCreateKeyChaCha20(t *testing.T) {
 	}
 
 	// TODO!
-	// key := vault.CreateChaCha20Key()
+	// key, err := vault.CreateChaCha20Key(db)
 
-	// success := key.Create(db)
+	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
 	// 	t.Errorf("failed to create ChaCha20 key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
 	// 	return
@@ -71,9 +71,9 @@ func TestCreateKeyBabyJubJub(t *testing.T) {
 	}
 
 	// TODO!
-	// key := vault.CreateBabyJubJubKeypair()
+	// key, err := vault.CreateBabyJubJubKeypair(db)
 
-	// success := key.Create(db)
+	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
 	// 	t.Errorf("failed to create babyJubJub keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
 	// 	return
@@ -90,9 +90,9 @@ func TestCreateKeyC25519(t *testing.T) {
 	}
 
 	// TODO!
-	// key := vault.CreateC25519Keypair()
+	// key, err := vault.CreateC25519Keypair(db)
 
-	// success := key.Create(db)
+	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
 	// 	t.Errorf("failed to create C25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
 	// 	return
@@ -109,9 +109,9 @@ func TestCreateKeyEd25519(t *testing.T) {
 	}
 
 	// TODO!
-	// key := vault.CreateEd25519Keypair()
+	// key, err := vault.CreateEd25519Keypair(db)
 
-	// success := key.Create(db)
+	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
 	// 	t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
 	// 	return
@@ -128,9 +128,9 @@ func TestCreateKeySecp256k1(t *testing.T) {
 	}
 
 	// TODO!
-	// key := vault.CreateSecp256k1Keypair()
+	// key, err := vault.CreateSecp256k1Keypair(db)
 
-	// success := key.Create(db)
+	// success := err != nil && key != nil && key.ID != uuid.Nil
 	// if !success {
 	// 	t.Errorf("failed to create secp256k1 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
 	// 	return

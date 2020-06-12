@@ -1,29 +1,19 @@
 package vault
 
 import (
-	"fmt"
 	"testing"
-	"time"
 
 	dbconf "github.com/kthomas/go-db-config"
+	keytestpgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 )
 
-var keyDB = dbconf.DatabaseConnection()
-
-func vaultFactory() *Vault {
-	vault := &Vault{
-		ApplicationID:  nil,
-		OrganizationID: nil,
-		UserID:         nil,
-		Name:           common.StringOrNil(fmt.Sprintf("vault@%d", time.Now().Unix())),
-		Description:    common.StringOrNil("a test vault for key unit tests"),
-	}
-
-	vault.Create(vaultDB)
-	return vault
+func init() {
+	keytestpgputil.RequirePGP()
 }
+
+var keyDB = dbconf.DatabaseConnection()
 
 func TestCreateKeyAES256GCM(t *testing.T) {
 	vault := vaultFactory()
@@ -32,16 +22,7 @@ func TestCreateKeyAES256GCM(t *testing.T) {
 		return
 	}
 
-	// TODO!
-	// key, err := vault.CreateAES256GCMKey(keyDB)
-
-	// success := err == nil && key != nil && key.ID != uuid.Nil
-	// if !success {
-	// 	t.Errorf("failed to create AES-256-GCM key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
-	// 	return
-	// }
-
-	// common.Log.Debugf("created AES-256-GCM key for vault: %s", vault.ID)
+	t.Error("test not implemented")
 }
 
 func TestCreateKeyChaCha20(t *testing.T) {
@@ -51,16 +32,7 @@ func TestCreateKeyChaCha20(t *testing.T) {
 		return
 	}
 
-	// TODO!
-	// key, err := vault.CreateChaCha20Key(keyDB)
-
-	// success := err == nil && key != nil && key.ID != uuid.Nil
-	// if !success {
-	// 	t.Errorf("failed to create ChaCha20 key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
-	// 	return
-	// }
-
-	// common.Log.Debugf("created ChaCha20 key for vault: %s", vault.ID)
+	t.Error("test not implemented")
 }
 
 func TestCreateKeyBabyJubJub(t *testing.T) {
@@ -70,16 +42,7 @@ func TestCreateKeyBabyJubJub(t *testing.T) {
 		return
 	}
 
-	// TODO!
-	// key, err := vault.CreateBabyJubJubKeypair(keyDB)
-
-	// success := err == nil && key != nil && key.ID != uuid.Nil
-	// if !success {
-	// 	t.Errorf("failed to create babyJubJub keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
-	// 	return
-	// }
-
-	// common.Log.Debugf("created babyJubJub keypair for vault: %s", vault.ID)
+	t.Error("test not implemented")
 }
 
 func TestCreateKeyC25519(t *testing.T) {
@@ -89,16 +52,20 @@ func TestCreateKeyC25519(t *testing.T) {
 		return
 	}
 
-	// TODO!
-	// key, err := vault.CreateC25519Keypair(keyDB)
+	key := &Key{
+		VaultID:     &vault.ID,
+		Name:        common.StringOrNil("C25519 key test"),
+		Description: common.StringOrNil("some C25519 test key"),
+		Spec:        common.StringOrNil(keySpecECCC25519),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
+	}
 
-	// success := err == nil && key != nil && key.ID != uuid.Nil
-	// if !success {
-	// 	t.Errorf("failed to create C25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
-	// 	return
-	// }
+	if !key.createPersisted(keyDB) {
+		t.Errorf("failed to create C25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
 
-	// common.Log.Debugf("created C25519 keypair for vault: %s", vault.ID)
+	common.Log.Debugf("created C25519 keypair for vault: %s", vault.ID)
 }
 
 func TestCreateKeyEd25519(t *testing.T) {
@@ -108,16 +75,7 @@ func TestCreateKeyEd25519(t *testing.T) {
 		return
 	}
 
-	// TODO!
-	// key, err := vault.CreateEd25519Keypair(keyDB)
-
-	// success := err == nil && key != nil && key.ID != uuid.Nil
-	// if !success {
-	// 	t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
-	// 	return
-	// }
-
-	// common.Log.Debugf("created Ed25519 keypair for vault: %s", vault.ID)
+	t.Error("test not implemented")
 }
 
 func TestCreateKeySecp256k1(t *testing.T) {
@@ -127,14 +85,5 @@ func TestCreateKeySecp256k1(t *testing.T) {
 		return
 	}
 
-	// TODO!
-	// key, err := vault.CreateSecp256k1Keypair(keyDB)
-
-	// success := err == nil && key != nil && key.ID != uuid.Nil
-	// if !success {
-	// 	t.Errorf("failed to create secp256k1 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
-	// 	return
-	// }
-
-	// common.Log.Debugf("created secp256k1 keypair for vault: %s", vault.ID)
+	t.Error("test not implemented")
 }

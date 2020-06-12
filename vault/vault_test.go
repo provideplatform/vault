@@ -1,14 +1,36 @@
 package vault
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	dbconf "github.com/kthomas/go-db-config"
+	vaulttestpgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 )
 
+func init() {
+	vaulttestpgputil.RequirePGP()
+}
+
 var vaultDB = dbconf.DatabaseConnection()
+
+func vaultFactory() *Vault {
+	associationUUID, _ := uuid.NewV4()
+
+	vault := &Vault{
+		ApplicationID:  nil,
+		OrganizationID: &associationUUID,
+		UserID:         nil,
+		Name:           common.StringOrNil(fmt.Sprintf("vault@%d", time.Now().Unix())),
+		Description:    common.StringOrNil("a test vault for key unit tests"),
+	}
+
+	vault.Create(vaultDB)
+	return vault
+}
 
 func TestCreateVaultFailsWithoutValidAssociation(t *testing.T) {
 	vault := &Vault{

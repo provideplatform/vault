@@ -15,6 +15,57 @@ func init() {
 
 var keyDB = dbconf.DatabaseConnection()
 
+func ChaChaFactory(vaultID *uuid.UUID) *Key {
+	key := &Key{
+		VaultID:     vaultID,
+		Name:        common.StringOrNil("chacha key test"),
+		Description: common.StringOrNil("some chacha test key"),
+		Spec:        common.StringOrNil(keySpecChaCha20),
+		Type:        common.StringOrNil(keyTypeSymmetric),
+		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
+	}
+
+	if !key.createPersisted(keyDB) {
+		return nil
+	}
+
+	return key
+}
+
+func AES256Factory(vaultID *uuid.UUID) *Key {
+	key := &Key{
+		VaultID:     vaultID,
+		Name:        common.StringOrNil("AES256 key test"),
+		Description: common.StringOrNil("some AES256 test key"),
+		Spec:        common.StringOrNil(keySpecAES256GCM),
+		Type:        common.StringOrNil(keyTypeSymmetric),
+		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
+	}
+
+	if !key.createPersisted(keyDB) {
+		return nil
+	}
+
+	return key
+}
+
+func babyJubJubFactory(vaultID *uuid.UUID) *Key {
+	key := &Key{
+		VaultID:     vaultID,
+		Name:        common.StringOrNil("babyJubJub key test"),
+		Description: common.StringOrNil("some babyJubJub test key"),
+		Spec:        common.StringOrNil(keySpecECCBabyJubJub),
+		Type:        common.StringOrNil(keyTypeAsymmetric),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
+	}
+
+	if !key.createPersisted(keyDB) {
+		return nil
+	}
+
+	return key
+}
+
 func ed25519Factory(vaultID *uuid.UUID) *Key {
 	key := &Key{
 		VaultID:     vaultID,
@@ -49,6 +100,15 @@ func secp256k1Factory(vaultID *uuid.UUID) *Key {
 	return key
 }
 
+func TestEncryptAndDecrypt(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key encrypt decrypt unit test!")
+		return
+	}
+
+}
+
 func TestCreateKeyAES256GCM(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
@@ -56,7 +116,13 @@ func TestCreateKeyAES256GCM(t *testing.T) {
 		return
 	}
 
-	t.Error("test not implemented")
+	key := AES256Factory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create AES256 keypair for vault: %s!", vault.ID)
+		return
+	}
+
+	common.Log.Debugf("created AES256 keypair for vault: %s", vault.ID)
 }
 
 func TestCreateKeyChaCha20(t *testing.T) {
@@ -66,7 +132,13 @@ func TestCreateKeyChaCha20(t *testing.T) {
 		return
 	}
 
-	t.Error("test not implemented")
+	key := ChaChaFactory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create chacha keypair for vault: %s!", vault.ID)
+		return
+	}
+
+	common.Log.Debugf("created chacha keypair for vault: %s", vault.ID)
 }
 
 func TestCreateKeyBabyJubJub(t *testing.T) {
@@ -76,7 +148,13 @@ func TestCreateKeyBabyJubJub(t *testing.T) {
 		return
 	}
 
-	t.Error("test not implemented")
+	key := babyJubJubFactory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create babyJubJub keypair for vault: %s!", vault.ID)
+		return
+	}
+
+	common.Log.Debugf("created babyJubJub keypair for vault: %s", vault.ID)
 }
 
 func TestCreateKeyC25519(t *testing.T) {

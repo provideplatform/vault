@@ -26,6 +26,8 @@ import (
 	"golang.org/x/crypto/chacha20"
 )
 
+const defaultVaultMasterKeyName = "master0"
+
 const keyTypeAsymmetric = "asymmetric"
 const keyTypeSymmetric = "symmetric"
 
@@ -78,8 +80,31 @@ type KeySignVerifyRequestResponse struct {
 	Verified  *bool   `json:"verified,omitempty"`
 }
 
-// CreateBabyJubJubKeypair creates a keypair on the twisted edwards babyJubJub curve
-func (k *Key) CreateBabyJubJubKeypair() error {
+// createAES256GCM creates a key using a random seed
+func (k *Key) createAES256GCM() error {
+	keypair, err := vaultcrypto.CreatePair(vaultcrypto.PrefixByteSeed)
+	if err != nil {
+		common.Log.Warningf("failed to generate Ed25519 seed; %s", err.Error())
+		return err
+	}
+
+	seed, err := keypair.Seed()
+	if err != nil {
+		common.Log.Warningf("failed to read encoded Ed25519 seed; %s", err.Error())
+		return err
+	}
+
+	k.Type = common.StringOrNil(keyTypeAsymmetric)
+	k.Usage = common.StringOrNil(keyUsageEncryptDecrypt)
+	k.Spec = common.StringOrNil(keySpecAES256GCM)
+	k.PrivateKey = common.StringOrNil(string(seed[0:32]))
+
+	common.Log.Debugf("created AES-256-GCM key with %d-byte seed for vault: %s", len(seed), k.VaultID)
+	return nil
+}
+
+// createBabyJubJubKeypair creates a keypair on the twisted edwards babyJubJub curve
+func (k *Key) createBabyJubJubKeypair() error {
 	publicKey, privateKey, err := provide.TECGenerateKeyPair()
 	if err != nil {
 		return fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
@@ -90,15 +115,57 @@ func (k *Key) CreateBabyJubJubKeypair() error {
 	k.Type = common.StringOrNil(keyTypeAsymmetric)
 	k.Usage = common.StringOrNil(keyUsageSignVerify)
 	k.Spec = common.StringOrNil(keySpecECCBabyJubJub)
-	k.PublicKey = common.StringOrNil(publicKeyHex)
 	k.PrivateKey = common.StringOrNil(string(privateKey))
+	k.PublicKey = common.StringOrNil(publicKeyHex)
 
 	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, *k.PublicKey)
 	return nil
 }
 
-// CreateDiffieHellmanSharedSecret creates a shared secret given a peer public key and signature
-func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, peerSignature []byte, name, description string) error {
+// createC25519Keypair creates an c25519 keypair suitable for Diffie-Hellman key exchange
+func (k *Key) createC25519Keypair() error {
+	publicKey, privateKey, err := provide.C25519GenerateKeyPair()
+	if err != nil {
+		return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
+	}
+
+	publicKeyHex := hex.EncodeToString(publicKey)
+
+	k.Type = common.StringOrNil(keyTypeAsymmetric)
+	k.Usage = common.StringOrNil(keyUsageSignVerify)
+	k.Spec = common.StringOrNil(keySpecECCC25519)
+	k.PrivateKey = common.StringOrNil(string(privateKey))
+	k.PublicKey = common.StringOrNil(publicKeyHex)
+
+	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
+	return nil
+}
+
+// createChaCha20 creates a key using a random seed
+func (k *Key) createChaCha20() error {
+	keypair, err := vaultcrypto.CreatePair(vaultcrypto.PrefixByteSeed)
+	if err != nil {
+		common.Log.Warningf("failed to generate ChaCha20 seed; %s", err.Error())
+		return err
+	}
+
+	seed, err := keypair.Seed()
+	if err != nil {
+		common.Log.Warningf("failed to read encoded ChaCha20 seed; %s", err.Error())
+		return err
+	}
+
+	k.Type = common.StringOrNil(keyTypeSymmetric)
+	k.Usage = common.StringOrNil(keyUsageEncryptDecrypt)
+	k.Spec = common.StringOrNil(keySpecChaCha20)
+	k.Seed = common.StringOrNil(string(seed))
+
+	common.Log.Debugf("created ChaCha20 key with %d-byte seed for vault: %s", len(seed), k.VaultID)
+	return nil
+}
+
+// createDiffieHellmanSharedSecret creates a shared secret given a peer public key and signature
+func (k *Key) createDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, peerSignature []byte, name, description string) error {
 	k.decryptFields()
 	defer k.encryptFields()
 
@@ -149,8 +216,8 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 	return nil
 }
 
-// CreateEd25519Keypair creates an Ed25519 keypair
-func (k *Key) CreateEd25519Keypair() error {
+// createEd25519Keypair creates an Ed25519 keypair
+func (k *Key) createEd25519Keypair() error {
 	keypair, err := vaultcrypto.CreatePair(vaultcrypto.PrefixByteSeed)
 	if err != nil {
 		return fmt.Errorf("failed to create Ed25519 keypair; %s", err.Error())
@@ -166,46 +233,38 @@ func (k *Key) CreateEd25519Keypair() error {
 		return fmt.Errorf("failed to read public key of Ed25519 keypair; %s", err.Error())
 	}
 
-	k.PublicKey = common.StringOrNil(publicKey)
+	k.Type = common.StringOrNil(keyTypeAsymmetric)
+	k.Usage = common.StringOrNil(keyUsageSignVerify)
+	k.Spec = common.StringOrNil(keySpecECCEd25519)
 	k.Seed = common.StringOrNil(string(seed))
+	k.PublicKey = common.StringOrNil(publicKey)
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, *k.PublicKey)
 	return nil
 }
 
-// CreateSecp256k1Keypair creates a keypair on the secp256k1 curve
-func (k *Key) CreateSecp256k1Keypair() error {
+// createSecp256k1Keypair creates a keypair on the secp256k1 curve
+func (k *Key) createSecp256k1Keypair() error {
 	address, privkey, err := provide.EVMGenerateKeyPair()
 	if err != nil {
 		return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
 	}
 
-	publicKey := hex.EncodeToString(elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y))
-	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
-	desc := fmt.Sprintf("%s; address: %s", *k.Description, *address)
-
-	k.Description = common.StringOrNil(desc)
-	k.PublicKey = common.StringOrNil(publicKey)
-	k.PrivateKey = common.StringOrNil(string(privateKey))
-
-	common.Log.Debugf("created secp256k1 key for vault: %s; public key: %s", k.VaultID, publicKey)
-	return nil
-}
-
-// CreateC25519Keypair creates an c25519 keypair suitable for Diffie-Hellman key exchange
-func (k *Key) CreateC25519Keypair() error {
-	publicKey, privateKey, err := provide.C25519GenerateKeyPair()
-	if err != nil {
-		return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
+	if k.Description == nil {
+		desc := fmt.Sprintf("secp256k1 keypair; address: %s", *address)
+		k.Description = common.StringOrNil(desc)
 	}
 
-	publicKeyHex := hex.EncodeToString(publicKey)
+	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
+	publicKey := hex.EncodeToString(elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y))
 
-	k.PublicKey = common.StringOrNil(publicKeyHex)
+	k.Type = common.StringOrNil(keyTypeAsymmetric)
+	k.Usage = common.StringOrNil(keyUsageSignVerify)
+	k.Spec = common.StringOrNil(keySpecECCSecp256k1)
 	k.PrivateKey = common.StringOrNil(string(privateKey))
+	k.PublicKey = common.StringOrNil(publicKey)
 
-	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
-
+	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, publicKey)
 	return nil
 }
 
@@ -412,26 +471,32 @@ func (k *Key) create() error {
 	if !hasKeyMaterial { // FIXME? this sucks :D
 		switch *k.Spec {
 		case keySpecAES256GCM:
-			return errors.New("not implemented")
+			err := k.createAES256GCM()
+			if err != nil {
+				return fmt.Errorf("failed to create AES-256-GCM key; %s", err.Error())
+			}
 		case keySpecChaCha20:
-			return errors.New("not implemented")
+			err := k.createChaCha20()
+			if err != nil {
+				return fmt.Errorf("failed to create ChaCha20 key; %s", err.Error())
+			}
 		case keySpecECCBabyJubJub:
-			err := k.CreateBabyJubJubKeypair()
+			err := k.createBabyJubJubKeypair()
 			if err != nil {
 				return fmt.Errorf("failed to create babyjubjub keypair; %s", err.Error())
 			}
 		case keySpecECCC25519:
-			err := k.CreateC25519Keypair()
+			err := k.createC25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
 			}
 		case keySpecECCEd25519:
-			err := k.CreateEd25519Keypair()
+			err := k.createEd25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
 			}
 		case keySpecECCSecp256k1:
-			err := k.CreateSecp256k1Keypair()
+			err := k.createSecp256k1Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
 			}
@@ -520,7 +585,7 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 	return nil, nil
 }
 
-// decryptSymmetric attempts symmetric AES-256 GCM decryption using the key;
+// decryptSymmetric attempts symmetric AES-256-GCM decryption using the key;
 // returns the plaintext and any error
 func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	// k.mutex.Lock()
@@ -661,7 +726,7 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 	return nil, nil
 }
 
-// encryptSymmetric attempts symmetric AES-256 GCM encryption using the key;
+// encryptSymmetric attempts symmetric AES-256-GCM encryption using the key;
 // returns the ciphertext-- with 12-byte nonce prepended-- and any error
 // TODO: support optional nonce parameter & use random nonce if not provided
 func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
@@ -727,7 +792,7 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 
 // Sign the input with the private key
 func (k *Key) Sign(payload []byte) ([]byte, error) {
-	if k.Type == nil && *k.Type != keyTypeAsymmetric {
+	if k.Type == nil || *k.Type != keyTypeAsymmetric {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
 	}
 
@@ -782,7 +847,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 
 // Verify the given payload against a signature using the public key
 func (k *Key) Verify(payload, sig []byte) error {
-	if k.Type == nil && *k.Type != keyTypeAsymmetric {
+	if k.Type == nil || *k.Type != keyTypeAsymmetric {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
 	}
 

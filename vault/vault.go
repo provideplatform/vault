@@ -7,7 +7,6 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
-	vaultcrypto "github.com/provideapp/vault/vault/crypto"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -73,26 +72,13 @@ func (v *Vault) validate() bool {
 }
 
 func (v *Vault) createMasterKey(tx *gorm.DB) error {
-	keypair, err := vaultcrypto.CreatePair(vaultcrypto.PrefixByteSeed)
-	if err != nil {
-		common.Log.Warningf("failed to create Ed25519 keypair; %s", err.Error())
-		return err
-	}
-
-	seed, err := keypair.Seed()
-	if err != nil {
-		common.Log.Warningf("failed to read encoded Ed25519 seed; %s", err.Error())
-		return err
-	}
-
 	masterKey := &Key{
 		VaultID:     &v.ID,
 		Type:        common.StringOrNil(keyTypeSymmetric),
 		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
 		Spec:        common.StringOrNil(keySpecAES256GCM),
-		Name:        common.StringOrNil("master0"),
-		Description: common.StringOrNil(fmt.Sprintf("AES-256 GCM master key for vault %s", v.ID)),
-		PrivateKey:  common.StringOrNil(string(seed[0:32])),
+		Name:        common.StringOrNil(defaultVaultMasterKeyName),
+		Description: common.StringOrNil(fmt.Sprintf("AES-256-GCM master key for vault %s", v.ID)),
 	}
 
 	if !masterKey.createPersisted(tx) {
@@ -104,7 +90,7 @@ func (v *Vault) createMasterKey(tx *gorm.DB) error {
 	v.MasterKeyID = &masterKey.ID
 	tx.Save(&v)
 
-	common.Log.Debugf("created master key %s with %d-byte seed for vault: %s", masterKey.ID, len(seed), v.ID)
+	common.Log.Debugf("created master key %s for vault: %s", masterKey.ID, v.ID)
 	return nil
 }
 

@@ -643,7 +643,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 // using the given nonce and key generation context identifier; note that the nonce
 // must not be reused or the secret will be exposed...
 func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (*Key, error) {
-	if k.Type == nil && *k.Type != keyTypeSymmetric {
+	if k.Type == nil || *k.Type != keyTypeSymmetric {
 		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key type", k.ID)
 	}
 

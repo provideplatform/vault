@@ -117,6 +117,15 @@ func secp256k1Factory(vaultID *uuid.UUID) *Key {
 	return key
 }
 
+func TestEncryptAndDecrypt(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key encrypt decrypt unit test!")
+		return
+	}
+
+}
+
 func TestCreateKeyAES256GCM(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
@@ -142,7 +151,7 @@ func TestCreateKeyBabyJubJub(t *testing.T) {
 
 	key := babyJubJubFactory(&vault.ID)
 	if key == nil {
-		t.Errorf("failed to create babyJubJub keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		t.Errorf("failed to create babyJubJub keypair for vault: %s!", vault.ID)
 		return
 	}
 

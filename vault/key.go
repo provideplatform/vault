@@ -94,9 +94,6 @@ func (k *Key) createAES256GCM() error {
 		return err
 	}
 
-	k.Type = common.StringOrNil(keyTypeSymmetric)
-	k.Usage = common.StringOrNil(keyUsageEncryptDecrypt)
-	k.Spec = common.StringOrNil(keySpecAES256GCM)
 	k.PrivateKey = common.StringOrNil(string(seed[0:32]))
 
 	common.Log.Debugf("created AES-256-GCM key with %d-byte seed for vault: %s", len(seed), k.VaultID)
@@ -112,9 +109,6 @@ func (k *Key) createBabyJubJubKeypair() error {
 
 	publicKeyHex := hex.EncodeToString(publicKey)
 
-	k.Type = common.StringOrNil(keyTypeAsymmetric)
-	k.Usage = common.StringOrNil(keyUsageSignVerify)
-	k.Spec = common.StringOrNil(keySpecECCBabyJubJub)
 	k.PrivateKey = common.StringOrNil(string(privateKey))
 	k.PublicKey = common.StringOrNil(publicKeyHex)
 
@@ -131,9 +125,6 @@ func (k *Key) createC25519Keypair() error {
 
 	publicKeyHex := hex.EncodeToString(publicKey)
 
-	k.Type = common.StringOrNil(keyTypeAsymmetric)
-	k.Usage = common.StringOrNil(keyUsageSignVerify)
-	k.Spec = common.StringOrNil(keySpecECCC25519)
 	k.PrivateKey = common.StringOrNil(string(privateKey))
 	k.PublicKey = common.StringOrNil(publicKeyHex)
 
@@ -155,9 +146,6 @@ func (k *Key) createChaCha20() error {
 		return err
 	}
 
-	k.Type = common.StringOrNil(keyTypeSymmetric)
-	k.Usage = common.StringOrNil(keyUsageEncryptDecrypt)
-	k.Spec = common.StringOrNil(keySpecChaCha20)
 	k.Seed = common.StringOrNil(string(seed))
 
 	common.Log.Debugf("created ChaCha20 key with %d-byte seed for vault: %s", len(seed), k.VaultID)
@@ -233,9 +221,6 @@ func (k *Key) createEd25519Keypair() error {
 		return fmt.Errorf("failed to read public key of Ed25519 keypair; %s", err.Error())
 	}
 
-	k.Type = common.StringOrNil(keyTypeAsymmetric)
-	k.Usage = common.StringOrNil(keyUsageSignVerify)
-	k.Spec = common.StringOrNil(keySpecECCEd25519)
 	k.Seed = common.StringOrNil(string(seed))
 	k.PublicKey = common.StringOrNil(publicKey)
 
@@ -258,9 +243,6 @@ func (k *Key) createSecp256k1Keypair() error {
 	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
 	publicKey := hex.EncodeToString(elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y))
 
-	k.Type = common.StringOrNil(keyTypeAsymmetric)
-	k.Usage = common.StringOrNil(keyUsageSignVerify)
-	k.Spec = common.StringOrNil(keySpecECCSecp256k1)
 	k.PrivateKey = common.StringOrNil(string(privateKey))
 	k.PublicKey = common.StringOrNil(publicKey)
 

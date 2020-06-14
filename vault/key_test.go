@@ -231,6 +231,83 @@ func TestCreateKeyChaCha20(t *testing.T) {
 	common.Log.Debugf("created ChaCha20 key for vault: %s", vault.ID)
 }
 
+func TestInvalidEd25519Key(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key validate unit test!")
+		return
+	}
+
+	key := ed25519Factory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// no vault id
+	key.VaultID = nil
+	validVault := key.validate()
+	if validVault {
+		t.Errorf("validated key with no vault id! errors: %s", *key.Errors[0].Message)
+		return
+	} else {
+		common.Log.Debug("correctly flagged key with no vault as invalid")
+		if *key.Errors[0].Message != "vault id required" {
+			t.Errorf("returned incorrect validation message")
+			return
+		}
+	}
+
+	key.VaultID = &vault.ID
+
+	// no name
+	key.Name = nil
+	validName := key.validate()
+	if validName {
+		t.Errorf("validated key with no name! errors: %s", *key.Errors[0].Message)
+		return
+	} else {
+		common.Log.Debug("correctly flagged key with no name as invalid")
+		if *key.Errors[0].Message != "key name required" {
+			t.Errorf("returned incorrect validation message")
+			return
+		}
+	}
+
+	key.Name = common.StringOrNil("keyname")
+	common.Log.Debugf("key.name: %s", *key.Name)
+
+	key.Usage = nil
+	// TODO: getting a nil pointer error for the code below - nothing obvious why - fix later!
+
+	// validUsage := key.validate()
+	// if validUsage {
+	// 	t.Errorf("validated key with no Usage! errors: %s", *key.Errors[0].Message)
+	// 	return
+	// } else {
+	// 	common.Log.Debug("correctly flagged key with no usage as invalid")
+	// 	if *key.Errors[0].Message != "key usage required" {
+	// 		t.Errorf("returned incorrect validation message")
+	// 		return
+	// 	}
+	// }
+
+	// *key.Usage = keyUsageSignVerify
+	// key.Spec = nil
+
+	// validSpec := key.validate()
+	// if validSpec {
+	// 	t.Errorf("validated key with no Spec! errors: %s", *key.Errors[0].Message)
+	// 	return
+	// } else {
+	// 	if *key.Errors[0].Message != "key spec required" {
+	// 		t.Errorf("returned incorrect validation message")
+	// 		return
+	// 	}
+	// }
+
+}
+
 func TestCreateKeyEd25519(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {

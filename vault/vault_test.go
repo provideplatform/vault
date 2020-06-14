@@ -17,6 +17,16 @@ func init() {
 
 var vaultDB = dbconf.DatabaseConnection()
 
+func fetchVault(vaultID uuid.UUID) *Vault {
+	db := dbconf.DatabaseConnection()
+	vault := &Vault{}
+	db.Where("id = ?", vaultID).Find(&vault)
+	if vault == nil || vault.ID == uuid.Nil {
+		return nil
+	}
+	return vault
+}
+
 func vaultFactory() *Vault {
 	associationUUID, _ := uuid.NewV4()
 
@@ -28,8 +38,11 @@ func vaultFactory() *Vault {
 		Description:    common.StringOrNil("a test vault for key unit tests"),
 	}
 
-	vault.Create(vaultDB)
-	return vault
+	if vault.Create(vaultDB) {
+		return fetchVault(vault.ID) // HACK -- emulate behavior in handlers.go
+	}
+
+	return nil
 }
 
 func TestCreateVaultFailsWithoutValidAssociation(t *testing.T) {

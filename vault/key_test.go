@@ -124,6 +124,7 @@ func TestEncryptAndDecrypt(t *testing.T) {
 		return
 	}
 
+	t.Error("encrypt/decrypt key tests not implemented")
 }
 
 func TestCreateKeyAES256GCM(t *testing.T) {

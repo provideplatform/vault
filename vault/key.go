@@ -94,7 +94,7 @@ func (k *Key) createAES256GCM() error {
 		return err
 	}
 
-	k.Type = common.StringOrNil(keyTypeAsymmetric)
+	k.Type = common.StringOrNil(keyTypeSymmetric)
 	k.Usage = common.StringOrNil(keyUsageEncryptDecrypt)
 	k.Spec = common.StringOrNil(keySpecAES256GCM)
 	k.PrivateKey = common.StringOrNil(string(seed[0:32]))
@@ -268,33 +268,41 @@ func (k *Key) createSecp256k1Keypair() error {
 	return nil
 }
 
-func (k *Key) resolveMasterKey() (*Key, error) {
-	var vault *Vault
-	var masterKey *Key
-	var err error
-
+func (k *Key) resolveVault(db *gorm.DB) error {
 	if k.VaultID == nil {
-		return nil, fmt.Errorf("unable to resolve master key without vault id for key: %s", k.ID)
+		return fmt.Errorf("unable to resolve vault without id for key: %s", k.ID)
 	}
 
-	db := dbconf.DatabaseConnection()
-
-	if k.vault == nil {
-		vlt := &Vault{}
-		db.Where("id = ?", k.VaultID).Find(&vlt)
-		if vlt == nil || vlt.ID == uuid.Nil {
-			return nil, fmt.Errorf("failed to resolve master key; no vault found for key: %s; vault id: %s", k.ID, k.VaultID)
-		}
-		k.vault = vlt
+	if k.vault != nil {
+		common.Log.Debugf("resolved cached pointer to vault %s within local key %s", k.vault.ID, k.ID)
+		return nil
 	}
 
-	vault = k.vault
+	vlt := &Vault{}
+	db.Where("id = ?", k.VaultID).Find(&vlt)
+	if vlt == nil || vlt.ID == uuid.Nil {
+		return fmt.Errorf("failed to resolve master key; no vault found for key: %s; vault id: %s", k.ID, k.VaultID)
+	}
+	k.vault = vlt
 
-	if vault.MasterKeyID != nil && vault.MasterKeyID.String() == k.ID.String() {
+	return nil
+}
+
+func (k *Key) resolveMasterKey(db *gorm.DB) (*Key, error) {
+	err := k.resolveVault(db)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve vault for master key resolution without vault id for key: %s", k.ID)
+	}
+
+	if k.vault == nil || k.vault.ID == uuid.Nil {
+		return nil, fmt.Errorf("failed to resolve master key without vault id for key: %s", k.ID)
+	}
+
+	if k.vault.MasterKeyID != nil && k.vault.MasterKeyID.String() == k.ID.String() {
 		return nil, fmt.Errorf("unable to resolve master key: %s; current key is master; vault id: %s", k.ID, k.VaultID)
 	}
 
-	masterKey, err = vault.resolveMasterKey(db)
+	masterKey, err := k.vault.resolveMasterKey(db)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve master key for key: %s; %s", k.ID, err.Error())
 	}
@@ -318,7 +326,7 @@ func (k *Key) decryptFields() error {
 		return fmt.Errorf("fields already decrypted for key: %s", k.ID)
 	}
 
-	masterKey, err := k.resolveMasterKey()
+	masterKey, err := k.resolveMasterKey(dbconf.DatabaseConnection())
 	if err != nil {
 		common.Log.Debugf("decrypting master key fields for vault: %s", k.VaultID)
 
@@ -376,7 +384,7 @@ func (k *Key) encryptFields() error {
 		return fmt.Errorf("fields already encrypted for key: %s", k.ID)
 	}
 
-	masterKey, err := k.resolveMasterKey()
+	masterKey, err := k.resolveMasterKey(dbconf.DatabaseConnection())
 	if err != nil {
 		common.Log.Debugf("encrypting master key fields for vault: %s", k.VaultID)
 
@@ -450,7 +458,12 @@ func (k *Key) createPersisted(db *gorm.DB) bool {
 		return false
 	}
 
-	return k.save(db)
+	success := k.save(db)
+	if success {
+		k.Enrich()
+	}
+
+	return success
 }
 
 // Generate the key/keypair based on Spec type
@@ -905,9 +918,21 @@ func (k *Key) Verify(payload, sig []byte) error {
 func (k *Key) validate() bool {
 	k.Errors = make([]*provide.Error, 0)
 
+	if k.VaultID == nil {
+		k.Errors = append(k.Errors, &provide.Error{
+			Message: common.StringOrNil("vault id required"),
+		})
+	}
+
 	if k.Name == nil {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil("key name required"),
+		})
+	}
+
+	if k.Usage == nil {
+		k.Errors = append(k.Errors, &provide.Error{
+			Message: common.StringOrNil("key usage required"),
 		})
 	}
 

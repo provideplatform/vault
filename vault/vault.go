@@ -138,7 +138,7 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 // Delete a vault
 func (v *Vault) Delete(tx *gorm.DB) bool {
 	if v.ID == uuid.Nil {
-		common.Log.Warning("attempted to delete vault instance")
+		common.Log.Warning("attempted to delete vault instance which only exists in-memory")
 		return false
 	}
 
@@ -175,5 +175,12 @@ func GetApplicationVaults(applicationID *uuid.UUID) []*Vault {
 func GetOrganizationVaults(organizationID *uuid.UUID) []*Vault {
 	var vaults []*Vault
 	dbconf.DatabaseConnection().Where("organization_id = ?", organizationID).Find(&vaults)
+	return vaults
+}
+
+// GetUserVaults - retrieve the vaults associated with the given user
+func GetUserVaults(userID *uuid.UUID) []*Vault {
+	var vaults []*Vault
+	dbconf.DatabaseConnection().Where("user_id = ?", userID).Find(&vaults)
 	return vaults
 }

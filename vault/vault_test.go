@@ -166,7 +166,12 @@ func TestGetVaults(t *testing.T) {
 			}
 			t.Logf("found %d vaults for organization ID %s", len(orgVaults), vault.OrganizationID)
 		case "user":
-			// no getuservaults method
+			userVaults := GetUserVaults(vault.UserID)
+			if len(userVaults) != 1 {
+				t.Errorf("couldn't retrieve vault for User ID %s", vault.UserID)
+				return
+			}
+			t.Logf("found %d vaults for user ID %s", len(userVaults), vault.UserID)
 		}
 
 	}

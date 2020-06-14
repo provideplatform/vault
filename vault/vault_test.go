@@ -17,16 +17,6 @@ func init() {
 
 var vaultDB = dbconf.DatabaseConnection()
 
-func fetchVault(vaultID uuid.UUID) *Vault {
-	db := dbconf.DatabaseConnection()
-	vault := &Vault{}
-	db.Where("id = ?", vaultID).Find(&vault)
-	if vault == nil || vault.ID == uuid.Nil {
-		return nil
-	}
-	return vault
-}
-
 func vaultFactory() *Vault {
 	associationUUID, _ := uuid.NewV4()
 
@@ -39,7 +29,7 @@ func vaultFactory() *Vault {
 	}
 
 	if vault.Create(vaultDB) {
-		return fetchVault(vault.ID) // HACK -- emulate behavior in handlers.go
+		return vault
 	}
 
 	return nil

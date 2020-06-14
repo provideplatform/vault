@@ -15,16 +15,6 @@ func init() {
 
 var keyDB = dbconf.DatabaseConnection()
 
-func fetchKey(vaultID uuid.UUID) *Key {
-	db := dbconf.DatabaseConnection()
-	key := &Key{}
-	db.Where("id = ?", vaultID).Find(&key)
-	if key == nil || key.ID == uuid.Nil {
-		return nil
-	}
-	return key
-}
-
 func aes256GCMFactory(vaultID *uuid.UUID) *Key {
 	key := &Key{
 		VaultID:     vaultID,
@@ -50,7 +40,6 @@ func babyJubJubFactory(vaultID *uuid.UUID) *Key {
 		Spec:        common.StringOrNil(keySpecECCBabyJubJub),
 		Type:        common.StringOrNil(keyTypeAsymmetric),
 		Usage:       common.StringOrNil(keyUsageSignVerify),
-		vault:       fetchVault(*vaultID),
 	}
 
 	if !key.createPersisted(keyDB) {
@@ -102,7 +91,6 @@ func ed25519Factory(vaultID *uuid.UUID) *Key {
 		Spec:        common.StringOrNil(keySpecECCEd25519),
 		Type:        common.StringOrNil(keyTypeAsymmetric),
 		Usage:       common.StringOrNil(keyUsageSignVerify),
-		vault:       fetchVault(*vaultID),
 	}
 
 	if !key.createPersisted(keyDB) {
@@ -120,7 +108,6 @@ func secp256k1Factory(vaultID *uuid.UUID) *Key {
 		Spec:        common.StringOrNil(keySpecECCSecp256k1),
 		Type:        common.StringOrNil(keyTypeAsymmetric),
 		Usage:       common.StringOrNil(keyUsageSignVerify),
-		vault:       fetchVault(*vaultID),
 	}
 
 	if !key.createPersisted(keyDB) {

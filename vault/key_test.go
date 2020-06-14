@@ -140,6 +140,13 @@ func TestCreateKeyAES256GCM(t *testing.T) {
 		return
 	}
 
+	// it should have a private key
+	privateKey := key.PrivateKey
+	if privateKey == nil {
+		t.Error("failed! private key was not set for the AES-256-GCM key!")
+		return
+	}
+
 	common.Log.Debugf("created AES-256-GCM key for vault: %s", vault.ID)
 }
 
@@ -153,6 +160,19 @@ func TestCreateKeyBabyJubJub(t *testing.T) {
 	key := babyJubJubFactory(&vault.ID)
 	if key == nil {
 		t.Errorf("failed to create babyJubJub keypair for vault: %s!", vault.ID)
+		return
+	}
+
+	// it should have a private key
+	privateKey := key.PrivateKey
+	if privateKey == nil {
+		t.Error("failed! private key was not set for the babyJubJub key!")
+		return
+	}
+	// it should have a public key
+	publicKey := key.PublicKey
+	if publicKey == nil {
+		t.Error("failed! public key was not set for the babyJubJub key!")
 		return
 	}
 
@@ -172,6 +192,19 @@ func TestCreateKeyC25519(t *testing.T) {
 		return
 	}
 
+	// it should have a private key
+	privateKey := key.PrivateKey
+	if privateKey == nil {
+		t.Error("failed! private key was not set for the C25519 key!")
+		return
+	}
+	// it should have a public key
+	publicKey := key.PublicKey
+	if publicKey == nil {
+		t.Error("failed! public key was not set for the C25519 key!")
+		return
+	}
+
 	common.Log.Debugf("created C25519 keypair for vault: %s", vault.ID)
 }
 
@@ -185,6 +218,13 @@ func TestCreateKeyChaCha20(t *testing.T) {
 	key := chacha20Factory(&vault.ID)
 	if key == nil {
 		t.Errorf("failed to create ChaCha20 key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// it should have a seed
+	seed := key.Seed
+	if seed == nil {
+		t.Error("failed! seed was not set for the ChaCha20 key!")
 		return
 	}
 
@@ -204,6 +244,19 @@ func TestCreateKeyEd25519(t *testing.T) {
 		return
 	}
 
+	// it should have a private key
+	seed := key.Seed
+	if seed == nil {
+		t.Error("failed! seed was not set for the Ed25519 key!")
+		return
+	}
+	// it should have a public key
+	publicKey := key.PublicKey
+	if publicKey == nil {
+		t.Error("failed! public key was not set for the Ed25519 key!")
+		return
+	}
+
 	common.Log.Debugf("created Ed25519 keypair for vault: %s", vault.ID)
 }
 
@@ -217,6 +270,25 @@ func TestCreateKeySecp256k1(t *testing.T) {
 	key := secp256k1Factory(&vault.ID)
 	if key == nil {
 		t.Errorf("failed to create secp256k1 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// it should have a private key
+	privateKey := key.PrivateKey
+	if privateKey == nil {
+		t.Error("failed! private key was not set for the secp256k1 key!")
+		return
+	}
+	// it should have a public key
+	publicKey := key.PublicKey
+	if publicKey == nil {
+		t.Error("failed! public key was not set for the secp256k1 key!")
+		return
+	}
+	// it should have a non-nil address enriched
+	address := key.Address
+	if address == nil {
+		t.Error("failed! address was not set for the secp256k1 key!")
 		return
 	}
 
@@ -248,10 +320,10 @@ func TestBabyJubJubSign(t *testing.T) {
 		return
 	}
 
-	// if len(sig) != 64 {
-	// 	t.Errorf("failed to sign message using Ed25519 keypair for vault: %s! received %d-byte signature: %s", vault.ID, len(sig), sig)
-	// 	return
-	// }
+	if len(sig) != 64 {
+		t.Errorf("failed to sign message using Ed25519 keypair for vault: %s! received %d-byte signature: %s", vault.ID, len(sig), sig)
+		return
+	}
 
 	common.Log.Debugf("signed message using babyJubJub keypair for vault: %s; sig: %s", vault.ID, string(sig))
 }
@@ -281,10 +353,10 @@ func TestEd25519Sign(t *testing.T) {
 		return
 	}
 
-	// if len(sig) != 64 {
-	// 	t.Errorf("failed to sign message using Ed25519 keypair for vault: %s! received %d-byte signature: %s", vault.ID, len(sig), sig)
-	// 	return
-	// }
+	if len(sig) != 64 {
+		t.Errorf("failed to sign message using Ed25519 keypair for vault: %s! received %d-byte signature: %s", vault.ID, len(sig), sig)
+		return
+	}
 
 	common.Log.Debugf("signed message using Ed25519 keypair for vault: %s; sig: %s", vault.ID, string(sig))
 }
@@ -314,10 +386,10 @@ func TestEd25519Verify(t *testing.T) {
 		return
 	}
 
-	// if len(sig) != 64 {
-	// 	t.Errorf("failed to sign message using Ed25519 keypair for vault: %s! received %d-byte signature: %s", vault.ID, len(sig), sig)
-	// 	return
-	// }
+	if len(sig) != 64 {
+		t.Errorf("failed to sign message using Ed25519 keypair for vault: %s! received %d-byte signature: %s", vault.ID, len(sig), sig)
+		return
+	}
 
 	err = key.Verify(msg, sig)
 	if err != nil {
@@ -353,11 +425,6 @@ func TestSecp256k1Sign(t *testing.T) {
 		return
 	}
 
-	// if len(sig) != 64 {
-	// 	t.Errorf("failed to sign message using secp256k1 keypair for vault: %s! received %d-byte signature: %s", vault.ID, len(sig), sig)
-	// 	return
-	// }
-
 	common.Log.Debugf("signed message using secp256k1 keypair for vault: %s; sig: %s", vault.ID, string(sig))
 }
 
@@ -385,11 +452,6 @@ func TestSecp256k1Verify(t *testing.T) {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s! nil signature!", vault.ID)
 		return
 	}
-
-	// if len(sig) != 64 {
-	// 	t.Errorf("failed to sign message using secp256k1 keypair for vault: %s! received %d-byte signature: %s", vault.ID, len(sig), sig)
-	// 	return
-	// }
 
 	err = key.Verify(msg, sig)
 	if err != nil {

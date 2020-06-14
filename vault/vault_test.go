@@ -50,6 +50,27 @@ func TestCreateVaultFailsWithoutValidAssociation(t *testing.T) {
 	}
 }
 
+func TestValidateVaultFailsWithoutMasterKey(t *testing.T) {
+	vault := &Vault{
+		ApplicationID:  nil,
+		OrganizationID: nil,
+		UserID:         nil,
+		Name:           common.StringOrNil("invalid vault"),
+		Description:    common.StringOrNil("a test vault without a master key"),
+	}
+
+	randomID, _ := uuid.NewV4()
+	vault.UserID = &randomID
+
+	vault.MasterKeyID = nil
+	vault.ID = randomID
+
+	success := vault.validate()
+	if success {
+		t.Error("failed! invalid vault was validated anyway!")
+	}
+}
+
 func TestDeleteVault(t *testing.T) {
 	vault := &Vault{
 		ApplicationID:  nil,

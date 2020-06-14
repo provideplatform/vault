@@ -15,14 +15,24 @@ func init() {
 
 var keyDB = dbconf.DatabaseConnection()
 
+func fetchKey(vaultID uuid.UUID) *Key {
+	db := dbconf.DatabaseConnection()
+	key := &Key{}
+	db.Where("id = ?", vaultID).Find(&key)
+	if key == nil || key.ID == uuid.Nil {
+		return nil
+	}
+	return key
+}
+
 func aes256GCMFactory(vaultID *uuid.UUID) *Key {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil("AES-256-GCM key test"),
 		Description: common.StringOrNil("some AES-256-GCM test key"),
-		// Spec:        common.StringOrNil(keySpecAES256GCM),
-		// Type:        common.StringOrNil(keyTypeSymmetric),
-		// Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
+		Spec:        common.StringOrNil(keySpecAES256GCM),
+		Type:        common.StringOrNil(keyTypeSymmetric),
+		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
 	}
 
 	if !key.createPersisted(keyDB) {
@@ -37,9 +47,10 @@ func babyJubJubFactory(vaultID *uuid.UUID) *Key {
 		VaultID:     vaultID,
 		Name:        common.StringOrNil("babyJubJub key test"),
 		Description: common.StringOrNil("some babyJubJub test key"),
-		// Spec:        common.StringOrNil(keySpecECCBabyJubJub),
-		// Type:        common.StringOrNil(keyTypeAsymmetric),
-		// Usage:       common.StringOrNil(keyUsageSignVerify),
+		Spec:        common.StringOrNil(keySpecECCBabyJubJub),
+		Type:        common.StringOrNil(keyTypeAsymmetric),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
+		vault:       fetchVault(*vaultID),
 	}
 
 	if !key.createPersisted(keyDB) {
@@ -54,9 +65,9 @@ func c25519Factory(vaultID *uuid.UUID) *Key {
 		VaultID:     vaultID,
 		Name:        common.StringOrNil("C25519 key test"),
 		Description: common.StringOrNil("some C25519 test key"),
-		// Spec:        common.StringOrNil(keySpecECCC25519),
-		// Type:        common.StringOrNil(keyTypeAsymmetric),
-		// Usage:       common.StringOrNil(keyUsageSignVerify),
+		Spec:        common.StringOrNil(keySpecECCC25519),
+		Type:        common.StringOrNil(keyTypeAsymmetric),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
 	}
 
 	if !key.createPersisted(keyDB) {
@@ -71,9 +82,9 @@ func chacha20Factory(vaultID *uuid.UUID) *Key {
 		VaultID:     vaultID,
 		Name:        common.StringOrNil("ChaCha20 key test"),
 		Description: common.StringOrNil("some ChaCha20 test key"),
-		// Spec:        common.StringOrNil(keySpecChaCha20),
-		// Type:        common.StringOrNil(keyTypeSymmetric),
-		// Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
+		Spec:        common.StringOrNil(keySpecChaCha20),
+		Type:        common.StringOrNil(keyTypeSymmetric),
+		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
 	}
 
 	if !key.createPersisted(keyDB) {
@@ -88,9 +99,10 @@ func ed25519Factory(vaultID *uuid.UUID) *Key {
 		VaultID:     vaultID,
 		Name:        common.StringOrNil("Ed25519 key test"),
 		Description: common.StringOrNil("some Ed25519 test key"),
-		// Spec:        common.StringOrNil(keySpecECCEd25519),
-		// Type:        common.StringOrNil(keyTypeAsymmetric),
-		// Usage:       common.StringOrNil(keyUsageSignVerify),
+		Spec:        common.StringOrNil(keySpecECCEd25519),
+		Type:        common.StringOrNil(keyTypeAsymmetric),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
+		vault:       fetchVault(*vaultID),
 	}
 
 	if !key.createPersisted(keyDB) {
@@ -105,9 +117,10 @@ func secp256k1Factory(vaultID *uuid.UUID) *Key {
 		VaultID:     vaultID,
 		Name:        common.StringOrNil("secp256k1 key test"),
 		Description: common.StringOrNil("some secp256k1 test key"),
-		// Spec:        common.StringOrNil(keySpecECCSecp256k1),
-		// Type:        common.StringOrNil(keyTypeAsymmetric),
-		// Usage:       common.StringOrNil(keyUsageSignVerify),
+		Spec:        common.StringOrNil(keySpecECCSecp256k1),
+		Type:        common.StringOrNil(keyTypeAsymmetric),
+		Usage:       common.StringOrNil(keyUsageSignVerify),
+		vault:       fetchVault(*vaultID),
 	}
 
 	if !key.createPersisted(keyDB) {

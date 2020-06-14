@@ -274,7 +274,7 @@ func (k *Key) resolveVault(db *gorm.DB) error {
 	}
 
 	if k.vault != nil {
-		common.Log.Debugf("resolved cached pointer to vault %s within local key %s", k.vault.ID, k.ID)
+		common.Log.Tracef("resolved cached pointer to vault %s within local key %s", k.vault.ID, k.ID)
 		return nil
 	}
 
@@ -328,7 +328,7 @@ func (k *Key) decryptFields() error {
 
 	masterKey, err := k.resolveMasterKey(dbconf.DatabaseConnection())
 	if err != nil {
-		common.Log.Debugf("decrypting master key fields for vault: %s", k.VaultID)
+		common.Log.Tracef("decrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
 			seed, err := pgputil.PGPPubDecrypt([]byte(*k.Seed))
@@ -346,7 +346,7 @@ func (k *Key) decryptFields() error {
 			k.PrivateKey = common.StringOrNil(string(privateKey))
 		}
 	} else {
-		common.Log.Debugf("decrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
+		common.Log.Tracef("decrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
 
 		masterKey.decryptFields()
 		defer masterKey.encryptFields()
@@ -386,7 +386,7 @@ func (k *Key) encryptFields() error {
 
 	masterKey, err := k.resolveMasterKey(dbconf.DatabaseConnection())
 	if err != nil {
-		common.Log.Debugf("encrypting master key fields for vault: %s", k.VaultID)
+		common.Log.Tracef("encrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
 			seed, err := pgputil.PGPPubEncrypt([]byte(*k.Seed))
@@ -404,7 +404,7 @@ func (k *Key) encryptFields() error {
 			k.PrivateKey = common.StringOrNil(string(privateKey))
 		}
 	} else {
-		common.Log.Debugf("encrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
+		common.Log.Tracef("encrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
 
 		masterKey.decryptFields()
 		defer masterKey.encryptFields()

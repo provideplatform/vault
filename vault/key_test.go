@@ -775,7 +775,7 @@ func TestSecp256k1Verify(t *testing.T) {
 func TestCreateEphemeralKeyAES256GCM_privatekey(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for create ephemeral AES256GCM unit test!")
 		return
 	}
 
@@ -806,7 +806,7 @@ func TestCreateEphemeralKeyAES256GCM_privatekey(t *testing.T) {
 func TestCreateEphemeralKeyAES256GCM_seed(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for ephemeral AES256GCM unit test!")
 		return
 	}
 
@@ -835,7 +835,7 @@ func TestCreateEphemeralKeyAES256GCM_seed(t *testing.T) {
 func TestRegenerateExistingKeyAES256GCM(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for ephemeral AES256GCM unit test!")
 		return
 	}
 	key := ephemeralAES256GCMType(&vault.ID)
@@ -860,10 +860,10 @@ func TestRegenerateExistingKeyAES256GCM(t *testing.T) {
 	common.Log.Debugf("created ephemeral AES-256-GCM key for vault: %s", vault.ID)
 }
 
-func TestCreateInvalidKey(t *testing.T) {
+func TestCreateAes256GcmInvalidVaultID(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for ephemeral AES256GCM unit test!")
 		return
 	}
 
@@ -884,7 +884,7 @@ func TestCreateInvalidKey(t *testing.T) {
 func TestDeriveSymmetricKeyNilType(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for derive symmetric key unit test!")
 		return
 	}
 
@@ -909,7 +909,7 @@ func TestDeriveSymmetricKeyNilType(t *testing.T) {
 func TestDeriveSymmetricKeyIncorrectSpec(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for derive symmetric key unit test!")
 		return
 	}
 
@@ -934,7 +934,7 @@ func TestDeriveSymmetricKeyIncorrectSpec(t *testing.T) {
 func TestDeriveSymmetricKeyIncorrectType(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for derive symmetric key unit test!")
 		return
 	}
 
@@ -960,7 +960,7 @@ func TestDeriveSymmetricKeyIncorrectType(t *testing.T) {
 func TestDeriveSymmetricKeyIncorrectUsage(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for derive symmetric key unit test!")
 		return
 	}
 
@@ -983,10 +983,10 @@ func TestDeriveSymmetricKeyIncorrectUsage(t *testing.T) {
 	}
 }
 
-func TestDeriveSymmetricKeyNilPrivateKey(t *testing.T) {
+func TestDeriveSymmetricKeyNilSeed(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for derive symmetric key unit test!")
 		return
 	}
 
@@ -996,21 +996,22 @@ func TestDeriveSymmetricKeyNilPrivateKey(t *testing.T) {
 	context := []byte("stuff and stuff")
 	name := "derived key"
 	description := "derived key description"
+	key.Seed = nil
 
 	key, err := key.DeriveSymmetric(nonce, context, name, description)
 
 	if err != nil {
-		common.Log.Debug("correctly failed to derive symmetric key")
+		common.Log.Debugf("correctly failed to derive symmetric with nil seed key. error %s", err.Error())
 	}
 	if err == nil {
-		t.Errorf("incorrectly derived symmetric key without private key")
+		t.Errorf("incorrectly derived symmetric key without seed")
 	}
 }
 
 func TestDeriveSymmetricKey(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
-		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		t.Error("failed! no vault created for derive symmetric key unit test!")
 		return
 	}
 
@@ -1024,12 +1025,15 @@ func TestDeriveSymmetricKey(t *testing.T) {
 	name := "derived key"
 	description := "derived key description"
 
+	// seed info
+	common.Log.Debugf("seed size (bytes %d)", len([]byte(*key.Seed)))
+	common.Log.Debugf("key seed: %s", *key.Seed)
 	key, err := key.DeriveSymmetric(nonce, context, name, description)
 
 	if err != nil {
-		common.Log.Debug("correctly failed to derive symmetric key")
+		t.Errorf("failed to derive symmetric key with error %s", err.Error())
 	}
 	if err == nil {
-		t.Errorf("incorrectly derived symmetric key without private key")
+		common.Log.Debugf("correctly derived symmetric key from key %s", key.ID)
 	}
 }

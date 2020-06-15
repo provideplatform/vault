@@ -634,7 +634,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-// DeriveSymmetric derives a symmetric key from the secret stored in k.PrivateKey
+// DeriveSymmetric derives a symmetric key from the secret stored in k.Seed
 // using the given nonce and key generation context identifier; note that the nonce
 // must not be reused or the secret will be exposed...
 func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (*Key, error) {
@@ -650,8 +650,8 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key spec", k.ID)
 	}
 
-	if k.PrivateKey == nil {
-		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil private key", k.ID)
+	if k.Seed == nil {
+		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil seed", k.ID)
 	}
 
 	k.decryptFields()
@@ -659,7 +659,7 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 
 	switch *k.Spec {
 	case keySpecChaCha20:
-		key := []byte(*k.PrivateKey)
+		key := []byte(*k.Seed)
 		derivedKey, err := chacha20.HChaCha20(key, nonce)
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive symmetric key from key: %s; %s", k.ID, err.Error())
@@ -672,7 +672,7 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 			Spec:        common.StringOrNil(keySpecChaCha20),
 			Name:        common.StringOrNil(name),
 			Description: common.StringOrNil(description),
-			PrivateKey:  common.StringOrNil(string(derivedKey)),
+			Seed:        common.StringOrNil(string(derivedKey)),
 		}
 
 		db := dbconf.DatabaseConnection()

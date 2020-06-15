@@ -1017,9 +1017,6 @@ func TestDeriveSymmetricKey(t *testing.T) {
 
 	key := chacha20Factory(&vault.ID)
 
-	common.Log.Debugf("seed: %s", *key.Seed)
-	//common.Log.Debugf("private key: %s", *key.PrivateKey)
-
 	nonce := []byte("number only used once")
 	context := []byte("stuff and stuff")
 	name := "derived key"
@@ -1027,11 +1024,16 @@ func TestDeriveSymmetricKey(t *testing.T) {
 
 	// seed info
 	common.Log.Debugf("seed size (bytes %d)", len([]byte(*key.Seed)))
+	common.Log.Debugf("seed type %T", *key.Seed)
 	common.Log.Debugf("key seed: %s", *key.Seed)
+
 	key, err := key.DeriveSymmetric(nonce, context, name, description)
 
 	if err != nil {
+		common.Log.Debug("derive expecting chacha seed size of 32 bytes")
+		//common.Log.Debugf("seed size of input chacha key: %d", len(*key.Seed))
 		t.Errorf("failed to derive symmetric key with error %s", err.Error())
+		return
 	}
 	if err == nil {
 		common.Log.Debugf("correctly derived symmetric key from key %s", key.ID)

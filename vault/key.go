@@ -28,26 +28,43 @@ import (
 
 const defaultVaultMasterKeyName = "master0"
 
-const keyTypeAsymmetric = "asymmetric"
-const keyTypeSymmetric = "symmetric"
+// KeyTypeAsymmetric asymmetric key type
+const KeyTypeAsymmetric = "asymmetric"
 
-const keyUsageEncryptDecrypt = "encrypt/decrypt"
-const keyUsageSignVerify = "sign/verify"
+// KeyTypeSymmetric symmetric key type
+const KeyTypeSymmetric = "symmetric"
 
-const keySpecAES256GCM = "AES-256-GCM"
-const keySpecChaCha20 = "ChaCha20"
-const keySpecECCBabyJubJub = "babyJubJub"
-const keySpecECCC25519 = "C25519"
-const keySpecECCEd25519 = "Ed25519"
-const keySpecECCSecp256k1 = "secp256k1"
+// KeyUsageEncryptDecrypt encrypt/decrypt usage
+const KeyUsageEncryptDecrypt = "encrypt/decrypt"
 
-// const keySpecECCSecp256r1 = "ECC-NIST-P256"
-// const keySpecECCSecp2048 = "ECC-NIST-P384"
-// const keySpecECCSecp521r1 = "ECC-NIST-P521"
-// const keySpecECCSecpP256k1 = "ECC-SECG-P256K1"
-// const keySpecRSA2048 = "RSA-2048"
-// const keySpecRSA3072 = "RSA-3072"
-// const keySpecRSA4096 = "RSA-4096"
+// KeyUsageSignVerify sign/verify usage
+const KeyUsageSignVerify = "sign/verify"
+
+// KeySpecAES256GCM AES-256-GCM key spec
+const KeySpecAES256GCM = "AES-256-GCM"
+
+// KeySpecChaCha20 ChaCha20 key spec
+const KeySpecChaCha20 = "ChaCha20"
+
+// KeySpecECCBabyJubJub babyJubJub key spec
+const KeySpecECCBabyJubJub = "babyJubJub"
+
+// KeySpecECCC25519 C25519 key spec
+const KeySpecECCC25519 = "C25519"
+
+// KeySpecECCEd25519 Ed25519 key spec
+const KeySpecECCEd25519 = "Ed25519"
+
+// KeySpecECCSecp256k1 secp256k1 key spec
+const KeySpecECCSecp256k1 = "secp256k1"
+
+// const KeySpecECCSecp256r1 = "ECC-NIST-P256"
+// const KeySpecECCSecp2048 = "ECC-NIST-P384"
+// const KeySpecECCSecp521r1 = "ECC-NIST-P521"
+// const KeySpecECCSecpP256k1 = "ECC-SECG-P256K1"
+// const KeySpecRSA2048 = "RSA-2048"
+// const KeySpecRSA3072 = "RSA-3072"
+// const KeySpecRSA4096 = "RSA-4096"
 
 // Key represents a symmetric or asymmetric signing key
 type Key struct {
@@ -181,9 +198,9 @@ func (k *Key) createDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 
 	ecdhSecret := &Key{
 		VaultID:     k.VaultID,
-		Type:        common.StringOrNil(keyTypeSymmetric),
-		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
-		Spec:        common.StringOrNil(keySpecChaCha20),
+		Type:        common.StringOrNil(KeyTypeSymmetric),
+		Usage:       common.StringOrNil(KeyUsageEncryptDecrypt),
+		Spec:        common.StringOrNil(KeySpecChaCha20),
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
 		Seed:        common.StringOrNil(string(sharedSecret)),
@@ -415,7 +432,7 @@ func (k *Key) encryptFields() error {
 // Enrich the key; typically a no-op; useful for public keys which
 // have a compressed representation (i.e., crypto address)
 func (k *Key) Enrich() {
-	if k.Spec != nil && *k.Spec == keySpecECCSecp256k1 {
+	if k.Spec != nil && *k.Spec == KeySpecECCSecp256k1 {
 		if k.PublicKey != nil {
 			pubkey, err := hex.DecodeString(*k.PublicKey)
 			if err == nil {
@@ -450,8 +467,8 @@ func (k *Key) createPersisted(db *gorm.DB) bool {
 
 // Generate the key/keypair based on Spec type
 func (k *Key) create() error {
-	if !k.validate() {
-		return nil
+	if !k.Validate() {
+		return fmt.Errorf("failed to validate key; %s", *k.Errors[0].Message)
 	}
 
 	hasKeyMaterial := k.Seed != nil || k.PrivateKey != nil
@@ -465,32 +482,32 @@ func (k *Key) create() error {
 
 	if !hasKeyMaterial { // FIXME? this sucks :D
 		switch *k.Spec {
-		case keySpecAES256GCM:
+		case KeySpecAES256GCM:
 			err := k.createAES256GCM()
 			if err != nil {
 				return fmt.Errorf("failed to create AES-256-GCM key; %s", err.Error())
 			}
-		case keySpecChaCha20:
+		case KeySpecChaCha20:
 			err := k.createChaCha20()
 			if err != nil {
 				return fmt.Errorf("failed to create ChaCha20 key; %s", err.Error())
 			}
-		case keySpecECCBabyJubJub:
+		case KeySpecECCBabyJubJub:
 			err := k.createBabyJubJubKeypair()
 			if err != nil {
 				return fmt.Errorf("failed to create babyjubjub keypair; %s", err.Error())
 			}
-		case keySpecECCC25519:
+		case KeySpecECCC25519:
 			err := k.createC25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
 			}
-		case keySpecECCEd25519:
+		case KeySpecECCEd25519:
 			err := k.createEd25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
 			}
-		case keySpecECCSecp256k1:
+		case KeySpecECCSecp256k1:
 			err := k.createSecp256k1Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
@@ -511,7 +528,7 @@ func (k *Key) create() error {
 		}
 	}
 
-	if !isEphemeral && k.encrypted == nil || !*k.encrypted {
+	if k.encrypted == nil || !*k.encrypted && !isEphemeral {
 		err := k.encryptFields()
 		if err != nil {
 			return fmt.Errorf("failed to encrypt key material; %s", err.Error())
@@ -553,15 +570,15 @@ func (k *Key) save(db *gorm.DB) bool {
 
 // Decrypt a ciphertext using the key according to its spec
 func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
-	if k.Usage == nil || *k.Usage != keyUsageEncryptDecrypt {
+	if k.Usage == nil || *k.Usage != KeyUsageEncryptDecrypt {
 		return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key: %s; nil or invalid key usage", len(ciphertext), k.ID)
 	}
 
-	if k.Type != nil && *k.Type == keyTypeSymmetric {
+	if k.Type != nil && *k.Type == KeyTypeSymmetric {
 		return k.decryptSymmetric(ciphertext[12:], ciphertext[0:12])
 	}
 
-	if k.Type != nil && *k.Type == keyTypeAsymmetric {
+	if k.Type != nil && *k.Type == KeyTypeAsymmetric {
 		return k.decryptAsymmetric(ciphertext)
 	}
 
@@ -600,7 +617,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	var plaintext []byte
 
 	switch *k.Spec {
-	case keySpecAES256GCM:
+	case KeySpecAES256GCM:
 		block, err := aes.NewCipher(key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
@@ -615,7 +632,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
 		}
-	case keySpecChaCha20:
+	case KeySpecChaCha20:
 		// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
 		nonce = make([]byte, 16)
 		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
@@ -638,15 +655,15 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 // using the given nonce and key generation context identifier; note that the nonce
 // must not be reused or the secret will be exposed...
 func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (*Key, error) {
-	if k.Type == nil || *k.Type != keyTypeSymmetric {
+	if k.Type == nil || *k.Type != KeyTypeSymmetric {
 		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key type", k.ID)
 	}
 
-	if k.Usage == nil || *k.Usage != keyUsageEncryptDecrypt {
+	if k.Usage == nil || *k.Usage != KeyUsageEncryptDecrypt {
 		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key usage", k.ID)
 	}
 
-	if k.Spec == nil || (*k.Spec != keySpecChaCha20) {
+	if k.Spec == nil || (*k.Spec != KeySpecChaCha20) {
 		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key spec", k.ID)
 	}
 
@@ -658,7 +675,7 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 	defer k.encryptFields()
 
 	switch *k.Spec {
-	case keySpecChaCha20:
+	case KeySpecChaCha20:
 		key := []byte(*k.Seed)
 		derivedKey, err := chacha20.HChaCha20(key, nonce)
 		if err != nil {
@@ -667,9 +684,9 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 
 		chacha20Key := &Key{
 			VaultID:     k.VaultID,
-			Type:        common.StringOrNil(keyTypeSymmetric),
-			Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
-			Spec:        common.StringOrNil(keySpecChaCha20),
+			Type:        common.StringOrNil(KeyTypeSymmetric),
+			Usage:       common.StringOrNil(KeyUsageEncryptDecrypt),
+			Spec:        common.StringOrNil(KeySpecChaCha20),
 			Name:        common.StringOrNil(name),
 			Description: common.StringOrNil(description),
 			Seed:        common.StringOrNil(string(derivedKey)),
@@ -693,15 +710,15 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 
 // Encrypt the given plaintext with the key, according to its spec
 func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
-	if k.Usage == nil || *k.Usage != keyUsageEncryptDecrypt {
+	if k.Usage == nil || *k.Usage != KeyUsageEncryptDecrypt {
 		return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key: %s; nil or invalid key usage", len(plaintext), k.ID)
 	}
 
-	if k.Type != nil && *k.Type == keyTypeSymmetric {
+	if k.Type != nil && *k.Type == KeyTypeSymmetric {
 		return k.encryptSymmetric(plaintext)
 	}
 
-	if k.Type != nil && *k.Type == keyTypeAsymmetric {
+	if k.Type != nil && *k.Type == KeyTypeAsymmetric {
 		return k.encryptAsymmetric(plaintext)
 	}
 
@@ -711,7 +728,7 @@ func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
 // encryptAsymmetric attempts asymmetric encryption using the public/private keypair;
 // returns the ciphertext any error
 func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
-	if k.Type == nil || *k.Type != keyTypeAsymmetric {
+	if k.Type == nil || *k.Type != KeyTypeAsymmetric {
 		return nil, fmt.Errorf("failed to asymmetrically encrypt using key: %s; nil or invalid key type", k.ID)
 	}
 
@@ -731,7 +748,7 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 		}
 	}()
 
-	if k.Type == nil || *k.Type != keyTypeSymmetric {
+	if k.Type == nil || *k.Type != KeyTypeSymmetric {
 		return nil, fmt.Errorf("failed to symmetrically encrypt using key: %s; nil or invalid key type", k.ID)
 	}
 
@@ -748,7 +765,7 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 	var ciphertext []byte
 
 	switch *k.Spec {
-	case keySpecAES256GCM:
+	case KeySpecAES256GCM:
 		block, err := aes.NewCipher(key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
@@ -766,7 +783,7 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 		}
 
 		ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
-	case keySpecChaCha20:
+	case KeySpecChaCha20:
 		// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
 		nonce = make([]byte, 16)
 		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
@@ -787,15 +804,15 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 
 // Sign the input with the private key
 func (k *Key) Sign(payload []byte) ([]byte, error) {
-	if k.Type == nil || *k.Type != keyTypeAsymmetric {
+	if k.Type == nil || *k.Type != KeyTypeAsymmetric {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
 	}
 
-	if k.Usage == nil || *k.Usage != keyUsageSignVerify {
+	if k.Usage == nil || *k.Usage != KeyUsageSignVerify {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519 && *k.Spec != keySpecECCSecp256k1) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -806,12 +823,12 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 	var sigerr error
 
 	switch *k.Spec {
-	case keySpecECCBabyJubJub:
+	case KeySpecECCBabyJubJub:
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		sig, sigerr = provide.TECSign([]byte(*k.PrivateKey), payload)
-	case keySpecECCEd25519:
+	case KeySpecECCEd25519:
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
 		}
@@ -820,7 +837,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
 		sig, sigerr = ec25519Key.Sign(payload)
-	case keySpecECCSecp256k1:
+	case KeySpecECCSecp256k1:
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil secp256k1 private key", len(payload), k.ID)
 		}
@@ -851,15 +868,15 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 
 // Verify the given payload against a signature using the public key
 func (k *Key) Verify(payload, sig []byte) error {
-	if k.Type == nil || *k.Type != keyTypeAsymmetric {
+	if k.Type == nil || *k.Type != KeyTypeAsymmetric {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
 	}
 
-	if k.Usage == nil || *k.Usage != keyUsageSignVerify {
+	if k.Usage == nil || *k.Usage != KeyUsageSignVerify {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCEd25519 && *k.Spec != keySpecECCSecp256k1) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1) {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -871,12 +888,12 @@ func (k *Key) Verify(payload, sig []byte) error {
 	defer k.encryptFields()
 
 	switch *k.Spec {
-	case keySpecECCBabyJubJub:
+	case KeySpecECCBabyJubJub:
 		if k.PublicKey == nil {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
 		}
 		return provide.TECVerify([]byte(*k.PublicKey), payload, sig)
-	case keySpecECCEd25519:
+	case KeySpecECCEd25519:
 		if k.PublicKey == nil {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
 		}
@@ -885,7 +902,7 @@ func (k *Key) Verify(payload, sig []byte) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
 		return ec25519Key.Verify(payload, sig)
-	case keySpecECCSecp256k1:
+	case KeySpecECCSecp256k1:
 		if k.PublicKey == nil {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
 		}
@@ -912,7 +929,8 @@ func (k *Key) Verify(payload, sig []byte) error {
 	return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 }
 
-func (k *Key) validate() bool {
+// Validate the key
+func (k *Key) Validate() bool {
 	k.Errors = make([]*provide.Error, 0)
 
 	if k.VaultID == nil {
@@ -943,21 +961,21 @@ func (k *Key) validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil("key type required"),
 		})
-	} else if *k.Type != keyTypeAsymmetric && *k.Type != keyTypeSymmetric {
+	} else if *k.Type != KeyTypeAsymmetric && *k.Type != KeyTypeSymmetric {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("key type must be one of %s or %s", keyTypeAsymmetric, keyTypeSymmetric)),
+			Message: common.StringOrNil(fmt.Sprintf("key type must be one of %s or %s", KeyTypeAsymmetric, KeyTypeSymmetric)),
 		})
-	} else if *k.Type == keyTypeSymmetric && *k.Usage != keyUsageEncryptDecrypt {
+	} else if *k.Type == KeyTypeSymmetric && *k.Usage != KeyUsageEncryptDecrypt {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("symmetric key requires %s usage mode", keyUsageEncryptDecrypt)),
+			Message: common.StringOrNil(fmt.Sprintf("symmetric key requires %s usage mode", KeyUsageEncryptDecrypt)),
 		})
-	} else if *k.Type == keyTypeSymmetric && *k.Usage == keyUsageEncryptDecrypt && (k.Spec == nil || (*k.Spec != keySpecAES256GCM && *k.Spec != keySpecChaCha20)) {
+	} else if *k.Type == KeyTypeSymmetric && *k.Usage == KeyUsageEncryptDecrypt && (k.Spec == nil || (*k.Spec != KeySpecAES256GCM && *k.Spec != KeySpecChaCha20)) {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("symmetric key in %s usage mode must be %s or %s", keyUsageEncryptDecrypt, keySpecAES256GCM, keySpecChaCha20)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
+			Message: common.StringOrNil(fmt.Sprintf("symmetric key in %s usage mode must be %s or %s", KeyUsageEncryptDecrypt, KeySpecAES256GCM, KeySpecChaCha20)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
 		})
-	} else if *k.Type == keyTypeAsymmetric && *k.Usage == keyUsageSignVerify && (k.Spec == nil || (*k.Spec != keySpecECCBabyJubJub && *k.Spec != keySpecECCC25519 && *k.Spec != keySpecECCEd25519 && *k.Spec != keySpecECCSecp256k1)) {
+	} else if *k.Type == KeyTypeAsymmetric && *k.Usage == KeyUsageSignVerify && (k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCC25519 && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1)) {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s, %s or %s", keyUsageSignVerify, keySpecECCBabyJubJub, keySpecECCC25519, keySpecECCEd25519, keySpecECCSecp256k1)), // TODO: support keySpecRSA2048, keySpecRSA3072, keySpecRSA4096
+			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s, %s or %s", KeyUsageSignVerify, KeySpecECCBabyJubJub, KeySpecECCC25519, KeySpecECCEd25519, KeySpecECCSecp256k1)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
 		})
 	}
 

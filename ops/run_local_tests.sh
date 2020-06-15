@@ -233,7 +233,7 @@ xH2b0OBcVjYsgRnQ9OZpQ+kIPaFhaWChnfEArCmhrOEgOnhfkr6YGDHFenfT3/RA
 PUl1cxrvY7BHh4obNa6Bf8ECAwEAAQ==
 -----END PUBLIC KEY-----'
 
-pkgs=(vault)
+pkgs=(test)
 for d in "${pkgs[@]}" ; do
   pkg=$(echo $d | sed 's/\/*$//g')
   
@@ -249,11 +249,11 @@ for d in "${pkgs[@]}" ; do
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     LOG_LEVEL=DEBUG \
-    go test "./${pkg}" -v \
+    go test ./... -v \
                        -race \
                        -timeout 1800s \
                        -cover \
-                       -coverpkg="./${pkg}" \
+                       -coverpkg=./vault \
                        -coverprofile=profile.out \
                        -tags="$TAGS"
     go tool cover -html=profile.out -o cover.html
@@ -269,10 +269,10 @@ for d in "${pkgs[@]}" ; do
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     LOG_LEVEL=DEBUG \
-    go test "./${pkg}" -v \
+    go test ./... -v \
                        -timeout 1800s \
                        -cover \
-                       -coverpkg="./${pkg}" \
+                       -coverpkg=./vault \
                        -coverprofile=profile.out \
                        -tags="$TAGS"
     go tool cover -html=profile.out -o cover.html

@@ -53,7 +53,8 @@ func (v *Vault) resolveMasterKey(db *gorm.DB) (*Key, error) {
 	return v.MasterKey, nil
 }
 
-func (v *Vault) validate() bool {
+// Validate the vault
+func (v *Vault) Validate() bool {
 	v.Errors = make([]*provide.Error, 0)
 
 	if v.ApplicationID == nil && v.OrganizationID == nil && v.UserID == nil {
@@ -74,9 +75,9 @@ func (v *Vault) validate() bool {
 func (v *Vault) createMasterKey(tx *gorm.DB) error {
 	masterKey := &Key{
 		VaultID:     &v.ID,
-		Type:        common.StringOrNil(keyTypeSymmetric),
-		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
-		Spec:        common.StringOrNil(keySpecAES256GCM),
+		Type:        common.StringOrNil(KeyTypeSymmetric),
+		Usage:       common.StringOrNil(KeyUsageEncryptDecrypt),
+		Spec:        common.StringOrNil(KeySpecAES256GCM),
 		Name:        common.StringOrNil(defaultVaultMasterKeyName),
 		Description: common.StringOrNil(fmt.Sprintf("AES-256-GCM master key for vault %s", v.ID)),
 	}
@@ -103,7 +104,7 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 		db = dbconf.DatabaseConnection()
 	}
 
-	if !v.validate() {
+	if !v.Validate() {
 		return false
 	}
 

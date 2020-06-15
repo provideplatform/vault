@@ -41,5 +41,6 @@ vendor/
 *.key
 *.crt
 
+cover.html
 coverage.txt
 profile.out

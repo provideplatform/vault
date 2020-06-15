@@ -1,4 +1,4 @@
-package vault
+package test
 
 import (
 	"fmt"
@@ -6,37 +6,33 @@ import (
 	"time"
 
 	dbconf "github.com/kthomas/go-db-config"
-	vaulttestpgputil "github.com/kthomas/go-pgputil"
+	vaultpgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
+	"github.com/provideapp/vault/vault"
 )
 
 func init() {
-	vaulttestpgputil.RequirePGP()
+	vaultpgputil.RequirePGP()
 }
 
 var vaultDB = dbconf.DatabaseConnection()
 
-func vaultFactory() *Vault {
-	associationUUID, _ := uuid.NewV4()
+func vaultFactory() *vault.Vault {
+	associationID, _ := uuid.NewV4()
 
-	vault := &Vault{
-		ApplicationID:  nil,
-		OrganizationID: &associationUUID,
-		UserID:         nil,
-		Name:           common.StringOrNil(fmt.Sprintf("vault@%d", time.Now().Unix())),
-		Description:    common.StringOrNil("a test vault for key unit tests"),
-	}
-
-	if vault.Create(vaultDB) {
-		return vault
-	}
-
-	return nil
+	return vault.New(
+		vaultDB,
+		fmt.Sprintf("vault@%d", time.Now().Unix()),
+		"a vault under test...",
+		nil,
+		&associationID,
+		nil,
+	)
 }
 
 func TestCreateVaultFailsWithoutValidAssociation(t *testing.T) {
-	vault := &Vault{
+	vlt := &vault.Vault{
 		ApplicationID:  nil,
 		OrganizationID: nil,
 		UserID:         nil,
@@ -44,14 +40,14 @@ func TestCreateVaultFailsWithoutValidAssociation(t *testing.T) {
 		Description:    common.StringOrNil("a test vault with invalid app, org or user association"),
 	}
 
-	success := vault.Create(vaultDB)
-	if success || vault.ID != uuid.Nil {
+	success := vlt.Create(vaultDB)
+	if success || vlt.ID != uuid.Nil {
 		t.Error("failed! invalid vault was created anyway!")
 	}
 }
 
 func TestValidateVaultFailsWithoutMasterKey(t *testing.T) {
-	vault := &Vault{
+	vlt := &vault.Vault{
 		ApplicationID:  nil,
 		OrganizationID: nil,
 		UserID:         nil,
@@ -60,19 +56,19 @@ func TestValidateVaultFailsWithoutMasterKey(t *testing.T) {
 	}
 
 	randomID, _ := uuid.NewV4()
-	vault.UserID = &randomID
+	vlt.UserID = &randomID
 
-	vault.MasterKeyID = nil
-	vault.ID = randomID
+	vlt.MasterKeyID = nil
+	vlt.ID = randomID
 
-	success := vault.validate()
+	success := vlt.Validate()
 	if success {
 		t.Error("failed! invalid vault was validated anyway!")
 	}
 }
 
 func TestDeleteVault(t *testing.T) {
-	vault := &Vault{
+	vlt := &vault.Vault{
 		ApplicationID:  nil,
 		OrganizationID: nil,
 		UserID:         nil,
@@ -81,29 +77,28 @@ func TestDeleteVault(t *testing.T) {
 	}
 
 	randomID, _ := uuid.NewV4()
-	vault.UserID = &randomID
+	vlt.UserID = &randomID
 
-	success := vault.Create(vaultDB)
+	success := vlt.Create(vaultDB)
 	if !success {
-		t.Errorf("failed to create vault %s", *vault.Errors[0].Message)
+		t.Errorf("failed to create vault %s", *vlt.Errors[0].Message)
 		return
 	}
 
-	key, err := vault.resolveMasterKey(vaultDB)
-	if key == nil {
-		t.Errorf("failed to resolve master key for vault %s, error %s", vault.ID, err.Error())
+	if vlt.MasterKeyID == nil {
+		t.Errorf("failed to resolve master key for vault %s", vlt.ID)
 		return
 	}
 
-	success = vault.Delete((vaultDB))
+	success = vlt.Delete((vaultDB))
 	if !success {
-		t.Errorf("failed to delete vault %s", *vault.Errors[0].Message)
+		t.Errorf("failed to delete vault %s", *vlt.Errors[0].Message)
 		return
 	}
 }
 
 func TestDeleteVaultWithNoID(t *testing.T) {
-	vault := &Vault{
+	vlt := &vault.Vault{
 		ApplicationID:  nil,
 		OrganizationID: nil,
 		UserID:         nil,
@@ -112,22 +107,21 @@ func TestDeleteVaultWithNoID(t *testing.T) {
 	}
 
 	randomID, _ := uuid.NewV4()
-	vault.UserID = &randomID
+	vlt.UserID = &randomID
 
-	success := vault.Create(vaultDB)
+	success := vlt.Create(vaultDB)
 	if !success {
-		t.Errorf("failed to create vault %s", *vault.Errors[0].Message)
+		t.Errorf("failed to create vault %s", *vlt.Errors[0].Message)
 		return
 	}
 
-	key, err := vault.resolveMasterKey(vaultDB)
-	if key == nil {
-		t.Errorf("failed to resolve master key for vault %s, error %s", vault.ID, err.Error())
+	if vlt.MasterKeyID == nil {
+		t.Errorf("failed to resolve master key for vault %s", vlt.ID)
 		return
 	}
 
-	vault.ID = uuid.Nil
-	success = vault.Delete((vaultDB))
+	vlt.ID = uuid.Nil
+	success = vlt.Delete((vaultDB))
 	if success {
 		t.Errorf("deleted vault with no ID!")
 		return
@@ -135,7 +129,7 @@ func TestDeleteVaultWithNoID(t *testing.T) {
 }
 
 func TestDeleteVaultWithKeys(t *testing.T) {
-	vault := &Vault{
+	vlt := &vault.Vault{
 		ApplicationID:  nil,
 		OrganizationID: nil,
 		UserID:         nil,
@@ -144,37 +138,37 @@ func TestDeleteVaultWithKeys(t *testing.T) {
 	}
 
 	randomID, _ := uuid.NewV4()
-	vault.UserID = &randomID
+	vlt.UserID = &randomID
 
-	success := vault.Create(vaultDB)
+	success := vlt.Create(vaultDB)
 	if !success {
-		t.Errorf("failed to create vault %s", *vault.Errors[0].Message)
+		t.Errorf("failed to create vault %s", *vlt.Errors[0].Message)
 		return
 	}
 
-	key := ed25519Factory(&vault.ID)
+	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
 	if key == nil {
-		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
 		return
 	}
 
 	t.Logf("created ed25519 key with ID %s", key.ID)
 
-	success = vault.Delete((vaultDB))
+	success = vlt.Delete((vaultDB))
 	if !success {
-		t.Errorf("failed to delete vault %s", *vault.Errors[0].Message)
+		t.Errorf("failed to delete vault %s", *vlt.Errors[0].Message)
 		return
 	}
 
-	t.Logf("deleted vault with ID %s", vault.ID)
+	t.Logf("deleted vault with ID %s", vlt.ID)
 
-	newKey := ed25519Factory(&vault.ID)
+	newKey := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
 	if newKey != nil {
-		t.Errorf("created Ed25519 keypair for deleted vault: %s! %s", vault.ID, *newKey.Errors[0].Message)
+		t.Errorf("created Ed25519 keypair for deleted vault: %s %s", vlt.ID, *newKey.Errors[0].Message)
 		return
 	}
 	if newKey == nil {
-		t.Logf("couldn't create key for deleted vault %s", vault.ID)
+		t.Logf("couldn't create key for deleted vault %s", vlt.ID)
 	}
 
 	//is the key still present?
@@ -182,7 +176,7 @@ func TestDeleteVaultWithKeys(t *testing.T) {
 
 func TestGetVaults(t *testing.T) {
 	for _, assn := range []string{"application", "organization", "user"} {
-		vault := &Vault{
+		vlt := &vault.Vault{
 			ApplicationID:  nil,
 			OrganizationID: nil,
 			UserID:         nil,
@@ -194,37 +188,37 @@ func TestGetVaults(t *testing.T) {
 
 		switch assn {
 		case "application":
-			vault.ApplicationID = &associationUUID
+			vlt.ApplicationID = &associationUUID
 		case "organization":
-			vault.OrganizationID = &associationUUID
+			vlt.OrganizationID = &associationUUID
 		case "user":
-			vault.UserID = &associationUUID
+			vlt.UserID = &associationUUID
 		}
-		vault.Create(vaultDB)
-		t.Logf("created vault %s for %s ID %s", vault.ID, assn, associationUUID)
+		vlt.Create(vaultDB)
+		t.Logf("created vault %s for %s ID %s", vlt.ID, assn, associationUUID)
 
 		switch assn {
 		case "application":
-			appVaults := GetApplicationVaults(vault.ApplicationID)
+			appVaults := vault.GetApplicationVaults(vlt.ApplicationID)
 			if len(appVaults) != 1 {
-				t.Errorf("couldn't retrieve vault for application ID %s", vault.ApplicationID)
+				t.Errorf("couldn't retrieve vault for application ID %s", vlt.ApplicationID)
 				return
 			}
-			t.Logf("found %d vaults for application ID %s", len(appVaults), vault.ApplicationID)
+			t.Logf("found %d vaults for application ID %s", len(appVaults), vlt.ApplicationID)
 		case "organization":
-			orgVaults := GetOrganizationVaults(vault.OrganizationID)
+			orgVaults := vault.GetOrganizationVaults(vlt.OrganizationID)
 			if len(orgVaults) != 1 {
-				t.Errorf("couldn't retrieve vault for organisation ID %s", vault.OrganizationID)
+				t.Errorf("couldn't retrieve vault for organisation ID %s", vlt.OrganizationID)
 				return
 			}
-			t.Logf("found %d vaults for organization ID %s", len(orgVaults), vault.OrganizationID)
+			t.Logf("found %d vaults for organization ID %s", len(orgVaults), vlt.OrganizationID)
 		case "user":
-			userVaults := GetUserVaults(vault.UserID)
+			userVaults := vault.GetUserVaults(vlt.UserID)
 			if len(userVaults) != 1 {
-				t.Errorf("couldn't retrieve vault for User ID %s", vault.UserID)
+				t.Errorf("couldn't retrieve vault for User ID %s", vlt.UserID)
 				return
 			}
-			t.Logf("found %d vaults for user ID %s", len(userVaults), vault.UserID)
+			t.Logf("found %d vaults for user ID %s", len(userVaults), vlt.UserID)
 		}
 
 	}
@@ -232,7 +226,7 @@ func TestGetVaults(t *testing.T) {
 
 func TestCreateVault(t *testing.T) {
 	for _, assn := range []string{"application", "organization", "user"} {
-		vault := &Vault{
+		vlt := &vault.Vault{
 			ApplicationID:  nil,
 			OrganizationID: nil,
 			UserID:         nil,
@@ -244,23 +238,23 @@ func TestCreateVault(t *testing.T) {
 
 		switch assn {
 		case "application":
-			vault.ApplicationID = &associationUUID
+			vlt.ApplicationID = &associationUUID
 		case "organization":
-			vault.OrganizationID = &associationUUID
+			vlt.OrganizationID = &associationUUID
 		case "user":
-			vault.UserID = &associationUUID
+			vlt.UserID = &associationUUID
 		}
 
-		success := vault.Create(vaultDB)
+		success := vlt.Create(vaultDB)
 		if !success {
-			t.Errorf("failed to create vault with %s association! %s", assn, *vault.Errors[0].Message)
+			t.Errorf("failed to create vault with %s association! %s", assn, *vlt.Errors[0].Message)
 			continue
 		}
 
-		common.Log.Debugf("created vault with %s association: %s", assn, vault.ID)
+		common.Log.Debugf("created vault with %s association: %s", assn, vlt.ID)
 
 		// it should have a master key...
-		masterKey := vault.MasterKey
+		masterKey := vlt.MasterKey
 		if masterKey == nil {
 			t.Errorf("failed! master key was not set for the new %s-associated vault!", assn)
 			continue
@@ -271,7 +265,7 @@ func TestCreateVault(t *testing.T) {
 			continue
 		}
 		// the master key should be AES-256-GCM
-		if masterKey.Spec == nil || *masterKey.Spec != keySpecAES256GCM {
+		if masterKey.Spec == nil || *masterKey.Spec != vault.KeySpecAES256GCM {
 			t.Errorf("failed! master key spec was not set to AES-256-GCM for the new %s-associated vault!", assn)
 			continue
 		}

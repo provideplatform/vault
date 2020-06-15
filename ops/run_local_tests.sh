@@ -256,6 +256,7 @@ for d in "${pkgs[@]}" ; do
                        -coverpkg="./${pkg}" \
                        -coverprofile=profile.out \
                        -tags="$TAGS"
+    go tool cover -html=profile.out -o cover.html
   else
     PGP_PUBLIC_KEY=$PGP_PUBLIC_KEY \
     PGP_PRIVATE_KEY=$PGP_PRIVATE_KEY \
@@ -274,5 +275,6 @@ for d in "${pkgs[@]}" ; do
                        -coverpkg="./${pkg}" \
                        -coverprofile=profile.out \
                        -tags="$TAGS"
+    go tool cover -html=profile.out -o cover.html
   fi
 done

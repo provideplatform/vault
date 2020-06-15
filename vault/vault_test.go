@@ -102,6 +102,38 @@ func TestDeleteVault(t *testing.T) {
 	}
 }
 
+func TestDeleteVaultWithNoID(t *testing.T) {
+	vault := &Vault{
+		ApplicationID:  nil,
+		OrganizationID: nil,
+		UserID:         nil,
+		Name:           common.StringOrNil("test vault"),
+		Description:    common.StringOrNil("a test vault :D"),
+	}
+
+	randomID, _ := uuid.NewV4()
+	vault.UserID = &randomID
+
+	success := vault.Create(vaultDB)
+	if !success {
+		t.Errorf("failed to create vault %s", *vault.Errors[0].Message)
+		return
+	}
+
+	key, err := vault.resolveMasterKey(vaultDB)
+	if key == nil {
+		t.Errorf("failed to resolve master key for vault %s, error %s", vault.ID, err.Error())
+		return
+	}
+
+	vault.ID = uuid.Nil
+	success = vault.Delete((vaultDB))
+	if success {
+		t.Errorf("deleted vault with no ID!")
+		return
+	}
+}
+
 func TestDeleteVaultWithKeys(t *testing.T) {
 	vault := &Vault{
 		ApplicationID:  nil,

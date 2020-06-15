@@ -16,6 +16,24 @@ func init() {
 
 var keyDB = dbconf.DatabaseConnection()
 
+func ephemeralAES256GCMType(vaultID *uuid.UUID) *Key {
+	ephemeral := true
+	encrypted := false
+
+	key := &Key{
+		VaultID:     vaultID,
+		Name:        common.StringOrNil("AES-256-GCM key test"),
+		Description: common.StringOrNil("some AES-256-GCM test key"),
+		Spec:        common.StringOrNil(keySpecAES256GCM),
+		Type:        common.StringOrNil(keyTypeSymmetric),
+		Usage:       common.StringOrNil(keyUsageEncryptDecrypt),
+		Ephemeral:   &ephemeral,
+		encrypted:   &encrypted,
+	}
+
+	return key
+}
+
 func aes256GCMFactory(vaultID *uuid.UUID) *Key {
 	key := &Key{
 		VaultID:     vaultID,
@@ -752,4 +770,266 @@ func TestSecp256k1Verify(t *testing.T) {
 	}
 
 	common.Log.Debugf("verified message using secp256k1 keypair for vault: %s; sig: %s", vault.ID, hex.EncodeToString(sig))
+}
+
+func TestCreateEphemeralKeyAES256GCM_privatekey(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+
+	key := ephemeralAES256GCMType(&vault.ID)
+	err := key.create()
+
+	//common.Log.Debugf("error returned %s", err.Error())
+	if err != nil {
+		t.Errorf("failed to create ephemeral AES-256-GCM key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// it should have a private key
+	privateKey := key.PrivateKey
+	if privateKey == nil {
+		t.Error("failed! private key was not set for the AES-256-GCM key!")
+		return
+	}
+	ephemeral := key.EphemeralPrivateKey
+	if ephemeral == nil {
+		t.Error("failed! key returned without ephemeral private key")
+		return
+	}
+
+	common.Log.Debugf("created ephemeral AES-256-GCM key for vault: %s", vault.ID)
+}
+
+func TestCreateEphemeralKeyAES256GCM_seed(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+
+	key := ephemeralAES256GCMType(&vault.ID)
+	key.PrivateKey = nil
+	seed := "hubbachubba"
+	key.Seed = &seed
+
+	err := key.create()
+
+	//common.Log.Debugf("error returned %s", err.Error())
+	if err != nil {
+		t.Errorf("failed to create ephemeral AES-256-GCM key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	ephemeral := key.EphemeralSeed
+	if ephemeral == nil {
+		t.Error("failed! key returned without ephemeral seed")
+		return
+	}
+
+	common.Log.Debugf("created ephemeral AES-256-GCM key for vault: %s", vault.ID)
+}
+
+func TestRegenerateExistingKeyAES256GCM(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+	key := ephemeralAES256GCMType(&vault.ID)
+	key.PrivateKey = nil
+	seed := "hubbachubba"
+	key.Seed = &seed
+
+	err := key.create()
+
+	//common.Log.Debugf("error returned %s", err.Error())
+	if err != nil {
+		t.Errorf("failed to create ephemeral AES-256-GCM key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	ephemeral := key.EphemeralSeed
+	if ephemeral == nil {
+		t.Error("failed! key returned without ephemeral seed")
+		return
+	}
+
+	common.Log.Debugf("created ephemeral AES-256-GCM key for vault: %s", vault.ID)
+}
+
+func TestCreateInvalidKey(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+
+	key := ephemeralAES256GCMType(&vault.ID)
+	key.VaultID = nil
+
+	err := key.create()
+
+	//common.Log.Debugf("error returned %s", err.Error())
+	if err != nil {
+		t.Errorf("failed to invalidate invalid AES-256-GCM key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	common.Log.Debugf("invalidated invalid AES-256-GCM key for vault: %s", vault.ID)
+}
+
+func TestDeriveSymmetricKeyNilType(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+
+	key := chacha20Factory(&vault.ID)
+	key.Type = nil
+
+	nonce := []byte("number only used once")
+	context := []byte("stuff and stuff")
+	name := "derived key"
+	description := "derived key description"
+
+	key, err := key.DeriveSymmetric(nonce, context, name, description)
+
+	if err != nil {
+		common.Log.Debug("correctly failed to derive symmetric key")
+	}
+	if err == nil {
+		t.Errorf("incorrectly derived symmetric key without type")
+	}
+}
+
+func TestDeriveSymmetricKeyIncorrectSpec(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+
+	key := chacha20Factory(&vault.ID)
+	*key.Spec = keySpecAES256GCM
+
+	nonce := []byte("number only used once")
+	context := []byte("stuff and stuff")
+	name := "derived key"
+	description := "derived key description"
+
+	key, err := key.DeriveSymmetric(nonce, context, name, description)
+
+	if err != nil {
+		common.Log.Debug("correctly failed to derive symmetric key")
+	}
+	if err == nil {
+		t.Errorf("incorrectly derived symmetric key with incorrect spec")
+	}
+}
+
+func TestDeriveSymmetricKeyIncorrectType(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+
+	key := chacha20Factory(&vault.ID)
+
+	*key.Type = keyTypeAsymmetric
+
+	nonce := []byte("number only used once")
+	context := []byte("stuff and stuff")
+	name := "derived key"
+	description := "derived key description"
+
+	key, err := key.DeriveSymmetric(nonce, context, name, description)
+
+	if err != nil {
+		common.Log.Debug("correctly failed to derive symmetric key")
+	}
+	if err == nil {
+		t.Errorf("incorrectly derived symmetric key with incorrect type")
+	}
+}
+
+func TestDeriveSymmetricKeyIncorrectUsage(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+
+	key := chacha20Factory(&vault.ID)
+
+	*key.Usage = keyUsageSignVerify
+
+	nonce := []byte("number only used once")
+	context := []byte("stuff and stuff")
+	name := "derived key"
+	description := "derived key description"
+
+	key, err := key.DeriveSymmetric(nonce, context, name, description)
+
+	if err != nil {
+		common.Log.Debug("correctly failed to derive symmetric key")
+	}
+	if err == nil {
+		t.Errorf("incorrectly derived symmetric key with incorrect usage")
+	}
+}
+
+func TestDeriveSymmetricKeyNilPrivateKey(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+
+	key := chacha20Factory(&vault.ID)
+
+	nonce := []byte("number only used once")
+	context := []byte("stuff and stuff")
+	name := "derived key"
+	description := "derived key description"
+
+	key, err := key.DeriveSymmetric(nonce, context, name, description)
+
+	if err != nil {
+		common.Log.Debug("correctly failed to derive symmetric key")
+	}
+	if err == nil {
+		t.Errorf("incorrectly derived symmetric key without private key")
+	}
+}
+
+func TestDeriveSymmetricKey(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key create unit test!")
+		return
+	}
+
+	key := chacha20Factory(&vault.ID)
+
+	common.Log.Debugf("seed: %s", *key.Seed)
+	//common.Log.Debugf("private key: %s", *key.PrivateKey)
+
+	nonce := []byte("number only used once")
+	context := []byte("stuff and stuff")
+	name := "derived key"
+	description := "derived key description"
+
+	key, err := key.DeriveSymmetric(nonce, context, name, description)
+
+	if err != nil {
+		common.Log.Debug("correctly failed to derive symmetric key")
+	}
+	if err == nil {
+		t.Errorf("incorrectly derived symmetric key without private key")
+	}
 }

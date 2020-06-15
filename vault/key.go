@@ -6,11 +6,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/asn1"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -828,7 +828,16 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
-		return secp256k1Key.Sign(rand.Reader, payload, nil)
+		r, s, err := ecdsa.Sign(rand.Reader, secp256k1Key, payload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
+		}
+		sig, err := asn1.Marshal(common.ECDSASignature{R: r, S: s})
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
+		}
+		common.Log.Debugf("signed %d-byte payload using key: %s; r==%s; s==%s; signature: %s", len(payload), k.ID, r, s, hex.EncodeToString(sig))
+		return sig, nil
 	default:
 		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 	}
@@ -880,15 +889,21 @@ func (k *Key) Verify(payload, sig []byte) error {
 		if k.PublicKey == nil {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
 		}
-		x, y := elliptic.Unmarshal(secp256k1.S256(), []byte(*k.PublicKey))
-		if x == nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to unmarshal public key", len(payload), k.ID)
+		signature := common.ECDSASignature{}
+		_, err := asn1.Unmarshal(sig, &signature)
+		if err != nil {
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to unmarshal ASN1-encoded signature; %s", len(payload), k.ID, err.Error())
 		}
-		secp256k1Key := &ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
-		// TODO: unmarshal sig into r and s vals
-		var r *big.Int
-		var s *big.Int
-		if !ecdsa.Verify(secp256k1Key, payload, r, s) {
+		common.Log.Debugf("unmarshaled ASN1 signature r, s (%s, %s) for key %s", signature.R, signature.S, k.ID)
+		pubkey, err := hex.DecodeString(*k.PublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to decode public key hex; %s", len(payload), k.ID, err.Error())
+		}
+		secp256k1Key, err := ethcrypto.UnmarshalPubkey([]byte(pubkey))
+		if err != nil {
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to unmarshal public key; %s", len(payload), k.ID, err.Error())
+		}
+		if !ecdsa.Verify(secp256k1Key, payload, signature.R, signature.S) {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s", len(payload), k.ID)
 		}
 		return nil

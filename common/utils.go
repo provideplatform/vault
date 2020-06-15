@@ -3,6 +3,7 @@ package common
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"math/big"
 	"math/rand"
 	"time"
 )
@@ -10,6 +11,11 @@ import (
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+// ECDSASignature for ECDSA signature marshaling
+type ECDSASignature struct {
+	R, S *big.Int
+}
 
 // PanicIfEmpty panics if the given string is empty
 func PanicIfEmpty(val string, msg string) {

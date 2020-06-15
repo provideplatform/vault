@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/hex"
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
@@ -117,14 +118,29 @@ func secp256k1Factory(vaultID *uuid.UUID) *Key {
 	return key
 }
 
-func TestEncryptAndDecrypt(t *testing.T) {
+func TestAES256GCMEncrypt(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
 		t.Error("failed! no vault created for AES-256-GCM key encrypt decrypt unit test!")
 		return
 	}
 
-	t.Error("encrypt/decrypt key tests not implemented")
+	key := aes256GCMFactory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	encval, err := key.Encrypt(msg)
+
+	// it should not result in an error ;)
+	if err != nil {
+		t.Errorf("failed! symmetric encryption failed using AES-256-GCM key %s; %s", key.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("encrypted %d-byte message (%d bytes encrypted) using AES-256-GCM key for vault: %s", len(msg), len(encval), vault.ID)
 }
 
 func TestCreateKeyAES256GCM(t *testing.T) {
@@ -402,7 +418,7 @@ func TestBabyJubJubSign(t *testing.T) {
 		return
 	}
 
-	common.Log.Debugf("signed message using babyJubJub keypair for vault: %s; sig: %s", vault.ID, string(sig))
+	common.Log.Debugf("signed message using babyJubJub keypair for vault: %s; sig: %s", vault.ID, hex.EncodeToString(sig))
 }
 
 func TestEd25519Sign(t *testing.T) {
@@ -435,7 +451,7 @@ func TestEd25519Sign(t *testing.T) {
 		return
 	}
 
-	common.Log.Debugf("signed message using Ed25519 keypair for vault: %s; sig: %s", vault.ID, string(sig))
+	common.Log.Debugf("signed message using Ed25519 keypair for vault: %s; sig: %s", vault.ID, hex.EncodeToString(sig))
 }
 
 func TestEd25519Verify(t *testing.T) {
@@ -474,7 +490,7 @@ func TestEd25519Verify(t *testing.T) {
 		return
 	}
 
-	common.Log.Debugf("verified message using Ed25519 keypair for vault: %s; sig: %s", vault.ID, string(sig))
+	common.Log.Debugf("verified message using Ed25519 keypair for vault: %s; sig: %s", vault.ID, hex.EncodeToString(sig))
 }
 
 func TestSecp256k1Sign(t *testing.T) {
@@ -502,7 +518,7 @@ func TestSecp256k1Sign(t *testing.T) {
 		return
 	}
 
-	common.Log.Debugf("signed message using secp256k1 keypair for vault: %s; sig: %s", vault.ID, string(sig))
+	common.Log.Debugf("signed message using secp256k1 keypair for vault: %s; sig: %s", vault.ID, hex.EncodeToString(sig))
 }
 
 func TestSecp256k1Verify(t *testing.T) {
@@ -536,5 +552,5 @@ func TestSecp256k1Verify(t *testing.T) {
 		return
 	}
 
-	common.Log.Debugf("verified message using secp256k1 keypair for vault: %s; sig: %s", vault.ID, string(sig))
+	common.Log.Debugf("verified message using secp256k1 keypair for vault: %s; sig: %s", vault.ID, hex.EncodeToString(sig))
 }

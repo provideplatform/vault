@@ -247,7 +247,7 @@ func TestCreateKeyChaCha20(t *testing.T) {
 	common.Log.Debugf("created ChaCha20 key for vault: %s", vault.ID)
 }
 
-func TestInvalidEd25519Key(t *testing.T) {
+func TestValidateNoVault(t *testing.T) {
 	vault := vaultFactory()
 	if vault.ID == uuid.Nil {
 		t.Error("failed! no vault created for Ed25519 key validate unit test!")
@@ -262,67 +262,266 @@ func TestInvalidEd25519Key(t *testing.T) {
 
 	// no vault id
 	key.VaultID = nil
-	validVault := key.validate()
-	if validVault {
+	valid := key.validate()
+	if valid {
 		t.Errorf("validated key with no vault id! errors: %s", *key.Errors[0].Message)
 		return
-	} else {
+	}
+
+	if !valid {
 		common.Log.Debug("correctly flagged key with no vault as invalid")
 		if *key.Errors[0].Message != "vault id required" {
 			t.Errorf("returned incorrect validation message")
 			return
 		}
 	}
+}
 
-	key.VaultID = &vault.ID
-
-	// no name
-	key.Name = nil
-	validName := key.validate()
-	if validName {
-		t.Errorf("validated key with no name! errors: %s", *key.Errors[0].Message)
+func TestValidateNoName(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key validate unit test!")
 		return
-	} else {
+	}
+
+	key := ed25519Factory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// no vault id
+	key.Name = nil
+	valid := key.validate()
+	if valid {
+		t.Errorf("validated key with no vault id! errors: %s", *key.Errors[0].Message)
+		return
+	}
+
+	if !valid {
 		common.Log.Debug("correctly flagged key with no name as invalid")
 		if *key.Errors[0].Message != "key name required" {
 			t.Errorf("returned incorrect validation message")
 			return
 		}
 	}
-
-	key.Name = common.StringOrNil("keyname")
-	common.Log.Debugf("key.name: %s", *key.Name)
-
-	key.Usage = nil
-	// TODO: getting a nil pointer error for the code below - nothing obvious why - fix later!
-
-	// validUsage := key.validate()
-	// if validUsage {
-	// 	t.Errorf("validated key with no Usage! errors: %s", *key.Errors[0].Message)
-	// 	return
-	// } else {
-	// 	common.Log.Debug("correctly flagged key with no usage as invalid")
-	// 	if *key.Errors[0].Message != "key usage required" {
-	// 		t.Errorf("returned incorrect validation message")
-	// 		return
-	// 	}
-	// }
-
-	// *key.Usage = keyUsageSignVerify
-	// key.Spec = nil
-
-	// validSpec := key.validate()
-	// if validSpec {
-	// 	t.Errorf("validated key with no Spec! errors: %s", *key.Errors[0].Message)
-	// 	return
-	// } else {
-	// 	if *key.Errors[0].Message != "key spec required" {
-	// 		t.Errorf("returned incorrect validation message")
-	// 		return
-	// 	}
-	// }
-
 }
+
+func TestValidateNoSpec(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key validate unit test!")
+		return
+	}
+
+	key := ed25519Factory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// no vault id
+	key.Spec = nil
+	valid := key.validate()
+	if valid {
+		t.Errorf("validated key with no spec! errors: %s", *key.Errors[0].Message)
+		return
+	}
+
+	if !valid {
+		common.Log.Debug("correctly flagged key with no spec as invalid")
+		if *key.Errors[0].Message != "key spec required" {
+			t.Errorf("returned incorrect validation message")
+			return
+		}
+	}
+}
+
+func TestValidateNoType(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key validate unit test!")
+		return
+	}
+
+	key := ed25519Factory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// no vault id
+	key.Type = nil
+	valid := key.validate()
+	if valid {
+		t.Errorf("validated key with no type! errors: %s", *key.Errors[0].Message)
+		return
+	}
+
+	if !valid {
+		common.Log.Debug("correctly flagged key with no type as invalid")
+		if *key.Errors[0].Message != "key type required" {
+			t.Errorf("returned incorrect validation message")
+			return
+		}
+	}
+}
+
+func TestValidateInvalidType(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key validate unit test!")
+		return
+	}
+
+	key := ed25519Factory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// no vault id
+	*key.Type = "invalid value"
+	valid := key.validate()
+	if valid {
+		t.Errorf("validated key with invalid type! errors: %s", *key.Errors[0].Message)
+		return
+	}
+
+	if !valid {
+		common.Log.Debug("correctly flagged key with invalid type as invalid")
+		if *key.Errors[0].Message != "key type must be one of "+keyTypeAsymmetric+" or "+keyTypeSymmetric {
+			t.Errorf("returned incorrect validation message")
+			return
+		}
+	}
+}
+
+func TestValidateInvalidSymmetricUsage(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key validate unit test!")
+		return
+	}
+
+	key := ed25519Factory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// no vault id
+	*key.Type = keyTypeSymmetric
+	*key.Usage = keyUsageSignVerify
+	valid := key.validate()
+	if valid {
+		t.Errorf("validated key with invalid type! errors: %s", *key.Errors[0].Message)
+		return
+	}
+
+	if !valid {
+		common.Log.Debug("correctly flagged key as invalid")
+		if *key.Errors[0].Message != "symmetric key requires "+keyUsageEncryptDecrypt+" usage mode" {
+			t.Errorf("returned incorrect validation message")
+			return
+		}
+	}
+}
+
+func TestValidateInvalidSymmetricUsageSpec(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key validate unit test!")
+		return
+	}
+
+	key := ed25519Factory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// no vault id
+	*key.Type = keyTypeSymmetric
+	*key.Usage = keyUsageEncryptDecrypt
+	*key.Spec = keySpecECCEd25519
+	valid := key.validate()
+	if valid {
+		t.Errorf("validated key with invalid type! errors: %s", *key.Errors[0].Message)
+		return
+	}
+
+	if !valid {
+		common.Log.Debug("correctly flagged key as invalid")
+		if *key.Errors[0].Message != "symmetric key in "+keyUsageEncryptDecrypt+" usage mode must be "+keySpecAES256GCM+" or "+keySpecChaCha20 {
+			t.Errorf("returned incorrect validation message")
+			return
+		}
+	}
+}
+
+func TestValidateInvalidAsymmetricUsageSpec(t *testing.T) {
+	vault := vaultFactory()
+	if vault.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key validate unit test!")
+		return
+	}
+
+	key := ed25519Factory(&vault.ID)
+	if key == nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+		return
+	}
+
+	// no vault id
+	*key.Type = keyTypeAsymmetric
+	*key.Usage = keyUsageSignVerify
+	*key.Spec = keySpecAES256GCM
+	valid := key.validate()
+	if valid {
+		t.Errorf("validated key with invalid type! errors: %s", *key.Errors[0].Message)
+		return
+	}
+
+	if !valid {
+		common.Log.Debug("correctly flagged key as invalid")
+		if *key.Errors[0].Message != "asymmetric key in "+keyUsageSignVerify+" usage mode must be "+keySpecECCBabyJubJub+", "+keySpecECCC25519+", "+keySpecECCEd25519+" or "+keySpecECCSecp256k1 {
+			t.Errorf("returned incorrect validation message")
+			return
+		}
+	}
+}
+
+//FIXME this test throws a nil pointer dereference for some unknown reason
+// func TestValidateNoUsage(t *testing.T) {
+// 	vault := vaultFactory()
+// 	if vault.ID == uuid.Nil {
+// 		t.Error("failed! no vault created for Ed25519 key validate unit test!")
+// 		return
+// 	}
+
+// 	key := ed25519Factory(&vault.ID)
+// 	if key == nil {
+// 		t.Errorf("failed to create Ed25519 keypair for vault: %s! %s", vault.ID, *key.Errors[0].Message)
+// 		return
+// 	}
+
+// 	// no vault id
+// 	key.Usage = nil
+// 	valid := key.validate()
+// 	if valid {
+// 		t.Errorf("validated key with no usage! errors: %s", *key.Errors[0].Message)
+// 		return
+// 	}
+
+// 	if !valid {
+// 		common.Log.Debug("correctly flagged key with no usage as invalid")
+// 		if *key.Errors[0].Message != "key usage required" {
+// 			t.Errorf("returned incorrect validation message")
+// 			return
+// 		}
+// 	}
+// }
 
 func TestCreateKeyEd25519(t *testing.T) {
 	vault := vaultFactory()

@@ -660,7 +660,7 @@ func TestCreateEphemeralKeyAES256GCM_privatekey(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMEphemeralFactory(&vlt.ID)
+	key := vault.AES256GCMEphemeralFactory(&vlt.ID, "test key", "just some key :D"))
 
 	//common.Log.Debugf("error returned %s", err.Error())
 	if key == nil { // FIXME -- return (key, err) from all factories
@@ -749,7 +749,7 @@ func TestCreateAes256GCMInvalidVaultID(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMEphemeralFactory(nil)
+	key := vault.AES256GCMEphemeralFactory(nil, "test key", "just some key :D"))
 	if key != nil {
 		t.Errorf("failed to invalidate key with invalid vault id: %s", vlt.ID)
 		return

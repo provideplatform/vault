@@ -883,33 +883,33 @@ func TestDeriveSymmetricKeyNilSeed(t *testing.T) {
 	}
 }
 
-// func TestDeriveSymmetricKey(t *testing.T) {
-// 	vlt := vaultFactory()
-// 	if vlt.ID == uuid.Nil {
-// 		t.Error("failed! no vault created for derive symmetric key unit test!")
-// 		return
-// 	}
+func TestDeriveSymmetricKey(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
 
-// 	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
 
-// 	// seed info
-// 	common.Log.Debugf("seed size (bytes %d)", len([]byte(*key.Seed)))
-// 	common.Log.Debugf("seed type %T", *key.Seed)
-// 	common.Log.Debugf("key seed: %s", *key.Seed)
+	// seed info
+	common.Log.Debugf("seed size (bytes %d)", len([]byte(*key.Seed)))
+	common.Log.Debugf("seed type %T", *key.Seed)
+	common.Log.Debugf("key seed: %s", *key.Seed)
 
-// 	nonce := []byte("number only used once")
-// 	context := []byte("stuff and stuff")
-// 	name := "derived key"
-// 	description := "derived key description"
+	nonce := []byte(common.RandomString(16))
+	context := []byte("stuff and stuff")
+	name := "derived key"
+	description := "derived key description"
 
-// 	key, err := key.DeriveSymmetric(nonce, context, name, description)
+	key, err := key.DeriveSymmetric(nonce, context, name, description)
 
-// 	if err != nil {
-// 		common.Log.Warningf("key derivation failed; %s", err.Error())
-// 		t.Errorf("failed to derive symmetric key with error %s", err.Error())
-// 		return
-// 	}
-// 	if err == nil {
-// 		common.Log.Debugf("correctly derived symmetric key from key %s", key.ID)
-// 	}
-// }
+	if err != nil {
+		common.Log.Warningf("key derivation failed; %s", err.Error())
+		t.Errorf("failed to derive symmetric key with error %s", err.Error())
+		return
+	}
+	if err == nil {
+		common.Log.Debugf("correctly derived symmetric key from key %s", key.ID)
+	}
+}

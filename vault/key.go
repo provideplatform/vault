@@ -163,6 +163,11 @@ func (k *Key) createChaCha20() error {
 		return err
 	}
 
+	_, seed, err = vaultcrypto.DecodeSeed(seed)
+	if err != nil {
+		common.Log.Warningf("failed to decode ChaCha20 seed; %s", err.Error())
+		return err
+	}
 	k.Seed = common.StringOrNil(string(seed))
 
 	common.Log.Debugf("created ChaCha20 key with %d-byte seed for vault: %s", len(seed), k.VaultID)

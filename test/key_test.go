@@ -1039,5 +1039,20 @@ func TestEncryptAndDecryptSymmetricChaChaNoErrors(t *testing.T) {
 		return
 	}
 	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
+}
 
+func TestDeleteKey(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	deleted := key.Delete(keyDB)
+	if !deleted {
+		t.Errorf("couldn't delete key %s, error: %s", key.ID, *key.Errors[0].Message)
+		return
+	}
 }

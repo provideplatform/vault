@@ -24,6 +24,7 @@ func InstallAPI(r *gin.Engine) {
 
 	r.GET("/api/v1/vaults/:id/keys", vaultKeysListHandler)
 	r.POST("/api/v1/vaults/:id/keys", createVaultKeyHandler)
+	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/sign", vaultKeySignHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/verify", vaultKeyVerifyHandler)
 
@@ -242,6 +243,39 @@ func createVaultKeyHandler(c *gin.Context) {
 		obj["errors"] = key.Errors
 		provide.Render(obj, 422, c)
 	}
+}
+
+func deleteVaultKeyHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	var key = &Key{}
+
+	db := dbconf.DatabaseConnection()
+	var query *gorm.DB
+
+	query = db.Table("keys")
+	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
+	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		query = query.Where("vaults.user_id = ?", bearer.UserID)
+	}
+	query.Find(&key)
+
+	if key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	if !key.Delete(db) {
+		provide.RenderError("key not deleted", 500, c)
+		return
+	}
+
+	provide.Render(nil, 204, c)
 }
 
 func vaultKeySignHandler(c *gin.Context) {

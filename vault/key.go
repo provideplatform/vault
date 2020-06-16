@@ -543,6 +543,26 @@ func (k *Key) create() error {
 	return nil
 }
 
+// Delete a key
+func (k *Key) Delete(db *gorm.DB) bool {
+	if k.ID == uuid.Nil {
+		common.Log.Warning("attempted to delete key instance which only exists in-memory")
+		return false
+	}
+
+	result := db.Delete(&k)
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			k.Errors = append(k.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
+		}
+	}
+	success := len(k.Errors) == 0
+	return success
+}
+
 // Create and persist a key
 func (k *Key) save(db *gorm.DB) bool {
 	if k.Ephemeral != nil && *k.Ephemeral {

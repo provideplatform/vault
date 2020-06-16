@@ -6,9 +6,12 @@ import (
 	"github.com/provideapp/vault/common"
 )
 
-// New is a factory to creates and persists a new vault
-func New(db *gorm.DB, name, description string, applicationID, organizationID, userID *uuid.UUID) *Vault {
-
+// New is a factory factory to create and persist vault instances
+func New(
+	db *gorm.DB,
+	name, description string,
+	applicationID, organizationID, userID *uuid.UUID,
+) *Vault {
 	vault := &Vault{
 		ApplicationID:  applicationID,
 		OrganizationID: organizationID,
@@ -87,13 +90,13 @@ func AES256GCMFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string)
 }
 
 // AES256GCMEphemeralFactory ephemeral AES-256-GCM
-func AES256GCMEphemeralFactory(vaultID *uuid.UUID) *Key {
+func AES256GCMEphemeralFactory(vaultID *uuid.UUID, name, description string) *Key {
 	ephemeral := true
 
 	key := &Key{
 		VaultID:     vaultID,
-		Name:        common.StringOrNil("AES-256-GCM key test"),
-		Description: common.StringOrNil("some AES-256-GCM test key"),
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(description),
 		Spec:        common.StringOrNil(KeySpecAES256GCM),
 		Type:        common.StringOrNil(KeyTypeSymmetric),
 		Usage:       common.StringOrNil(KeyUsageEncryptDecrypt),
@@ -145,7 +148,7 @@ func C25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *K
 	return key
 }
 
-// ChaCha20Factory ChaCha-20
+// Chacha20Factory ChaCha-20
 func Chacha20Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
 	key := &Key{
 		VaultID:     vaultID,

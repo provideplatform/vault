@@ -391,7 +391,7 @@ func TestValidateInvalidAsymmetricUsageSpec(t *testing.T) {
 	}
 }
 
-//FIXME this test throws a nil pointer dereference for some unknown reason
+// //FIXME this test throws a nil pointer dereference for some unknown reason
 // func TestValidateNoUsage(t *testing.T) {
 // 	vlt := vaultFactory()
 // 	if vlt.ID == uuid.Nil {
@@ -399,7 +399,7 @@ func TestValidateInvalidAsymmetricUsageSpec(t *testing.T) {
 // 		return
 // 	}
 
-// 	key := ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+// 	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
 // 	if key == nil {
 // 		t.Errorf("failed to create Ed25519 keypair for vault: %s %s", vlt.ID, *key.Errors[0].Message)
 // 		return
@@ -892,11 +892,7 @@ func TestDeriveSymmetricKey(t *testing.T) {
 
 	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
 
-	// seed info
-	common.Log.Debugf("seed size (bytes %d)", len([]byte(*key.Seed)))
-	common.Log.Debugf("seed type %T", *key.Seed)
-	common.Log.Debugf("key seed: %s", *key.Seed)
-
+	// nonce is 16 bytes for derivation function
 	nonce := []byte(common.RandomString(16))
 	context := []byte("stuff and stuff")
 	name := "derived key"
@@ -912,4 +908,136 @@ func TestDeriveSymmetricKey(t *testing.T) {
 	if err == nil {
 		common.Log.Debugf("correctly derived symmetric key from key %s", key.ID)
 	}
+}
+
+func TestEncryptChaChaNoErrors(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	ciphertext, err := key.Encrypt(plaintext)
+	if err != nil {
+		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
+		return
+	}
+
+	nonceSize := 12
+	if len(plaintext)+nonceSize != len(ciphertext) {
+		t.Errorf("%d-byte ciphertext is not the same length as %d-byte plaintext", len(ciphertext)-nonceSize, len(plaintext))
+		return
+	}
+
+	if err == nil {
+		common.Log.Debug("encrypted with no errors")
+	}
+
+}
+
+func TestEncryptChaChaInvalidNilUsage(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	key.Usage = nil
+	_, err := key.Encrypt(plaintext)
+	if err == nil {
+		t.Error("failed to trap invalid nil usage on key")
+		return
+	}
+}
+
+func TestEncryptChaChaInvalidUsage(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	*key.Usage = vault.KeyUsageSignVerify
+	_, err := key.Encrypt(plaintext)
+	if err == nil {
+		t.Error("failed to trap invalid usage on key")
+		return
+	}
+}
+
+func TestEncryptChaChaNilKeyType(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	key.Type = nil
+	_, err := key.Encrypt(plaintext)
+	if err == nil {
+		t.Error("failed to trap nil type on key")
+		return
+	}
+}
+
+func TestEncryptAndDecryptSymmetricChaChaNoErrors(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	ciphertext, err := key.Encrypt(plaintext)
+	if err != nil {
+		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
+		return
+	}
+
+	if hex.EncodeToString(ciphertext[vault.NonceSizeSymmetric:]) == hex.EncodeToString(plaintext) {
+		t.Error("encrypted text is the same as plaintext")
+		return
+	}
+
+	if len(plaintext)+vault.NonceSizeSymmetric != len(ciphertext) {
+		t.Errorf("%d-byte ciphertext is not the same length as %d-byte plaintext", len(ciphertext)-vault.NonceSizeSymmetric, len(plaintext))
+		return
+	}
+
+	decryptedtext, err := key.Decrypt(ciphertext)
+	if err != nil {
+		t.Errorf("failed to decrypt encrypted text  with error: %s", err.Error())
+		return
+	}
+
+	if len(decryptedtext) != len(plaintext) {
+		t.Errorf("%d-byte decrypted text is different length to %d-byte plaintext", len(decryptedtext), len(plaintext))
+		return
+	}
+
+	if hex.EncodeToString(decryptedtext) != hex.EncodeToString(plaintext) {
+		t.Error("decrypted text is not the same as original plaintext!")
+		return
+	}
+	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
+
 }

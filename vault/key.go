@@ -58,6 +58,9 @@ const KeySpecECCEd25519 = "Ed25519"
 // KeySpecECCSecp256k1 secp256k1 key spec
 const KeySpecECCSecp256k1 = "secp256k1"
 
+// NonceSizeSymmetric chacha20 & aes256 encrypt/decrypt nonce size
+const NonceSizeSymmetric = 12
+
 // const KeySpecECCSecp256r1 = "ECC-NIST-P256"
 // const KeySpecECCSecp2048 = "ECC-NIST-P384"
 // const KeySpecECCSecp521r1 = "ECC-NIST-P521"
@@ -600,7 +603,7 @@ func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
 	}
 
 	if k.Type != nil && *k.Type == KeyTypeSymmetric {
-		return k.decryptSymmetric(ciphertext[12:], ciphertext[0:12])
+		return k.decryptSymmetric(ciphertext[NonceSizeSymmetric:], ciphertext[0:NonceSizeSymmetric])
 	}
 
 	if k.Type != nil && *k.Type == KeyTypeAsymmetric {
@@ -631,18 +634,22 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	// k.decryptFields()
 	// defer k.encryptFields()
 
-	if k.PrivateKey == nil {
+	if *k.Spec == KeySpecAES256GCM && k.PrivateKey == nil {
 		return nil, fmt.Errorf("failed to decrypt using key: %s; nil private key", k.ID)
+	}
+
+	if *k.Spec == KeySpecChaCha20 && k.Seed == nil {
+		return nil, fmt.Errorf("failed to decrypt using key: %s; nil seed", k.ID)
 	}
 
 	k.decryptFields()
 	defer k.encryptFields()
 
-	key := []byte(*k.PrivateKey)
 	var plaintext []byte
 
 	switch *k.Spec {
 	case KeySpecAES256GCM:
+		key := []byte(*k.PrivateKey)
 		block, err := aes.NewCipher(key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
@@ -658,18 +665,14 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
 		}
 	case KeySpecChaCha20:
-		// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-		nonce = make([]byte, 16)
-		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
-		}
+		key := []byte(*k.Seed)
 
 		cipher, err := chacha20.NewUnauthenticatedCipher(key, nonce)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
 		}
 
-		plaintext := make([]byte, len(ciphertext))
+		plaintext = make([]byte, len(ciphertext))
 		cipher.XORKeyStream(plaintext, ciphertext)
 	}
 
@@ -777,27 +780,31 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to symmetrically encrypt using key: %s; nil or invalid key type", k.ID)
 	}
 
-	if k.PrivateKey == nil {
+	if *k.Spec == KeySpecChaCha20 && k.Seed == nil {
+		return nil, fmt.Errorf("failed to encrypt using key: %s; nil seed", k.ID)
+	}
+
+	if *k.Spec == KeySpecAES256GCM && k.PrivateKey == nil {
 		return nil, fmt.Errorf("failed to encrypt using key: %s; nil private key", k.ID)
 	}
 
 	k.decryptFields()
 	defer k.encryptFields()
 
-	key := []byte(*k.PrivateKey)
-
 	var nonce []byte
 	var ciphertext []byte
 
 	switch *k.Spec {
 	case KeySpecAES256GCM:
+		key := []byte(*k.PrivateKey)
+
 		block, err := aes.NewCipher(key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
 		}
 
 		// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-		nonce = make([]byte, 12)
+		nonce = make([]byte, NonceSizeSymmetric)
 		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
 		}
@@ -809,8 +816,10 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 
 		ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
 	case KeySpecChaCha20:
+		key := []byte(*k.Seed)
+
 		// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-		nonce = make([]byte, 16)
+		nonce = make([]byte, NonceSizeSymmetric)
 		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
 		}
@@ -820,7 +829,7 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
 		}
 
-		ciphertext := make([]byte, len(plaintext))
+		ciphertext = make([]byte, len(plaintext))
 		cipher.XORKeyStream(ciphertext, plaintext)
 	}
 

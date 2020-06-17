@@ -1114,17 +1114,41 @@ func TestECDH(t *testing.T) {
 		common.Log.Debug("my signature validated ok")
 	}
 
-	// create the diffie hellman secret
-	err = myECDHkey.CreateDiffieHellmanSharedSecret([]byte(*peerECDHkey.PublicKey), []byte(*peerSigningkey.PublicKey), peerSignature, "ecdh name", "ecdh description")
+	// create the peer diffie hellman secret
+	peerSecretKey, err := myECDHkey.CreateDiffieHellmanSharedSecret([]byte(*peerECDHkey.PublicKey), []byte(*peerSigningkey.PublicKey), peerSignature, "ecdh name", "ecdh description")
 	if err != nil {
-		t.Error("error creating my diffie hellman secret")
+		t.Errorf("error creating my diffie hellman secret. Error: %s", err.Error())
 		return
 	}
+	if err == nil {
+		common.Log.Debugf("returned chacha20 key with ID %s", peerSecretKey.ID)
+	}
 
-	// okay, great, so it's made, but how to test it?
-	err = peerECDHkey.CreateDiffieHellmanSharedSecret([]byte(*myECDHkey.PublicKey), []byte(*mySigningKey.PublicKey), mySignature, "ecdh name", "ecdh description")
+	// create my diffie hellman secret
+	mySecretKey, err := peerECDHkey.CreateDiffieHellmanSharedSecret([]byte(*myECDHkey.PublicKey), []byte(*mySigningKey.PublicKey), mySignature, "ecdh name", "ecdh description")
 	if err != nil {
-		t.Error("error creating peer diffie hellman secret")
+		t.Errorf("error creating peer diffie hellman secret. Error: %s", err.Error())
 		return
+	}
+	if err == nil {
+		common.Log.Debugf("returned chacha20 key with ID %s", mySecretKey.ID)
+	}
+
+	plaintext := common.RandomString(128)
+	ciphertext, err := peerSecretKey.Encrypt([]byte(plaintext))
+	if err != nil {
+		t.Errorf("error encrypting plaintext with peer key %s", err.Error())
+		return
+	}
+	decryptedtext, err := mySecretKey.Decrypt(ciphertext)
+	if err != nil {
+		t.Errorf("error decrypting ciphertext with my key %s", err.Error())
+		return
+	}
+	if hex.EncodeToString(decryptedtext) != hex.EncodeToString([]byte(plaintext)) {
+		t.Error("shared seed mismatch")
+	}
+	if hex.EncodeToString(decryptedtext) == hex.EncodeToString([]byte(plaintext)) {
+		common.Log.Debug("successfully shared secret")
 	}
 }

@@ -146,7 +146,7 @@ func (k *Key) createC25519Keypair() error {
 	publicKeyHex := hex.EncodeToString(publicKey)
 
 	k.PrivateKey = common.StringOrNil(string(privateKey))
-	k.PublicKey = common.StringOrNil(publicKeyHex)
+	k.PublicKey = common.StringOrNil(string(publicKey))
 
 	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
 	return nil
@@ -178,7 +178,7 @@ func (k *Key) createChaCha20() error {
 }
 
 // CreateDiffieHellmanSharedSecret creates a shared secret given a peer public key and signature
-func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, peerSignature []byte, name, description string) error {
+func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, peerSignature []byte, name, description string) (*Key, error) {
 	k.decryptFields()
 	defer k.encryptFields()
 
@@ -190,23 +190,20 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 	if privkey == nil {
 		err := errors.New("failed to calculate Diffie-Hellman shared secret; nil seed/private key")
 		common.Log.Warning(err.Error())
-		return err
+		return nil, err
 	}
 
 	ec25519Key, err := vaultcrypto.FromPublicKey(string(peerSigningKey))
 	if err != nil {
-		return fmt.Errorf("failed to compute shared secret; failed to unmarshal %d-byte Ed22519 public key: %s", len(peerPublicKey), string(peerPublicKey))
+		return nil, fmt.Errorf("failed to compute shared secret; failed to unmarshal %d-byte Ed22519 public key: %s", len(peerPublicKey), string(peerPublicKey))
 	}
 
 	err = ec25519Key.Verify(peerPublicKey, peerSignature)
 	if err != nil {
-		return fmt.Errorf("failed to compute shared secret; failed to verify %d-byte Ed22519 signature using public key: %s; %s", len(peerSignature), string(peerPublicKey), err.Error())
+		return nil, fmt.Errorf("failed to compute shared secret; failed to verify %d-byte Ed22519 signature using public key: %s; %s", len(peerSignature), string(peerPublicKey), err.Error())
 	}
 
 	sharedSecret := provide.C25519ComputeSecret([]byte(*privkey), peerPublicKey)
-
-	//backdoor - woop woop woop
-	//common.Log.Debugf("ecdh shared secret %s", (vaultcrypto.DecodeSeed()(sharedSecret)
 
 	ecdhSecret := &Key{
 		VaultID:     k.VaultID,
@@ -222,15 +219,15 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 
 	err = ecdhSecret.create()
 	if err != nil {
-		return fmt.Errorf("failed to create Diffie-Hellman shared secret in vault: %s; %s", k.VaultID, err.Error())
+		return nil, fmt.Errorf("failed to create Diffie-Hellman shared secret in vault: %s; %s", k.VaultID, err.Error())
 	}
 
 	if !ecdhSecret.save(db) {
-		return fmt.Errorf("failed to save Diffie-Hellman shared secret in vault: %s; %s", k.VaultID, *ecdhSecret.Errors[0].Message)
+		return nil, fmt.Errorf("failed to save Diffie-Hellman shared secret in vault: %s; %s", k.VaultID, *ecdhSecret.Errors[0].Message)
 	}
 
 	common.Log.Debugf("created Diffie-Hellman shared secret %s in vault: %s", ecdhSecret.ID, k.VaultID)
-	return nil
+	return ecdhSecret, nil
 }
 
 // createEd25519Keypair creates an Ed25519 keypair

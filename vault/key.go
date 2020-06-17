@@ -113,8 +113,13 @@ func (k *Key) createAES256GCM() error {
 		common.Log.Warningf("failed to read encoded Ed25519 seed; %s", err.Error())
 		return err
 	}
+	_, seed, err = vaultcrypto.DecodeSeed(seed)
+	if err != nil {
+		common.Log.Warningf("failed to decode Ed25519 seed; %s", err.Error())
+		return err
+	}
 
-	k.PrivateKey = common.StringOrNil(string(seed[0:32]))
+	k.PrivateKey = common.StringOrNil(string(seed))
 
 	common.Log.Debugf("created AES-256-GCM key with %d-byte seed for vault: %s", len(seed), k.VaultID)
 	return nil
@@ -243,6 +248,11 @@ func (k *Key) createEd25519Keypair() error {
 	seed, err := keypair.Seed()
 	if err != nil {
 		return fmt.Errorf("failed to read encoded seed of Ed25519 keypair; %s", err.Error())
+	}
+	_, seed, err = vaultcrypto.DecodeSeed(seed)
+	if err != nil {
+		common.Log.Warningf("failed to decode Ed25519 seed; %s", err.Error())
+		return err
 	}
 
 	publicKey, err := keypair.PublicKey()

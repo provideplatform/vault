@@ -1064,7 +1064,7 @@ func TestECDH(t *testing.T) {
 		return
 	}
 
-	// todo add test for ephemeral
+	// TODO add test for ephemeral
 	// create the peer ecdh key
 	peerECDHkey := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
 	if peerECDHkey == nil {
@@ -1135,20 +1135,80 @@ func TestECDH(t *testing.T) {
 	}
 
 	plaintext := common.RandomString(128)
+
 	ciphertext, err := peerSecretKey.Encrypt([]byte(plaintext))
 	if err != nil {
 		t.Errorf("error encrypting plaintext with peer key %s", err.Error())
 		return
 	}
+
 	decryptedtext, err := mySecretKey.Decrypt(ciphertext)
 	if err != nil {
 		t.Errorf("error decrypting ciphertext with my key %s", err.Error())
 		return
 	}
+
 	if hex.EncodeToString(decryptedtext) != hex.EncodeToString([]byte(plaintext)) {
 		t.Error("shared seed mismatch")
 	}
+
 	if hex.EncodeToString(decryptedtext) == hex.EncodeToString([]byte(plaintext)) {
 		common.Log.Debug("successfully shared secret")
+	}
+}
+
+func TestECDHNilPrivateKey(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	// TODO add test for ephemeral
+	// create the peer ecdh key
+	peerECDHkey := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
+	if peerECDHkey == nil {
+		t.Error("peer ecdh key is nil after being created!")
+	}
+
+	//create my ecdh key
+	myECDHkey := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
+	if myECDHkey == nil {
+		t.Error("my ecdh key is nil after being created!")
+	}
+
+	// create the peer signing key
+	peerSigningkey := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
+
+	// sign the peer ecdh key with the peer signing key
+	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey))
+	if err != nil {
+		t.Errorf("got error signing peer c25519 public key. Error: %s", err.Error())
+		return
+	}
+
+	// create the peer diffie hellman secret
+	myECDHkey.Seed = nil
+	myECDHkey.PrivateKey = nil
+	_, err = myECDHkey.CreateDiffieHellmanSharedSecret([]byte(*peerECDHkey.PublicKey), []byte(*peerSigningkey.PublicKey), peerSignature, "ecdh name", "ecdh description")
+	if err == nil {
+		t.Error("no error despite private key being nil")
+		return
+	}
+	if err != nil {
+		common.Log.Debugf("expected fail of creating ecdh with nil private key. Error: %s", err.Error())
+	}
+}
+
+func TestCreateSECP256k1KeyWithNilDescription(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	testKey := vault.Secp256k1Factory(keyDB, &vlt.ID, "ecdh public key", "")
+	if testKey == nil {
+		t.Error("failed to create secp256k1 with nil description")
 	}
 }

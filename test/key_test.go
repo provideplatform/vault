@@ -1056,3 +1056,75 @@ func TestDeleteKey(t *testing.T) {
 		return
 	}
 }
+
+func TestECDH(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	// todo add test for ephemeral
+	// create the peer ecdh key
+	peerECDHkey := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
+	if peerECDHkey == nil {
+		t.Error("peer ecdh key is nil after being created!")
+	}
+
+	//create my ecdh key
+	myECDHkey := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
+	if myECDHkey == nil {
+		t.Error("my ecdh key is nil after being created!")
+	}
+
+	// create the peer signing key
+	peerSigningkey := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
+
+	// sign the peer ecdh key with the peer signing key
+	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey))
+	if err != nil {
+		t.Errorf("got error signing peer c25519 public key. Error: %s", err.Error())
+		return
+	}
+
+	//verify the peer signature worked ok
+	err = peerSigningkey.Verify([]byte(*peerECDHkey.PublicKey), peerSignature)
+	if err != nil {
+		t.Errorf("error validating peer signature %s", err.Error())
+		return
+	}
+	if err == nil {
+		common.Log.Debug("peer signature validated ok")
+	}
+
+	mySigningKey := vault.Ed25519Factory(keyDB, &vlt.ID, "my ecdh signing key", "test key")
+	mySignature, err := mySigningKey.Sign([]byte(*myECDHkey.PublicKey))
+	if err != nil {
+		t.Errorf("got error signing my c25519 public key. Error: %s", err.Error())
+		return
+	}
+
+	//verify my signature worked ok
+	err = mySigningKey.Verify([]byte(*myECDHkey.PublicKey), mySignature)
+	if err != nil {
+		t.Errorf("error validating my signature %s", err.Error())
+		return
+	}
+	if err == nil {
+		common.Log.Debug("my signature validated ok")
+	}
+
+	// create the diffie hellman secret
+	err = myECDHkey.CreateDiffieHellmanSharedSecret([]byte(*peerECDHkey.PublicKey), []byte(*peerSigningkey.PublicKey), peerSignature, "ecdh name", "ecdh description")
+	if err != nil {
+		t.Error("error creating my diffie hellman secret")
+		return
+	}
+
+	// okay, great, so it's made, but how to test it?
+	err = peerECDHkey.CreateDiffieHellmanSharedSecret([]byte(*myECDHkey.PublicKey), []byte(*mySigningKey.PublicKey), mySignature, "ecdh name", "ecdh description")
+	if err != nil {
+		t.Error("error creating peer diffie hellman secret")
+		return
+	}
+}

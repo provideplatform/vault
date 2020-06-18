@@ -271,3 +271,33 @@ func TestCreateVault(t *testing.T) {
 		}
 	}
 }
+
+func TestDeleteVaultNilDB(t *testing.T) {
+	vlt := &vault.Vault{
+		ApplicationID:  nil,
+		OrganizationID: nil,
+		UserID:         nil,
+		Name:           common.StringOrNil("test vault"),
+		Description:    common.StringOrNil("a test vault :D"),
+	}
+
+	randomID, _ := uuid.NewV4()
+	vlt.UserID = &randomID
+
+	success := vlt.Create(vaultDB)
+	if !success {
+		t.Errorf("failed to create vault %s", *vlt.Errors[0].Message)
+		return
+	}
+
+	if vlt.MasterKeyID == nil {
+		t.Errorf("failed to resolve master key for vault %s", vlt.ID)
+		return
+	}
+
+	success = vlt.Delete(nil)
+	if !success {
+		t.Errorf("failed to delete vault %s", *vlt.Errors[0].Message)
+		return
+	}
+}

@@ -1207,7 +1207,7 @@ func TestCreateSECP256k1KeyWithNilDescription(t *testing.T) {
 		return
 	}
 
-	testKey := vault.Secp256k1Factory(keyDB, &vlt.ID, "ecdh public key", "")
+	testKey := vault.Secp256k1Factory(keyDB, &vlt.ID, "secp256k1 public key", "")
 	if testKey == nil {
 		t.Error("failed to create secp256k1 with nil description")
 	}

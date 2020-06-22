@@ -1041,6 +1041,41 @@ func TestEncryptAndDecryptSymmetricChaChaNoErrors(t *testing.T) {
 	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
 }
 
+func TestEncryptAndDecryptSymmetricAESErrors(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	ciphertext, err := key.Encrypt(plaintext)
+	if err != nil {
+		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
+		return
+	}
+
+	decryptedtext, err := key.Decrypt(ciphertext)
+	if err != nil {
+		t.Errorf("failed to decrypt encrypted text  with error: %s", err.Error())
+		return
+	}
+
+	if len(decryptedtext) != len(plaintext) {
+		t.Errorf("%d-byte decrypted text is different length to %d-byte plaintext", len(decryptedtext), len(plaintext))
+		return
+	}
+
+	if hex.EncodeToString(decryptedtext) != hex.EncodeToString(plaintext) {
+		t.Error("decrypted text is not the same as original plaintext!")
+		return
+	}
+	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
+}
+
 func TestDeleteKey(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {

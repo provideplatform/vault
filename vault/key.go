@@ -155,27 +155,16 @@ func (k *Key) createC25519Keypair() error {
 
 // createChaCha20 creates a key using a random seed
 func (k *Key) createChaCha20() error {
-	keypair, err := vaultcrypto.CreatePair(vaultcrypto.PrefixByteSeed)
+
+	seed, err := vaultcrypto.CreateChaChaSeed()
 	if err != nil {
-		common.Log.Warningf("failed to generate ChaCha20 seed; %s", err.Error())
 		return err
 	}
 
-	seed, err := keypair.Seed()
-	if err != nil {
-		common.Log.Warningf("failed to read encoded ChaCha20 seed; %s", err.Error())
-		return err
-	}
-
-	_, seed, err = vaultcrypto.DecodeSeed(seed)
-	if err != nil {
-		common.Log.Warningf("failed to decode ChaCha20 seed; %s", err.Error())
-		return err
-	}
 	k.Seed = &seed
-
-	common.Log.Debugf("created ChaCha20 key with %d-byte seed for vault: %s", len(seed), k.VaultID)
+	common.Log.Debugf("created chacha20 key for vault: %s; key id: %s", k.VaultID, k.ID)
 	return nil
+
 }
 
 // CreateDiffieHellmanSharedSecret creates a shared secret given a peer public key and signature

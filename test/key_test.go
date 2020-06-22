@@ -223,7 +223,7 @@ func TestValidateNoSpec(t *testing.T) {
 	key.Spec = nil
 	valid := key.Validate()
 	if valid {
-		t.Errorf("validated key with no spec! errors: %s", *key.Errors[0].Message)
+		t.Error("validated key with no spec! errors")
 		return
 	}
 
@@ -265,6 +265,38 @@ func TestValidateNoType(t *testing.T) {
 		}
 	}
 }
+
+// can't test nil usage properly as it's dereferenced later in function and throws a nill pointer exception
+// maybe try to recover?
+// func TestValidateNoUsage(t *testing.T) {
+// 	vlt := vaultFactory()
+// 	if vlt.ID == uuid.Nil {
+// 		t.Error("failed! no vault created for Ed25519 key validate unit test!")
+// 		return
+// 	}
+
+// 	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+// 	if key == nil {
+// 		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+// 		return
+// 	}
+
+// 	// no vault id
+// 	key.Usage = common.StringOrNil("")
+// 	valid := key.Validate()
+// 	if valid {
+// 		t.Errorf("validated key with no usage!")
+// 		return
+// 	}
+
+// 	if !valid {
+// 		common.Log.Debug("correctly flagged key with no usage as invalid")
+// 		if *key.Errors[0].Message != "key usage required" {
+// 			t.Errorf("returned incorrect validation message")
+// 			return
+// 		}
+// 	}
+// }
 
 func TestValidateInvalidType(t *testing.T) {
 	vlt := vaultFactory()
@@ -390,37 +422,6 @@ func TestValidateInvalidAsymmetricUsageSpec(t *testing.T) {
 		}
 	}
 }
-
-// //FIXME this test throws a nil pointer dereference for some unknown reason
-// func TestValidateNoUsage(t *testing.T) {
-// 	vlt := vaultFactory()
-// 	if vlt.ID == uuid.Nil {
-// 		t.Error("failed! no vault created for Ed25519 key validate unit test!")
-// 		return
-// 	}
-
-// 	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-// 	if key == nil {
-// 		t.Errorf("failed to create Ed25519 keypair for vault: %s %s", vlt.ID, *key.Errors[0].Message)
-// 		return
-// 	}
-
-// 	// no vault id
-// 	key.Usage = nil
-// 	valid := key.Validate()
-// 	if valid {
-// 		t.Errorf("validated key with no usage! errors: %s", *key.Errors[0].Message)
-// 		return
-// 	}
-
-// 	if !valid {
-// 		common.Log.Debug("correctly flagged key with no usage as invalid")
-// 		if *key.Errors[0].Message != "key usage required" {
-// 			t.Errorf("returned incorrect validation message")
-// 			return
-// 		}
-// 	}
-// }
 
 func TestCreateKeyEd25519(t *testing.T) {
 	vlt := vaultFactory()
@@ -1246,4 +1247,230 @@ func TestCreateSECP256k1KeyWithNilDescription(t *testing.T) {
 	if testKey == nil {
 		t.Error("failed to create secp256k1 with nil description")
 	}
+}
+
+func TestSignEd25519NilSeed(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key signing unit test!")
+		return
+	}
+
+	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	key.Seed = nil
+	_, err := key.Sign(msg)
+	if err == nil {
+		t.Errorf("signed message using Ed25519 keypair with nil seed for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+	if err != nil {
+		common.Log.Debug("correctly failed to sign with ed25519 key with no seed")
+	}
+}
+
+func TestSignBabyJubJubNilPrivateKey(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key signing unit test!")
+		return
+	}
+
+	key := vault.BabyJubJubFactory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create BabyJubJub keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	key.PrivateKey = nil
+	_, err := key.Sign(msg)
+	if err == nil {
+		t.Errorf("signed message using BabyJubJub keypair with nil private key for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+	if err != nil {
+		common.Log.Debug("correctly failed to sign with BabyJubJub key with no private key")
+	}
+}
+
+func TestSign256k1NilPrivateKey(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for 256k1 key signing unit test!")
+		return
+	}
+
+	key := vault.Secp256k1Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create 256k1 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	key.PrivateKey = nil
+	_, err := key.Sign(msg)
+	if err == nil {
+		t.Errorf("signed message using 256k1 keypair with nil private key for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+	if err != nil {
+		common.Log.Debug("correctly failed to sign with 256k1 key with no private key")
+	}
+}
+
+func TestVerifyEd25519NilType(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for ed25519 key signing unit test!")
+		return
+	}
+
+	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	key.Type = nil
+	err = key.Verify(msg, sig)
+	if err == nil {
+		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with nil type for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
+
+func TestVerifyEd25519NilUsage(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for ed25519 key signing unit test!")
+		return
+	}
+
+	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	key.Usage = nil
+	err = key.Verify(msg, sig)
+	if err == nil {
+		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with nil usage for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
+
+func TestVerifyEd25519NilSpec(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for ed25519 key signing unit test!")
+		return
+	}
+
+	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	key.Spec = nil
+	err = key.Verify(msg, sig)
+	if err == nil {
+		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with nil spec for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
+
+func TestVerifyEd25519NilPublicKey(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for ed25519 key signing unit test!")
+		return
+	}
+
+	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	key.PublicKey = nil
+	err = key.Verify(msg, sig)
+	if err == nil {
+		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with nil publickey for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
+
+func TestVerifyEd25519InvalidSpec(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for ed25519 key signing unit test!")
+		return
+	}
+
+	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	invalidSpec := "non-existent key"
+	key.Spec = &invalidSpec
+	err = key.Verify(msg, sig)
+	if err == nil {
+		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with invalid spec for vault: %s; err: %s", vlt.ID, err.Error())
 }

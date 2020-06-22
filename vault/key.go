@@ -925,23 +925,14 @@ func (k *Key) Verify(payload, sig []byte) error {
 
 	switch *k.Spec {
 	case KeySpecECCBabyJubJub:
-		if k.PublicKey == nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
-		}
 		return provide.TECVerify([]byte(*k.PublicKey), payload, sig)
 	case KeySpecECCEd25519:
-		if k.PublicKey == nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
-		}
 		ec25519Key, err := vaultcrypto.FromPublicKey(*k.PublicKey)
 		if err != nil {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
 		return ec25519Key.Verify(payload, sig)
 	case KeySpecECCSecp256k1:
-		if k.PublicKey == nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
-		}
 		signature := common.ECDSASignature{}
 		_, err := asn1.Unmarshal(sig, &signature)
 		if err != nil {

@@ -78,14 +78,14 @@ type Key struct {
 	Spec        *string    `sql:"not null" json:"spec"`
 	Name        *string    `sql:"not null" json:"name"`
 	Description *string    `json:"description"`
-	Seed        *string    `sql:"type:bytea" json:"-"`
+	Seed        *[]byte    `sql:"type:bytea" json:"-"`
 	PublicKey   *string    `sql:"type:bytea" json:"public_key,omitempty"`
-	PrivateKey  *string    `sql:"type:bytea" json:"-"`
+	PrivateKey  *[]byte    `sql:"type:bytea" json:"-"`
 
 	Address             *string `sql:"-" json:"address,omitempty"`
 	Ephemeral           *bool   `sql:"-" json:"ephemeral,omitempty"`
-	EphemeralPrivateKey *string `sql:"-" json:"private_key,omitempty"`
-	EphemeralSeed       *string `sql:"-" json:"seed,omitempty"`
+	EphemeralPrivateKey *[]byte `sql:"-" json:"private_key,omitempty"`
+	EphemeralSeed       *[]byte `sql:"-" json:"seed,omitempty"`
 
 	encrypted *bool      `sql:"-"`
 	mutex     sync.Mutex `sql:"-"`
@@ -114,7 +114,8 @@ func (k *Key) createAES256GCM() error {
 		return err
 	}
 
-	k.PrivateKey = common.StringOrNil(string(seed[0:32]))
+	slicedSeed := seed[0:32]
+	k.PrivateKey = &slicedSeed
 
 	common.Log.Debugf("created AES-256-GCM key with %d-byte seed for vault: %s", len(seed), k.VaultID)
 	return nil
@@ -129,7 +130,7 @@ func (k *Key) createBabyJubJubKeypair() error {
 
 	publicKeyHex := hex.EncodeToString(publicKey)
 
-	k.PrivateKey = common.StringOrNil(string(privateKey))
+	k.PrivateKey = &privateKey
 	k.PublicKey = common.StringOrNil(publicKeyHex)
 
 	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, *k.PublicKey)
@@ -145,7 +146,7 @@ func (k *Key) createC25519Keypair() error {
 
 	publicKeyHex := hex.EncodeToString(publicKey)
 
-	k.PrivateKey = common.StringOrNil(string(privateKey))
+	k.PrivateKey = &privateKey
 	k.PublicKey = common.StringOrNil(string(publicKey))
 
 	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
@@ -171,7 +172,7 @@ func (k *Key) createChaCha20() error {
 		common.Log.Warningf("failed to decode ChaCha20 seed; %s", err.Error())
 		return err
 	}
-	k.Seed = common.StringOrNil(string(seed))
+	k.Seed = &seed
 
 	common.Log.Debugf("created ChaCha20 key with %d-byte seed for vault: %s", len(seed), k.VaultID)
 	return nil
@@ -212,7 +213,7 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 		Spec:        common.StringOrNil(KeySpecChaCha20),
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
-		Seed:        common.StringOrNil(string(sharedSecret)),
+		Seed:        &sharedSecret,
 	}
 
 	db := dbconf.DatabaseConnection()
@@ -247,7 +248,7 @@ func (k *Key) createEd25519Keypair() error {
 		return fmt.Errorf("failed to read public key of Ed25519 keypair; %s", err.Error())
 	}
 
-	k.Seed = common.StringOrNil(string(seed))
+	k.Seed = &seed
 	k.PublicKey = common.StringOrNil(publicKey)
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, *k.PublicKey)
@@ -269,7 +270,7 @@ func (k *Key) createSecp256k1Keypair() error {
 	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
 	publicKey := hex.EncodeToString(elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y))
 
-	k.PrivateKey = common.StringOrNil(string(privateKey))
+	k.PrivateKey = &privateKey
 	k.PublicKey = common.StringOrNil(publicKey)
 
 	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, publicKey)
@@ -343,7 +344,7 @@ func (k *Key) decryptFields() error {
 			if err != nil {
 				return err
 			}
-			k.Seed = common.StringOrNil(string(seed))
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
@@ -351,7 +352,7 @@ func (k *Key) decryptFields() error {
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = common.StringOrNil(string(privateKey))
+			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("decrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
@@ -364,7 +365,7 @@ func (k *Key) decryptFields() error {
 			if err != nil {
 				return err
 			}
-			k.Seed = common.StringOrNil(string(seed))
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
@@ -372,7 +373,7 @@ func (k *Key) decryptFields() error {
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = common.StringOrNil(string(privateKey))
+			k.PrivateKey = &privateKey
 		}
 	}
 
@@ -401,7 +402,7 @@ func (k *Key) encryptFields() error {
 			if err != nil {
 				return err
 			}
-			k.Seed = common.StringOrNil(string(seed))
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
@@ -409,7 +410,7 @@ func (k *Key) encryptFields() error {
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = common.StringOrNil(string(privateKey))
+			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("encrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
@@ -422,7 +423,7 @@ func (k *Key) encryptFields() error {
 			if err != nil {
 				return err
 			}
-			k.Seed = common.StringOrNil(string(seed))
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
@@ -430,7 +431,7 @@ func (k *Key) encryptFields() error {
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = common.StringOrNil(string(privateKey))
+			k.PrivateKey = &privateKey
 		}
 	}
 
@@ -532,7 +533,7 @@ func (k *Key) create() error {
 			k.EphemeralSeed = &ephemeralSeed
 		}
 		if k.PrivateKey != nil {
-			ephemeralPrivateKey := hex.EncodeToString([]byte(*k.PrivateKey))
+			ephemeralPrivateKey := *k.PrivateKey
 			k.EphemeralPrivateKey = &ephemeralPrivateKey
 		}
 	}
@@ -718,7 +719,7 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 			Spec:        common.StringOrNil(KeySpecChaCha20),
 			Name:        common.StringOrNil(name),
 			Description: common.StringOrNil(description),
-			Seed:        common.StringOrNil(string(derivedKey)),
+			Seed:        &derivedKey,
 		}
 
 		db := dbconf.DatabaseConnection()

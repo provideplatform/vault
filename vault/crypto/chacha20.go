@@ -12,20 +12,35 @@ import (
 const NonceSizeChaCha20 = 12
 
 var (
-	//ErrCannotGenerateSeed is the error returned if seed generation fails.
+	// ErrCannotGenerateSeed is the error returned if seed generation fails.
 	ErrCannotGenerateSeed = errors.New("cannot generate seed")
 
-	//ErrCannotEncrypt is the error returned if the encryption fails.
+	// ErrCannotEncrypt is the error returned if the encryption fails.
 	ErrCannotEncrypt = errors.New("failed to encrypt")
 
-	//ErrCannotDecrypt is the error returned if the decryption fails.
+	// ErrCannotDecrypt is the error returned if the decryption fails.
 	ErrCannotDecrypt = errors.New("failed to decrypt")
 
-	//ErrCannotDecodeSeed is the error returned if the seed cannot be decoded.
+	// ErrCannotDecodeSeed is the error returned if the seed cannot be decoded.
 	ErrCannotDecodeSeed = errors.New("cannot decode seed")
 
-	//ErrCannotReadSeed is the error returned if the seed cannot be decoded.
+	// ErrCannotReadSeed is the error returned if the seed cannot be decoded.
 	ErrCannotReadSeed = errors.New("cannot read seed")
+
+	// ErrCannotSignPayload is the error returned if the payload cannot be signed
+	ErrCannotSignPayload = errors.New("cannot sign payload")
+
+	// ErrCannotVerifyPayload is the error returned if the payload cannot be verified
+	ErrCannotVerifyPayload = errors.New("cannot verify payload")
+
+	// ErrNilPrivateKey is the error returned when required private key is not present
+	ErrNilPrivateKey = errors.New("nil private key")
+
+	// ErrCannotUnmarshallKey is the error returned when the signature cannot be unmarshalled
+	ErrCannotUnmarshallSignature = errors.New("cannot unmarshall signature")
+
+	// ErrCannotDecodeKey is the error returned when the key cannot be decoded
+	ErrCannotDecodeKey = errors.New("cannot decode key")
 )
 
 // ChaCha is the internal struct for a keypair using seed.

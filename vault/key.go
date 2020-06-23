@@ -3,14 +3,11 @@ package vault
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rand"
-	"encoding/asn1"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common/math"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/jinzhu/gorm"
@@ -235,23 +232,21 @@ func (k *Key) createEd25519Keypair() error {
 
 // createSecp256k1Keypair creates a keypair on the secp256k1 curve
 func (k *Key) createSecp256k1Keypair() error {
-	address, privkey, err := provide.EVMGenerateKeyPair()
+
+	secp256k1KeyPair, err := vaultcrypto.CreateSecp256k1KeyPair()
 	if err != nil {
 		return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
 	}
 
+	k.PrivateKey = secp256k1KeyPair.PrivateKey
+	k.PublicKey = secp256k1KeyPair.PublicKey
+
 	if k.Description == nil {
-		desc := fmt.Sprintf("secp256k1 keypair; address: %s", *address)
+		desc := fmt.Sprintf("secp256k1 keypair; address: %s", *secp256k1KeyPair.Address)
 		k.Description = common.StringOrNil(desc)
 	}
 
-	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
-	publicKey := hex.EncodeToString(elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y))
-
-	k.PrivateKey = &privateKey
-	k.PublicKey = common.StringOrNil(publicKey)
-
-	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, publicKey)
+	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, *k.PublicKey)
 	return nil
 }
 
@@ -831,24 +826,19 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
 		sig, sigerr = ec25519Key.Sign(payload)
+
 	case KeySpecECCSecp256k1:
-		if k.PrivateKey == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil secp256k1 private key", len(payload), k.ID)
+
+		secp256k1 := vaultcrypto.Secp256k1{}
+		secp256k1.PrivateKey = k.PrivateKey
+
+		sig, sigerr = secp256k1.Sign(payload)
+		if sigerr != nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, sigerr.Error())
 		}
-		secp256k1Key, err := ethcrypto.ToECDSA([]byte(*k.PrivateKey))
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
-		}
-		r, s, err := ecdsa.Sign(rand.Reader, secp256k1Key, payload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
-		}
-		sig, err := asn1.Marshal(common.ECDSASignature{R: r, S: s})
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
-		}
-		common.Log.Debugf("signed %d-byte payload using key: %s; r==%s; s==%s; signature: %s", len(payload), k.ID, r, s, hex.EncodeToString(sig))
+
 		return sig, nil
+
 	default:
 		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 	}
@@ -890,25 +880,14 @@ func (k *Key) Verify(payload, sig []byte) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
 		}
 		return ec25519Key.Verify(payload, sig)
+
 	case KeySpecECCSecp256k1:
-		signature := common.ECDSASignature{}
-		_, err := asn1.Unmarshal(sig, &signature)
-		if err != nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to unmarshal ASN1-encoded signature; %s", len(payload), k.ID, err.Error())
-		}
-		common.Log.Debugf("unmarshaled ASN1 signature r, s (%s, %s) for key %s", signature.R, signature.S, k.ID)
-		pubkey, err := hex.DecodeString(*k.PublicKey)
-		if err != nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to decode public key hex; %s", len(payload), k.ID, err.Error())
-		}
-		secp256k1Key, err := ethcrypto.UnmarshalPubkey([]byte(pubkey))
-		if err != nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to unmarshal public key; %s", len(payload), k.ID, err.Error())
-		}
-		if !ecdsa.Verify(secp256k1Key, payload, signature.R, signature.S) {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s", len(payload), k.ID)
-		}
-		return nil
+
+		secp256k1 := vaultcrypto.Secp256k1{}
+		secp256k1.PublicKey = k.PublicKey
+
+		return secp256k1.Verify(payload, sig)
+
 	}
 
 	return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)

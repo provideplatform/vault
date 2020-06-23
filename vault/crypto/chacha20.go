@@ -12,17 +12,20 @@ import (
 const NonceSizeChaCha20 = 12
 
 var (
-	//ErrCannotGenerateSeed is the error returned if chacha20 seed generation fails.
+	//ErrCannotGenerateSeed is the error returned if seed generation fails.
 	ErrCannotGenerateSeed = errors.New("cannot generate seed")
 
-	//ErrCannotEncrypt is the error returned if the chacha20 encryption fails.
+	//ErrCannotEncrypt is the error returned if the encryption fails.
 	ErrCannotEncrypt = errors.New("failed to encrypt")
 
-	//ErrCannotDecrypt is the error returned if the chacha20 decryption fails.
+	//ErrCannotDecrypt is the error returned if the decryption fails.
 	ErrCannotDecrypt = errors.New("failed to decrypt")
 
-	//ErrCannotDecodeSeed is the error returned if the chacha20 seed cannot be decoded.
+	//ErrCannotDecodeSeed is the error returned if the seed cannot be decoded.
 	ErrCannotDecodeSeed = errors.New("cannot decode seed")
+
+	//ErrCannotReadSeed is the error returned if the seed cannot be decoded.
+	ErrCannotReadSeed = errors.New("cannot read seed")
 )
 
 // ChaCha is the internal struct for a keypair using seed.
@@ -52,14 +55,14 @@ func CreateChaChaSeed() ([]byte, error) {
 
 	_, seed, err = DecodeSeed(seed)
 	if err != nil {
-		return nil, err
+		return nil, ErrCannotDecodeSeed
 	}
 
 	return seed, nil //no errors found in execution
 }
 
 //Encrypt encrypts byte array using chacha20 key
-func (k *ChaCha) Encrypt(input []byte) ([]byte, error) {
+func (k *ChaCha) Encrypt(plaintext []byte) ([]byte, error) {
 
 	// create a random nonce
 	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat
@@ -74,11 +77,11 @@ func (k *ChaCha) Encrypt(input []byte) ([]byte, error) {
 		return nil, ErrCannotEncrypt
 	}
 
-	ciphertext := make([]byte, len(input))
-	cipher.XORKeyStream(ciphertext, input)
-	ciphertextWithNonce := append(nonce[:], ciphertext[:]...)
+	ciphertext := make([]byte, len(plaintext))
+	cipher.XORKeyStream(ciphertext, plaintext)
+	ciphertext = append(nonce[:], ciphertext[:]...)
 
-	return ciphertextWithNonce, nil
+	return ciphertext, nil
 }
 
 // Decrypt decrypts byte array using chacha20 key and input nonce

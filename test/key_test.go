@@ -1044,7 +1044,7 @@ func TestEncryptAndDecryptSymmetricAESErrors(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key := vault.AES256GCMFactory(keyDB, &vlt.ID, "test key", "just some key :D")
 
 	plaintext := []byte(common.RandomString(128))
 

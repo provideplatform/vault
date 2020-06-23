@@ -1,8 +1,6 @@
 package vault
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -10,7 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -102,22 +99,14 @@ type KeySignVerifyRequestResponse struct {
 
 // createAES256GCM creates a key using a random seed
 func (k *Key) createAES256GCM() error {
-	keypair, err := vaultcrypto.CreatePair(vaultcrypto.PrefixByteSeed)
+
+	privatekey, err := vaultcrypto.CreateAES256GCMSeed()
 	if err != nil {
-		common.Log.Warningf("failed to generate Ed25519 seed; %s", err.Error())
 		return err
 	}
 
-	seed, err := keypair.Seed()
-	if err != nil {
-		common.Log.Warningf("failed to read encoded Ed25519 seed; %s", err.Error())
-		return err
-	}
-
-	slicedSeed := seed[0:32]
-	k.PrivateKey = &slicedSeed
-
-	common.Log.Debugf("created AES-256-GCM key with %d-byte seed for vault: %s", len(seed), k.VaultID)
+	k.PrivateKey = &privatekey
+	common.Log.Debugf("created AES256GCM key for vault: %s; key id: %s", k.VaultID, k.ID)
 	return nil
 }
 
@@ -640,21 +629,16 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 
 	switch *k.Spec {
 	case KeySpecAES256GCM:
-		key := []byte(*k.PrivateKey)
-		block, err := aes.NewCipher(key)
+
+		aes256 := vaultcrypto.AES256GCM{}
+		aes256.PrivateKey = k.PrivateKey
+
+		var err error
+		plaintext, err = aes256.Decrypt(ciphertext, nonce)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
+			return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
 		}
 
-		aesgcm, err := cipher.NewGCM(block)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
-		}
-
-		plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
-		}
 	case KeySpecChaCha20:
 
 		chacha := vaultcrypto.ChaCha{}
@@ -782,32 +766,19 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 	k.decryptFields()
 	defer k.encryptFields()
 
-	var nonce []byte
 	var ciphertext []byte
 
 	switch *k.Spec {
 	case KeySpecAES256GCM:
-		key := *k.PrivateKey
 
-		block, err := aes.NewCipher(key)
+		aes256 := vaultcrypto.AES256GCM{}
+		aes256.PrivateKey = k.PrivateKey
+
+		var err error
+		ciphertext, err = aes256.Encrypt(plaintext)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
+			return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
 		}
-
-		// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-		nonce = make([]byte, NonceSizeSymmetric)
-		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
-		}
-
-		aesgcm, err := cipher.NewGCM(block)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
-		}
-
-		ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
-		//append the nonce to the ciphertext
-		ciphertext = append(nonce[:], ciphertext[:]...)
 
 	case KeySpecChaCha20:
 

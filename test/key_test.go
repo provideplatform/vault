@@ -520,6 +520,44 @@ func TestBabyJubJubSign(t *testing.T) {
 	common.Log.Debugf("signed message using babyJubJub keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
 }
 
+func TestBabyJubJubVerify(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for babyjubjub key verify unit test!")
+		return
+	}
+
+	key := vault.BabyJubJubFactory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create babyjubjub keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("1failed to sign message using babyjubjub keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	if sig == nil {
+		t.Errorf("2failed to sign message using babyjubjub keypair for vault: %s nil signature!", vlt.ID)
+		return
+	}
+
+	if len(sig) != 64 {
+		t.Errorf("3failed to sign message using babyjubjub keypair for vault: %s received %d-byte signature: %s", vlt.ID, len(sig), sig)
+		return
+	}
+
+	err = key.Verify(msg, sig)
+	if err != nil {
+		t.Errorf("4failed to verify message using babyjubjub keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("verified message using babyjubjub keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
 func TestEd25519Sign(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {
@@ -997,6 +1035,25 @@ func TestEncryptChaChaNilKeyType(t *testing.T) {
 	}
 }
 
+func TestEncryptChaChaNilSeed(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	key.Seed = nil
+	_, err := key.Encrypt(plaintext)
+	if err == nil {
+		t.Error("failed to trap nil seed on key")
+		return
+	}
+}
+
 func TestEncryptAndDecryptSymmetricChaChaNoErrors(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {
@@ -1035,6 +1092,25 @@ func TestEncryptAndDecryptSymmetricChaChaNoErrors(t *testing.T) {
 		return
 	}
 	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
+}
+
+func TestEncryptAESNilPrivateKey(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.AES256GCMFactory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	key.PrivateKey = nil
+	_, err := key.Encrypt(plaintext)
+	if err == nil {
+		t.Error("failed to trap nil private key on key")
+		return
+	}
 }
 
 func TestEncryptAndDecryptSymmetricAESErrors(t *testing.T) {
@@ -1319,34 +1395,79 @@ func TestSign256k1NilPrivateKey(t *testing.T) {
 	}
 }
 
-func TestVerifyEd25519NilType(t *testing.T) {
+func TestSign256k1NilType(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {
-		t.Error("failed! no vault created for ed25519 key signing unit test!")
+		t.Error("failed! no vault created for 256k1 key signing unit test!")
 		return
 	}
 
-	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key := vault.Secp256k1Factory(keyDB, &vlt.ID, "test key", "just some key :D")
 	if key == nil {
-		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+		t.Errorf("failed to create 256k1 keypair for vault: %s", vlt.ID)
 		return
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
-	if err != nil {
-		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
-		return
-	}
-
 	key.Type = nil
-	err = key.Verify(msg, sig)
+	_, err := key.Sign(msg)
 	if err == nil {
-		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		t.Errorf("signed message using 256k1 keypair with nil type for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+	if err != nil {
+		common.Log.Debug("correctly failed to sign with 256k1 key with nil type")
+	}
+}
+
+func TestSign256k1NilUsage(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for 256k1 key signing unit test!")
 		return
 	}
 
-	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with nil type for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+	key := vault.Secp256k1Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create 256k1 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	key.Usage = nil
+	_, err := key.Sign(msg)
+	if err == nil {
+		t.Errorf("signed message using 256k1 keypair with nil type for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+	if err != nil {
+		common.Log.Debug("correctly failed to sign with 256k1 key with nil usage")
+	}
+}
+
+func TestSign256k1NilSpec(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for 256k1 key signing unit test!")
+		return
+	}
+
+	key := vault.Secp256k1Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create 256k1 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	key.Spec = nil
+	_, err := key.Sign(msg)
+	if err == nil {
+		t.Errorf("signed message using 256k1 keypair with nil spec for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+	if err != nil {
+		common.Log.Debug("correctly failed to sign with 256k1 key with nil spec")
+	}
 }
 
 func TestVerifyEd25519NilUsage(t *testing.T) {
@@ -1409,6 +1530,35 @@ func TestVerifyEd25519NilSpec(t *testing.T) {
 	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with nil spec for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
 }
 
+func TestVerifyEd25519NilType(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for ed25519 key signing unit test!")
+		return
+	}
+
+	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	key.Type = nil
+	err = key.Verify(msg, sig)
+	if err == nil {
+		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with nil type for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
 func TestVerifyEd25519NilPublicKey(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {

@@ -103,7 +103,7 @@ func (k *Key) createAES256GCM() error {
 	}
 
 	k.PrivateKey = &privatekey
-	common.Log.Debugf("created AES256GCM key for vault: %s; key id: %s", k.VaultID, k.ID)
+	common.Log.Debugf("created AES256GCM key for vault: %s;", k.VaultID)
 	return nil
 }
 
@@ -119,23 +119,22 @@ func (k *Key) createBabyJubJubKeypair() error {
 	k.PrivateKey = &privateKey
 	k.PublicKey = common.StringOrNil(publicKeyHex)
 
-	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, *k.PublicKey)
+	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
 	return nil
 }
 
 // createC25519Keypair creates an c25519 keypair suitable for Diffie-Hellman key exchange
 func (k *Key) createC25519Keypair() error {
-	publicKey, privateKey, err := provide.C25519GenerateKeyPair()
+
+	c25519KeyPair, err := vaultcrypto.CreateC25519KeyPair()
 	if err != nil {
 		return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
 	}
+	k.PrivateKey = c25519KeyPair.PrivateKey
+	k.PublicKey = common.StringOrNil(string(*c25519KeyPair.PublicKey))
 
-	publicKeyHex := hex.EncodeToString(publicKey)
+	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, hex.EncodeToString(*c25519KeyPair.PublicKey))
 
-	k.PrivateKey = &privateKey
-	k.PublicKey = common.StringOrNil(string(publicKey))
-
-	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
 	return nil
 }
 
@@ -746,10 +745,6 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 		}
 	}()
 
-	if k.Type == nil || *k.Type != KeyTypeSymmetric {
-		return nil, fmt.Errorf("failed to symmetrically encrypt using key: %s; nil or invalid key type", k.ID)
-	}
-
 	if *k.Spec == KeySpecChaCha20 && k.Seed == nil {
 		return nil, fmt.Errorf("failed to encrypt using key: %s; nil seed", k.ID)
 	}
@@ -817,27 +812,25 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		sig, sigerr = provide.TECSign([]byte(*k.PrivateKey), payload)
+
 	case KeySpecECCEd25519:
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
 		}
-		ec25519Key, err := vaultcrypto.FromSeed([]byte(*k.Seed))
+		ec25519Key, err := vaultcrypto.FromSeed(*k.Seed)
 		if err != nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
+			return nil, fmt.Errorf("failed to create public key from seed using key: %s; %s", k.ID, err.Error())
 		}
 		sig, sigerr = ec25519Key.Sign(payload)
 
 	case KeySpecECCSecp256k1:
-
+		if k.PrivateKey == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
+		}
 		secp256k1 := vaultcrypto.Secp256k1{}
 		secp256k1.PrivateKey = k.PrivateKey
 
 		sig, sigerr = secp256k1.Sign(payload)
-		if sigerr != nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; %s", len(payload), k.ID, sigerr.Error())
-		}
-
-		return sig, nil
 
 	default:
 		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
@@ -873,7 +866,10 @@ func (k *Key) Verify(payload, sig []byte) error {
 
 	switch *k.Spec {
 	case KeySpecECCBabyJubJub:
-		return provide.TECVerify([]byte(*k.PublicKey), payload, sig)
+		// convert the hex string public key to bytes before verification
+		decodedPubKey, _ := hex.DecodeString(*k.PublicKey)
+		return provide.TECVerify(decodedPubKey, payload, sig)
+
 	case KeySpecECCEd25519:
 		ec25519Key, err := vaultcrypto.FromPublicKey(*k.PublicKey)
 		if err != nil {

@@ -17,7 +17,7 @@ import (
 // Secp256k1 is the internal struct for an asymmetric keypair
 type Secp256k1 struct {
 	PrivateKey *[]byte
-	PublicKey  *string
+	PublicKey  *string //TODO: change to []byte for internal consistency
 	Address    *string
 }
 

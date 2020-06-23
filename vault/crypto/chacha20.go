@@ -36,11 +36,14 @@ var (
 	// ErrNilPrivateKey is the error returned when required private key is not present
 	ErrNilPrivateKey = errors.New("nil private key")
 
-	// ErrCannotUnmarshallKey is the error returned when the signature cannot be unmarshalled
+	// ErrCannotUnmarshallSignature is the error returned when the signature cannot be unmarshalled
 	ErrCannotUnmarshallSignature = errors.New("cannot unmarshall signature")
 
 	// ErrCannotDecodeKey is the error returned when the key cannot be decoded
 	ErrCannotDecodeKey = errors.New("cannot decode key")
+
+	// ErrCannotGenerateKey is the error returned if key generation fails
+	ErrCannotGenerateKey = errors.New("cannot generate key")
 )
 
 // ChaCha is the internal struct for a keypair using seed.

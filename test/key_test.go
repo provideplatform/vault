@@ -1030,11 +1030,6 @@ func TestEncryptAndDecryptSymmetricChaChaNoErrors(t *testing.T) {
 		return
 	}
 
-	if len(decryptedtext) != len(plaintext) {
-		t.Errorf("%d-byte decrypted text is different length to %d-byte plaintext", len(decryptedtext), len(plaintext))
-		return
-	}
-
 	if hex.EncodeToString(decryptedtext) != hex.EncodeToString(plaintext) {
 		t.Error("decrypted text is not the same as original plaintext!")
 		return

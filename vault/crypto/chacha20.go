@@ -27,12 +27,11 @@ var (
 
 // ChaCha is the internal struct for a keypair using seed.
 type ChaCha struct {
-	seed []byte
+	Seed *[]byte
 }
 
 // ChaCha20 ...
 type ChaCha20 interface {
-	create() ([]byte, error)
 	Encrypt(plaintext []byte) ([]byte, error)
 	Decrypt(ciphertext []byte) ([]byte, error)
 	Wipe()
@@ -45,7 +44,7 @@ func CreateChaChaSeed() ([]byte, error) {
 		return nil, ErrCannotGenerateSeed
 	}
 
-	//NB: unencrypted seed stored in memory
+	//NB: shared, unencrypted seed stored in only one memory location
 	seed, err := keypair.Seed()
 	if err != nil {
 		return nil, ErrCannotGenerateSeed
@@ -69,7 +68,8 @@ func (k *ChaCha) Encrypt(input []byte) ([]byte, error) {
 		return nil, ErrCannotEncrypt
 	}
 
-	cipher, err := chacha20.NewUnauthenticatedCipher(k.seed, nonce)
+	//NB: shared, unencrypted seed stored in only one memory location
+	cipher, err := chacha20.NewUnauthenticatedCipher(*k.Seed, nonce)
 	if err != nil {
 		return nil, ErrCannotEncrypt
 	}
@@ -81,15 +81,11 @@ func (k *ChaCha) Encrypt(input []byte) ([]byte, error) {
 	return ciphertextWithNonce, nil
 }
 
-// Decrypt decrypts byte array using chacha20 key
-func (k *ChaCha) Decrypt(input []byte) ([]byte, error) {
+// Decrypt decrypts byte array using chacha20 key and input nonce
+func (k *ChaCha) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) {
 
-	//key := []byte(key.seed)
-
-	nonce := input[0:NonceSizeChaCha20]
-	ciphertext := input[NonceSizeChaCha20:]
-
-	cipher, err := chacha20.NewUnauthenticatedCipher(k.seed, nonce)
+	//NB: shared, unencrypted seed stored in only one memory location
+	cipher, err := chacha20.NewUnauthenticatedCipher(*k.Seed, nonce)
 	if err != nil {
 		return nil, ErrCannotDecrypt
 	}
@@ -102,6 +98,6 @@ func (k *ChaCha) Decrypt(input []byte) ([]byte, error) {
 
 // Wipe will randomize the contents of the seed key
 func (k *ChaCha) Wipe() {
-	io.ReadFull(rand.Reader, k.seed)
-	k.seed = nil
+	io.ReadFull(rand.Reader, *k.Seed)
+	k.Seed = nil
 }

@@ -656,15 +656,15 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 			return nil, fmt.Errorf("failed to decrypt using key: %s; %s", k.ID, err.Error())
 		}
 	case KeySpecChaCha20:
-		key := []byte(*k.Seed)
 
-		cipher, err := chacha20.NewUnauthenticatedCipher(key, nonce)
+		chacha := vaultcrypto.ChaCha{}
+		chacha.Seed = k.Seed
+
+		var err error
+		plaintext, err = chacha.Decrypt(ciphertext, nonce)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
+			return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
 		}
-
-		plaintext = make([]byte, len(ciphertext))
-		cipher.XORKeyStream(plaintext, ciphertext)
 	}
 
 	return plaintext, nil
@@ -787,7 +787,7 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 
 	switch *k.Spec {
 	case KeySpecAES256GCM:
-		key := []byte(*k.PrivateKey)
+		key := *k.PrivateKey
 
 		block, err := aes.NewCipher(key)
 		if err != nil {
@@ -806,25 +806,23 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 		}
 
 		ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
+		//append the nonce to the ciphertext
+		ciphertext = append(nonce[:], ciphertext[:]...)
+
 	case KeySpecChaCha20:
-		key := []byte(*k.Seed)
 
-		// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-		nonce = make([]byte, NonceSizeSymmetric)
-		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
-		}
+		chacha := vaultcrypto.ChaCha{}
+		chacha.Seed = k.Seed
 
-		cipher, err := chacha20.NewUnauthenticatedCipher(key, nonce)
+		var err error
+		ciphertext, err = chacha.Encrypt(plaintext)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt using key: %s; %s", k.ID, err.Error())
+			return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
 		}
 
-		ciphertext = make([]byte, len(plaintext))
-		cipher.XORKeyStream(ciphertext, plaintext)
 	}
 
-	return append(nonce[:], ciphertext[:]...), nil
+	return ciphertext, nil
 }
 
 // Sign the input with the private key

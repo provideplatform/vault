@@ -1,11 +1,10 @@
-package vault
+package crypto
 
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/asn1"
-	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common/math"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
@@ -17,7 +16,7 @@ import (
 // Secp256k1 is the internal struct for an asymmetric keypair
 type Secp256k1 struct {
 	PrivateKey *[]byte
-	PublicKey  *string //TODO: change to []byte for internal consistency
+	PublicKey  *[]byte //TODO: change to []byte for internal consistency
 	Address    *string
 }
 
@@ -29,7 +28,7 @@ func CreateSecp256k1KeyPair() (*Secp256k1, error) {
 	}
 
 	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
-	publicKey := hex.EncodeToString(elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y))
+	publicKey := elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y)
 
 	secp256k1 := Secp256k1{}
 	secp256k1.PrivateKey = &privateKey
@@ -71,12 +70,12 @@ func (k *Secp256k1) Verify(payload, sig []byte) error {
 	}
 	//common.Log.Debugf("unmarshaled ASN1 signature r, s (%s, %s) for key %s", signature.R, signature.S, k.ID)
 
-	pubkey, err := hex.DecodeString(*k.PublicKey)
-	if err != nil {
-		return ErrCannotDecodeKey
-		//return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to decode public key hex; %s", len(payload), k.ID, err.Error())
-	}
-	secp256k1Key, err := ethcrypto.UnmarshalPubkey([]byte(pubkey))
+	// pubkey, err := *k.PublicKey
+	// if err != nil {
+	// 	return ErrCannotDecodeKey
+	// 	//return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to decode public key hex; %s", len(payload), k.ID, err.Error())
+	// }
+	secp256k1Key, err := ethcrypto.UnmarshalPubkey(*k.PublicKey)
 	if err != nil {
 		return ErrCannotVerifyPayload
 		//return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to unmarshal public key; %s", len(payload), k.ID, err.Error())

@@ -1,4 +1,4 @@
-package vault
+package crypto
 
 import (
 	"crypto/aes"

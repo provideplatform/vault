@@ -1,4 +1,4 @@
-package vault
+package crypto
 
 import (
 	"github.com/provideservices/provide-go"

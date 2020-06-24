@@ -1,4 +1,4 @@
-package vault
+package crypto
 
 import (
 	"bytes"
@@ -93,7 +93,7 @@ type PrefixByte byte
 // KeyPair provides the central interface to nkeys.
 type KeyPair interface {
 	Seed() ([]byte, error)
-	PublicKey() (string, error)
+	PublicKey() ([]byte, error)
 	PrivateKey() ([]byte, error)
 	Sign(input []byte) ([]byte, error)
 	Verify(input []byte, sig []byte) error
@@ -117,8 +117,8 @@ func CreatePair(prefix PrefixByte) (KeyPair, error) {
 }
 
 // FromPublicKey will create a KeyPair capable of verifying signatures.
-func FromPublicKey(public string) (KeyPair, error) {
-	raw, err := decode([]byte(public))
+func FromPublicKey(public []byte) (KeyPair, error) {
+	raw, err := decode(public)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +126,7 @@ func FromPublicKey(public string) (KeyPair, error) {
 	if err := checkValidPublicPrefixByte(pre); err != nil {
 		return nil, ErrInvalidPublicKey
 	}
+
 	return &pubkey{pre, raw[1:]}, nil
 }
 
@@ -176,20 +177,20 @@ func (pair *keypair) Seed() ([]byte, error) {
 
 // PublicKey will return the encoded public key associated with the KeyPair.
 // All KeyPairs have a public key.
-func (pair *keypair) PublicKey() (string, error) {
+func (pair *keypair) PublicKey() ([]byte, error) {
 	public, raw, err := DecodeSeed(pair.seed)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	pub, _, err := ed25519.GenerateKey(bytes.NewReader(raw))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	pk, err := Encode(public, pub)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(pk), nil
+	return pk, nil
 }
 
 // PrivateKey will return the encoded private key for KeyPair.
@@ -421,7 +422,7 @@ func CompatibleKeyPair(kp KeyPair, expected ...PrefixByte) error {
 	if err != nil {
 		return err
 	}
-	pkType := Prefix(pk)
+	pkType := Prefix(string(pk[:]))
 	for _, k := range expected {
 		if pkType == k {
 			return nil
@@ -450,12 +451,12 @@ func validate(data []byte, expected uint16) error {
 
 // PublicKey will return the encoded public key associated with the KeyPair.
 // All KeyPairs have a public key.
-func (p *pubkey) PublicKey() (string, error) {
+func (p *pubkey) PublicKey() ([]byte, error) {
 	pk, err := Encode(p.pre, p.pub)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(pk), nil
+	return pk, nil
 }
 
 // Seed will return an error since this is not available for public key only KeyPairs.

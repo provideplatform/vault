@@ -253,10 +253,11 @@ for d in "${pkgs[@]}" ; do
                        -race \
                        -timeout 1800s \
                        -cover \
-                       -coverpkg=./vault \
-                       -coverprofile=profile.out \
+                       -coverpkg=./vault/...,./crypto/... \
+                       -coverprofile=profile.cov \
                        -tags="$TAGS"
-    go tool cover -html=profile.out -o cover.html
+    go tool cover -func profile.cov
+    go tool cover -html=profile.cov -o cover.html
   else
     PGP_PUBLIC_KEY=$PGP_PUBLIC_KEY \
     PGP_PRIVATE_KEY=$PGP_PRIVATE_KEY \
@@ -272,9 +273,10 @@ for d in "${pkgs[@]}" ; do
     go test ./... -v \
                        -timeout 1800s \
                        -cover \
-                       -coverpkg=./vault \
-                       -coverprofile=profile.out \
+                       -coverpkg=./vault/...,./crypto/... \
+                       -coverprofile=profile.cov \
                        -tags="$TAGS"
-    go tool cover -html=profile.out -o cover.html
+    go tool cover -func profile.cov
+    go tool cover -html=profile.cov -o cover.html
   fi
 done

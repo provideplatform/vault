@@ -15,7 +15,7 @@ import (
 	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
-	vaultcrypto "github.com/provideapp/vault/vault/crypto"
+	vaultcrypto "github.com/provideapp/vault/crypto"
 	provide "github.com/provideservices/provide-go"
 	"golang.org/x/crypto/chacha20"
 )
@@ -73,7 +73,7 @@ type Key struct {
 	Name        *string    `sql:"not null" json:"name"`
 	Description *string    `json:"description"`
 	Seed        *[]byte    `sql:"type:bytea" json:"-"`
-	PublicKey   *string    `sql:"type:bytea" json:"public_key,omitempty"`
+	PublicKey   *[]byte    `sql:"type:bytea" json:"public_key,omitempty"`
 	PrivateKey  *[]byte    `sql:"type:bytea" json:"-"`
 
 	Address             *string `sql:"-" json:"address,omitempty"`
@@ -117,7 +117,7 @@ func (k *Key) createBabyJubJubKeypair() error {
 	publicKeyHex := hex.EncodeToString(publicKey)
 
 	k.PrivateKey = &privateKey
-	k.PublicKey = common.StringOrNil(publicKeyHex)
+	k.PublicKey = &publicKey
 
 	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
 	return nil
@@ -131,7 +131,7 @@ func (k *Key) createC25519Keypair() error {
 		return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
 	}
 	k.PrivateKey = c25519KeyPair.PrivateKey
-	k.PublicKey = common.StringOrNil(string(*c25519KeyPair.PublicKey))
+	k.PublicKey = c25519KeyPair.PublicKey
 
 	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, hex.EncodeToString(*c25519KeyPair.PublicKey))
 
@@ -168,7 +168,7 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 		return nil, err
 	}
 
-	ec25519Key, err := vaultcrypto.FromPublicKey(string(peerSigningKey))
+	ec25519Key, err := vaultcrypto.FromPublicKey(peerSigningKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute shared secret; failed to unmarshal %d-byte Ed22519 public key: %s", len(peerPublicKey), string(peerPublicKey))
 	}
@@ -223,7 +223,7 @@ func (k *Key) createEd25519Keypair() error {
 	}
 
 	k.Seed = &seed
-	k.PublicKey = common.StringOrNil(publicKey)
+	k.PublicKey = &publicKey
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, *k.PublicKey)
 	return nil
@@ -416,15 +416,14 @@ func (k *Key) encryptFields() error {
 func (k *Key) Enrich() {
 	if k.Spec != nil && *k.Spec == KeySpecECCSecp256k1 {
 		if k.PublicKey != nil {
-			pubkey, err := hex.DecodeString(*k.PublicKey)
-			if err == nil {
-				x, y := elliptic.Unmarshal(secp256k1.S256(), pubkey)
-				if x != nil {
-					publicKey := &ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
-					addr := ethcrypto.PubkeyToAddress(*publicKey)
-					k.Address = common.StringOrNil(addr.Hex())
-				}
+			pubkey := *k.PublicKey
+			x, y := elliptic.Unmarshal(secp256k1.S256(), pubkey)
+			if x != nil {
+				publicKey := &ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
+				addr := ethcrypto.PubkeyToAddress(*publicKey)
+				k.Address = common.StringOrNil(addr.Hex())
 			}
+
 		}
 	}
 }
@@ -866,8 +865,8 @@ func (k *Key) Verify(payload, sig []byte) error {
 
 	switch *k.Spec {
 	case KeySpecECCBabyJubJub:
-		// convert the hex string public key to bytes before verification
-		decodedPubKey, _ := hex.DecodeString(*k.PublicKey)
+		// convert the hex string public key to bytes before verification TODO: decoding removed, so tidy this up
+		decodedPubKey := *k.PublicKey
 		return provide.TECVerify(decodedPubKey, payload, sig)
 
 	case KeySpecECCEd25519:

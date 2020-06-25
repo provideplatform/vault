@@ -1,7 +1,10 @@
 package test
 
 import (
+	"crypto/rand"
 	"encoding/hex"
+	"fmt"
+	"io"
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
@@ -16,6 +19,7 @@ func init() {
 }
 
 var keyDB = dbconf.DatabaseConnection()
+var NonceSizeSymmetric = 12
 
 func TestAES256GCMEncrypt(t *testing.T) {
 	vlt := vaultFactory()
@@ -31,7 +35,7 @@ func TestAES256GCMEncrypt(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	encval, err := key.Encrypt(msg)
+	encval, err := key.Encrypt(msg, nil)
 
 	// it should not result in an error ;)
 	if err != nil {
@@ -352,7 +356,7 @@ func TestValidateInvalidSymmetricUsage(t *testing.T) {
 
 	if !valid {
 		common.Log.Debug("correctly flagged key as invalid")
-		if *key.Errors[0].Message != "symmetric key requires "+vault.KeyUsageEncryptDecrypt+" usage mode" {
+		if *key.Errors[0].Message != fmt.Sprintf("symmetric key requires %s usage mode", vault.KeyUsageEncryptDecrypt) {
 			t.Errorf("returned incorrect validation message")
 			return
 		}
@@ -960,7 +964,7 @@ func TestEncryptChaChaNoErrors(t *testing.T) {
 
 	plaintext := []byte(common.RandomString(128))
 
-	ciphertext, err := key.Encrypt(plaintext)
+	ciphertext, err := key.Encrypt(plaintext, nil)
 	if err != nil {
 		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
 		return
@@ -990,7 +994,7 @@ func TestEncryptChaChaInvalidNilUsage(t *testing.T) {
 	plaintext := []byte(common.RandomString(128))
 
 	key.Usage = nil
-	_, err := key.Encrypt(plaintext)
+	_, err := key.Encrypt(plaintext, nil)
 	if err == nil {
 		t.Error("failed to trap invalid nil usage on key")
 		return
@@ -1009,7 +1013,7 @@ func TestEncryptChaChaInvalidUsage(t *testing.T) {
 	plaintext := []byte(common.RandomString(128))
 
 	*key.Usage = vault.KeyUsageSignVerify
-	_, err := key.Encrypt(plaintext)
+	_, err := key.Encrypt(plaintext, nil)
 	if err == nil {
 		t.Error("failed to trap invalid usage on key")
 		return
@@ -1028,7 +1032,7 @@ func TestEncryptChaChaNilKeyType(t *testing.T) {
 	plaintext := []byte(common.RandomString(128))
 
 	key.Type = nil
-	_, err := key.Encrypt(plaintext)
+	_, err := key.Encrypt(plaintext, nil)
 	if err == nil {
 		t.Error("failed to trap nil type on key")
 		return
@@ -1047,7 +1051,7 @@ func TestEncryptChaChaNilSeed(t *testing.T) {
 	plaintext := []byte(common.RandomString(128))
 
 	key.Seed = nil
-	_, err := key.Encrypt(plaintext)
+	_, err := key.Encrypt(plaintext, nil)
 	if err == nil {
 		t.Error("failed to trap nil seed on key")
 		return
@@ -1065,7 +1069,7 @@ func TestEncryptAndDecryptSymmetricChaChaNoErrors(t *testing.T) {
 
 	plaintext := []byte(common.RandomString(128))
 
-	ciphertext, err := key.Encrypt(plaintext)
+	ciphertext, err := key.Encrypt(plaintext, nil)
 	if err != nil {
 		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
 		return
@@ -1106,7 +1110,7 @@ func TestEncryptAESNilPrivateKey(t *testing.T) {
 	plaintext := []byte(common.RandomString(128))
 
 	key.PrivateKey = nil
-	_, err := key.Encrypt(plaintext)
+	_, err := key.Encrypt(plaintext, nil)
 	if err == nil {
 		t.Error("failed to trap nil private key on key")
 		return
@@ -1124,7 +1128,7 @@ func TestEncryptAndDecryptSymmetricAESErrors(t *testing.T) {
 
 	plaintext := []byte(common.RandomString(128))
 
-	ciphertext, err := key.Encrypt(plaintext)
+	ciphertext, err := key.Encrypt(plaintext, nil)
 	if err != nil {
 		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
 		return
@@ -1243,7 +1247,7 @@ func TestECDH(t *testing.T) {
 
 	plaintext := common.RandomString(128)
 
-	ciphertext, err := peerSecretKey.Encrypt([]byte(plaintext))
+	ciphertext, err := peerSecretKey.Encrypt([]byte(plaintext), nil)
 	if err != nil {
 		t.Errorf("error encrypting plaintext with peer key %s", err.Error())
 		return
@@ -1618,4 +1622,101 @@ func TestVerifyEd25519InvalidSpec(t *testing.T) {
 	}
 
 	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with invalid spec for vault: %s; err: %s", vlt.ID, err.Error())
+}
+
+func TestEncryptAndDecryptSymmetricChaChaNoErrorsOptionalNonce(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	nonce := make([]byte, NonceSizeSymmetric)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		t.Errorf("error creating random nonce %s", err.Error())
+		return
+	}
+
+	ciphertext, err := key.Encrypt(plaintext, nonce)
+	if err != nil {
+		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
+		return
+	}
+
+	if hex.EncodeToString(ciphertext[vault.NonceSizeSymmetric:]) == hex.EncodeToString(plaintext) {
+		t.Error("encrypted text is the same as plaintext")
+		return
+	}
+
+	if len(plaintext)+vault.NonceSizeSymmetric != len(ciphertext) {
+		t.Errorf("%d-byte ciphertext is not the same length as %d-byte plaintext", len(ciphertext)-vault.NonceSizeSymmetric, len(plaintext))
+		return
+	}
+
+	if hex.EncodeToString(ciphertext[:vault.NonceSizeSymmetric]) != hex.EncodeToString(nonce) {
+		t.Errorf("user-generated nonce not returned in ciphertext. expected %s, got %s", hex.EncodeToString(nonce), hex.EncodeToString(ciphertext[:vault.NonceSizeSymmetric]))
+		return
+	}
+
+	decryptedtext, err := key.Decrypt(ciphertext)
+	if err != nil {
+		t.Errorf("failed to decrypt encrypted text  with error: %s", err.Error())
+		return
+	}
+
+	if hex.EncodeToString(decryptedtext) != hex.EncodeToString(plaintext) {
+		t.Error("decrypted text is not the same as original plaintext!")
+		return
+	}
+	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
+}
+
+func TestEncryptAndDecryptSymmetricAESNoErrorsOptionalNonce(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.AES256GCMFactory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	nonce := make([]byte, NonceSizeSymmetric)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		t.Errorf("error creating random nonce %s", err.Error())
+		return
+	}
+
+	ciphertext, err := key.Encrypt(plaintext, nonce)
+	if err != nil {
+		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
+		return
+	}
+
+	if hex.EncodeToString(ciphertext[vault.NonceSizeSymmetric:]) == hex.EncodeToString(plaintext) {
+		t.Error("encrypted text is the same as plaintext")
+		return
+	}
+
+	if hex.EncodeToString(ciphertext[:vault.NonceSizeSymmetric]) != hex.EncodeToString(nonce) {
+		t.Errorf("user-generated nonce not returned in ciphertext. expected %s, got %s", hex.EncodeToString(nonce), hex.EncodeToString(ciphertext[:vault.NonceSizeSymmetric]))
+		return
+	}
+
+	decryptedtext, err := key.Decrypt(ciphertext)
+	if err != nil {
+		t.Errorf("failed to decrypt encrypted text  with error: %s", err.Error())
+		return
+	}
+
+	if hex.EncodeToString(decryptedtext) != hex.EncodeToString(plaintext) {
+		t.Error("decrypted text is not the same as original plaintext!")
+		return
+	}
+	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
 }

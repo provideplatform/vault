@@ -147,7 +147,7 @@ func (k *Key) createChaCha20() error {
 	}
 
 	k.Seed = &seed
-	common.Log.Debugf("created chacha20 key for vault: %s; key id: %s", k.VaultID, k.ID)
+	common.Log.Debugf("created chacha20 key for vault: %s;", k.VaultID)
 	return nil
 
 }
@@ -391,7 +391,7 @@ func (k *Key) encryptFields() error {
 		defer masterKey.encryptFields()
 
 		if k.Seed != nil {
-			seed, err := masterKey.Encrypt([]byte(*k.Seed))
+			seed, err := masterKey.Encrypt(*k.Seed, nil)
 			if err != nil {
 				return err
 			}
@@ -399,7 +399,7 @@ func (k *Key) encryptFields() error {
 		}
 
 		if k.PrivateKey != nil {
-			privateKey, err := masterKey.Encrypt([]byte(*k.PrivateKey))
+			privateKey, err := masterKey.Encrypt(*k.PrivateKey, nil)
 			if err != nil {
 				return err
 			}
@@ -603,6 +603,7 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	// k.mutex.Lock()
 	// defer k.mutex.Unlock()
+	//TODO validate mutex
 
 	// k.decryptFields()
 	// defer k.encryptFields()
@@ -705,13 +706,15 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 }
 
 // Encrypt the given plaintext with the key, according to its spec
-func (k *Key) Encrypt(plaintext []byte) ([]byte, error) {
+// nonce is optional and a random nonce will be generated if nil
+// never use more than 2^32 random nonces with a given key because of the risk of a repeat.
+func (k *Key) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 	if k.Usage == nil || *k.Usage != KeyUsageEncryptDecrypt {
 		return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key: %s; nil or invalid key usage", len(plaintext), k.ID)
 	}
 
 	if k.Type != nil && *k.Type == KeyTypeSymmetric {
-		return k.encryptSymmetric(plaintext)
+		return k.encryptSymmetric(plaintext, nonce)
 	}
 
 	if k.Type != nil && *k.Type == KeyTypeAsymmetric {
@@ -736,8 +739,8 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 
 // encryptSymmetric attempts symmetric AES-256-GCM encryption using the key;
 // returns the ciphertext-- with 12-byte nonce prepended-- and any error
-// TODO: support optional nonce parameter & use random nonce if not provided
-func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
+// nonce is optional and if nil is passed in, a random nonce is created
+func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 	defer func() {
 		if r := recover(); r != nil {
 			common.Log.Warningf("recovered from panic during encryptSymmetric(); %s", r)
@@ -764,7 +767,7 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 		aes256.PrivateKey = k.PrivateKey
 
 		var err error
-		ciphertext, err = aes256.Encrypt(plaintext)
+		ciphertext, err = aes256.Encrypt(plaintext, nonce)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
 		}
@@ -775,7 +778,7 @@ func (k *Key) encryptSymmetric(plaintext []byte) ([]byte, error) {
 		chacha.Seed = k.Seed
 
 		var err error
-		ciphertext, err = chacha.Encrypt(plaintext)
+		ciphertext, err = chacha.Encrypt(plaintext, nonce)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
 		}

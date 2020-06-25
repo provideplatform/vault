@@ -35,19 +35,21 @@ func CreateAES256GCMSeed() ([]byte, error) {
 	return slicedSeed, nil
 }
 
-//Encrypt encrypts byte array using AES256GCM key
-func (k *AES256GCM) Encrypt(plaintext []byte) ([]byte, error) {
-	//key := *k.PrivateKey
+// Encrypt encrypts byte array using AES256GCM key
+// if nonce is nil, a random nonce is generated
+// never use more than 2^32 random nonces with a given key because of the risk of a repeat.
+func (k *AES256GCM) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 
 	block, err := aes.NewCipher(*k.PrivateKey)
 	if err != nil {
 		return nil, ErrCannotEncrypt
 	}
 
-	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-	nonce := make([]byte, NonceSizeAES256GCM)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, ErrCannotEncrypt
+	if nonce == nil {
+		nonce = make([]byte, NonceSizeAES256GCM)
+		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+			return nil, ErrCannotEncrypt
+		}
 	}
 
 	aesgcm, err := cipher.NewGCM(block)

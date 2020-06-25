@@ -44,6 +44,9 @@ var (
 
 	// ErrCannotGenerateKey is the error returned if key generation fails
 	ErrCannotGenerateKey = errors.New("cannot generate key")
+
+	// ErrCannotGenerateNonce is the error returned if a random nonce generation fails
+	ErrCannotGenerateNonce = errors.New("cannot generate nonce")
 )
 
 // ChaCha is the internal struct for a keypair using seed.
@@ -79,14 +82,17 @@ func CreateChaChaSeed() ([]byte, error) {
 	return seed, nil //no errors found in execution
 }
 
-//Encrypt encrypts byte array using chacha20 key
-func (k *ChaCha) Encrypt(plaintext []byte) ([]byte, error) {
+// Encrypt encrypts byte array using chacha20 key
+// nonce is optional and a random nonce is generated if nil
+// Never use more than 2^32 random nonces with a given key because of the risk of a repeat
+func (k *ChaCha) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 
-	// create a random nonce
-	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat
-	nonce := make([]byte, NonceSizeChaCha20)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, ErrCannotEncrypt
+	// create a random nonce if nonce is nil
+	if nonce == nil {
+		nonce = make([]byte, NonceSizeChaCha20)
+		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+			return nil, ErrCannotGenerateNonce
+		}
 	}
 
 	//NB: shared, unencrypted seed stored in only one memory location

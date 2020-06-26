@@ -71,6 +71,26 @@ func NewEphemeralKey(
 	return key
 }
 
+// SecretFactory ....
+func SecretFactory(db *gorm.DB, vaultID *uuid.UUID, secretcontents []byte, name, description string) *Secret {
+	var secretType = "fixed for now"
+	secret := &Secret{
+		VaultID:     vaultID,
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(description),
+		Type:        &secretType,
+		Data:        &secretcontents,
+	}
+
+	encryptedSecret, err := secret.Store()
+	if err != nil {
+		return nil
+	}
+
+	secret.Data = encryptedSecret
+	return secret
+}
+
 // AES256GCMFactory AES-256-GCM
 func AES256GCMFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
 	key := &Key{

@@ -48,7 +48,7 @@ func (s *Secret) validate() bool {
 		})
 	}
 
-	if s.Data == nil {
+	if s.Data == nil || len(*s.Data) == 0 {
 		s.Errors = append(s.Errors, &provide.Error{
 			Message: common.StringOrNil("secret data required"),
 		})
@@ -59,6 +59,11 @@ func (s *Secret) validate() bool {
 
 // Store saves a secret encrypted (with the vault master key) in the database
 func (s *Secret) Store() (*[]byte, error) {
+
+	if !s.validate() {
+		return nil, fmt.Errorf("invalid secret: name, type and data required")
+	}
+
 	db := dbconf.DatabaseConnection()
 
 	if s.encrypted == nil || !*s.encrypted {

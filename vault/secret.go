@@ -36,13 +36,13 @@ type SecretStoreRetrieveRequestResponse struct {
 func (s *Secret) validate() bool {
 	s.Errors = make([]*provide.Error, 0)
 
-	if s.Name == nil {
+	if s.Name == nil || common.StringOrNil(*s.Name) == nil {
 		s.Errors = append(s.Errors, &provide.Error{
 			Message: common.StringOrNil("secret name required"),
 		})
 	}
 
-	if s.Type == nil {
+	if s.Type == nil || common.StringOrNil(*s.Type) == nil {
 		s.Errors = append(s.Errors, &provide.Error{
 			Message: common.StringOrNil("secret type required"),
 		})
@@ -92,7 +92,7 @@ func (s *Secret) Retrieve() (*[]byte, error) {
 	return s.Data, nil
 }
 
-// Create and persist a key
+// Create and persist a secret
 func (s *Secret) save(db *gorm.DB) bool {
 
 	if db.NewRecord(s) {
@@ -122,11 +122,11 @@ func (s *Secret) save(db *gorm.DB) bool {
 func (s *Secret) resolveMasterKey(db *gorm.DB) (*Key, error) {
 	err := s.resolveVault(db)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve vault for master key resolution without vault id for key: %s", s.ID)
+		return nil, fmt.Errorf("failed to resolve vault for master key resolution without vault id for secret: %s", s.ID)
 	}
 
 	if s.vault == nil || s.vault.ID == uuid.Nil {
-		return nil, fmt.Errorf("failed to resolve master key without vault id for key: %s", s.ID)
+		return nil, fmt.Errorf("failed to resolve master key without vault id for secret: %s", s.ID)
 	}
 
 	if s.vault.MasterKeyID != nil && s.vault.MasterKeyID.String() == s.ID.String() {
@@ -155,7 +155,7 @@ func (s *Secret) resolveVault(db *gorm.DB) error {
 	vlt := &Vault{}
 	db.Where("id = ?", s.VaultID).Find(&vlt)
 	if vlt == nil || vlt.ID == uuid.Nil {
-		return fmt.Errorf("failed to resolve master key; no vault found for key: %s; vault id: %s", s.ID, s.VaultID)
+		return fmt.Errorf("failed to resolve master key; no vault found for secret: %s; vault id: %s", s.ID, s.VaultID)
 	}
 	s.vault = vlt
 

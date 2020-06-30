@@ -678,7 +678,7 @@ func TestSecp256k1Verify(t *testing.T) {
 	msg := []byte(common.RandomString(10))
 	sig, err := key.Sign(msg)
 	if err != nil {
-		t.Errorf("failed to verify message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
+		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
 	}
 

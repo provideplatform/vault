@@ -82,12 +82,11 @@ func SecretFactory(db *gorm.DB, vaultID *uuid.UUID, secretcontents []byte, name,
 		Data:        &secretcontents,
 	}
 
-	encryptedSecret, err := secret.Store()
+	err := secret.Store()
 	if err != nil {
 		return nil
 	}
 
-	secret.Data = encryptedSecret
 	return secret
 }
 

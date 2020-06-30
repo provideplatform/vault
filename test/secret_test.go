@@ -1,7 +1,6 @@
 package test
 
 import (
-	"encoding/hex"
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
@@ -30,11 +29,6 @@ func TestSecretStore(t *testing.T) {
 		t.Errorf("failed to create secret for vault: %s", vlt.ID)
 		return
 	}
-
-	if hex.EncodeToString([]byte(secretText)) == hex.EncodeToString(*secret.Data) {
-		t.Errorf("encrypted secret %s is the same as original secret %s", hex.EncodeToString([]byte(secretText)), hex.EncodeToString(*secret.Data))
-		return
-	}
 }
 
 func TestSecretStoreAndRetrieve(t *testing.T) {
@@ -45,23 +39,26 @@ func TestSecretStoreAndRetrieve(t *testing.T) {
 	}
 
 	secretText := common.RandomString(32)
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "secret name", "secret type", "secret description")
+	t.Logf("generated secret %s", secretText)
+	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "secret name", "secret type", "secret description 123456")
 	if secret == nil {
 		t.Errorf("failed to create secret for vault: %s", vlt.ID)
 		return
 	}
 
-	decryptedSecret, err := secret.Retrieve()
+	//next we will list the secrets for the vault, select our secret and retrieve the text
+	storedSecret := &vault.Secret{}
+	vlt.ListSecretsQuery(secretDB).Where("secrets.id=?", secret.ID).Find(&storedSecret)
+	_, err := storedSecret.Retrieve()
 	if err != nil {
-		t.Errorf("error retrieving secret from db %s", err.Error())
+		t.Errorf("error retrieving secret %s", err.Error())
 	}
 
-	decryptedSecretAsSlice := *decryptedSecret
-	if hex.EncodeToString(*decryptedSecret) != hex.EncodeToString([]byte(secretText)) {
-		t.Errorf("retrieved secret not the same as stored secret! expected %s, got %s", secretText, string(decryptedSecretAsSlice[:]))
+	if *storedSecret.DecryptedData != secretText {
+		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *storedSecret.DecryptedData)
 		return
 	}
-	t.Logf("expected decrypted secret of %s, got %s", secretText, string(decryptedSecretAsSlice[:]))
+	t.Logf("got expected secret back")
 }
 
 func TestSecretStoreNoName(t *testing.T) {
@@ -125,4 +122,59 @@ func TestSecretStoreNoSecret(t *testing.T) {
 		return
 	}
 	t.Log("correctly failed to validate secret without secret")
+}
+
+func TestSecretDelete(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for secret store unit test!")
+		return
+	}
+
+	secretText := common.RandomString(32)
+	secretName := "to be deleted secret"
+	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), secretName, "secret type", "secret to be deleted")
+	if secret == nil {
+		t.Errorf("failed to create secret for vault: %s", vlt.ID)
+		return
+	}
+
+	if !secret.Delete(secretDB) {
+		t.Errorf("error deleting secret")
+		return
+	}
+
+	//next we will list the secrets for the vault, select our secret and retrieve the text
+	deletedSecret := &vault.Secret{}
+	vlt.ListSecretsQuery(secretDB).Where("secrets.id=?", secret.ID).Find(&deletedSecret)
+
+	_, err := deletedSecret.Retrieve()
+	if err == nil {
+		t.Errorf("no error retrieving deleted secret")
+		return
+	}
+
+	t.Logf("secret deleted as expected %s", err.Error())
+}
+
+func TestSecretDeleteNilSecretID(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for secret store unit test!")
+		return
+	}
+
+	secretText := common.RandomString(32)
+	secretName := "to be fail deleted secret"
+	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), secretName, "secret type", "secret to be fail deleted")
+	if secret == nil {
+		t.Errorf("failed to create fail secret for vault: %s", vlt.ID)
+		return
+	}
+
+	secret.ID = uuid.Nil
+	if secret.Delete(secretDB) {
+		t.Errorf("got no error deleting invalid secret")
+		return
+	}
 }

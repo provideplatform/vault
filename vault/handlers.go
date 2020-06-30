@@ -67,7 +67,6 @@ func vaultSecretRetrieveHandler(c *gin.Context) {
 		provide.RenderError("secret not found", 404, c)
 		return
 	}
-	common.Log.Debugf("secret id: %s", secret.ID)
 
 	decryptedSecret, err := secret.Retrieve()
 	if err != nil {
@@ -75,11 +74,7 @@ func vaultSecretRetrieveHandler(c *gin.Context) {
 		return
 	}
 
-	provide.Render(&SecretStoreRetrieveRequestResponse{
-		Data:        decryptedSecret,
-		Name:        secret.Name,
-		Description: secret.Description,
-	}, 200, c)
+	provide.Render(&decryptedSecret, 200, c)
 	return
 }
 
@@ -93,7 +88,7 @@ func vaultSecretStoreHandler(c *gin.Context) {
 		return
 	}
 
-	params := &SecretStoreRetrieveRequestResponse{}
+	params := &SecretStoreRequest{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -108,7 +103,9 @@ func vaultSecretStoreHandler(c *gin.Context) {
 	var secret = &Secret{}
 	secret.Name = params.Name
 	secret.Description = params.Description
-	secret.Data = params.Data
+	secret.Type = params.Type
+	secretAsBytes := []byte(*params.Data)
+	secret.Data = &secretAsBytes
 
 	var vault = &Vault{}
 
@@ -133,21 +130,47 @@ func vaultSecretStoreHandler(c *gin.Context) {
 	secret.VaultID = &vault.ID
 	secret.vault = vault
 
-	encryptedSecret, err := secret.Store()
+	err = secret.Store()
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)
 		return
 	}
 
-	provide.Render(&SecretStoreRetrieveRequestResponse{
-		Data:        encryptedSecret,
-		Name:        secret.Name,
-		Description: secret.Description,
-	}, 201, c)
+	provide.Render(secret, 201, c)
 }
 
 func vaultSecretDeleteHandler(c *gin.Context) {
-	provide.RenderError("not implemented", 404, c)
+	bearer := token.InContext(c)
+
+	var secret = &Secret{}
+
+	db := dbconf.DatabaseConnection()
+	var query *gorm.DB
+
+	query = db.Table("secrets")
+	query = query.Joins("inner join vaults on secrets.vault_id = vaults.id")
+	query = query.Where("secrets.id = ? AND secrets.vault_id = ?", c.Param("secretId"), c.Param("id"))
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		query = query.Where("vaults.user_id = ?", bearer.UserID)
+	}
+	query.Find(&secret)
+
+	if secret.ID == uuid.Nil {
+		provide.RenderError("secret not found", 404, c)
+		return
+	}
+	common.Log.Debugf("secret id: %s", secret.ID)
+
+	if !secret.Delete(db) {
+		provide.RenderError("error deleting secret", 500, c)
+		return
+	}
+
+	provide.Render("secret deleted", 200, c)
 	return
 }
 
@@ -539,5 +562,8 @@ func vaultSecretsListHandler(c *gin.Context) {
 
 	var secrets []*Secret
 	provide.Paginate(c, vault.ListSecretsQuery(db), &Secret{}).Find(&secrets)
+	for _, secret := range secrets {
+		common.Log.Debugf("secret: %s", *secret.Name)
+	}
 	provide.Render(secrets, 200, c)
 }

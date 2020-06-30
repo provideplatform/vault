@@ -33,7 +33,7 @@ func (v *Vault) ListKeysQuery(db *gorm.DB) *gorm.DB {
 
 // ListSecretsQuery returns the fields to SELECT from vault secrets table
 func (v *Vault) ListSecretsQuery(db *gorm.DB) *gorm.DB {
-	return db.Select("secrets.id, secrets.created_at, secrets.name, secrets.description, secrets.type").Where("secrets.vault_id = ?", v.ID)
+	return db.Select("secrets.id, secrets.vault_id, secrets.created_at, secrets.name, secrets.data, secrets.description, secrets.type").Where("secrets.vault_id = ?", v.ID)
 }
 
 func (v *Vault) resolveMasterKey(db *gorm.DB) (*Key, error) {

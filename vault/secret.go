@@ -15,24 +15,26 @@ import (
 // Secret represents a secret encrypted by the vault's master key
 type Secret struct {
 	provide.Model
-	VaultID     *uuid.UUID `sql:"not null;type:uuid" json:"vault_id"`
-	Type        *string    `sql:"not null" json:"type"` // arbitrary secret type
-	Name        *string    `sql:"not null" json:"name"`
-	Description *string    `json:"description"`
-	Data        *[]byte    `sql:"type:bytea" json:"-"`
-	encrypted   *bool      `sql:"-"`
-	mutex       sync.Mutex `sql:"-"`
-	vault       *Vault     `sql:"-"` // vault cache
+	VaultID       *uuid.UUID `sql:"not null;type:uuid" json:"vault_id"`
+	Type          *string    `sql:"not null" json:"type"` // arbitrary secret type
+	Name          *string    `sql:"not null" json:"name"`
+	Description   *string    `json:"description"`
+	Data          *[]byte    `sql:"type:bytea" json:"secret,omitempty"`
+	DecryptedData *string    `sql:"-" json:"rawsecret,omitempty"`
+	encrypted     *bool      `sql:"-"`
+	mutex         sync.Mutex `sql:"-"`
+	vault         *Vault     `sql:"-"` // vault cache
 }
 
-// SecretStoreRetrieveRequestResponse represents the API request/response parameters
-// needed to store or retrieve a secret
-type SecretStoreRetrieveRequestResponse struct {
-	Data        *[]byte `json:"secret,omitempty"`
+// SecretStoreRequest is the struct containing the secret data for storing in the db
+type SecretStoreRequest struct {
+	Data        *string `json:"secret,omitempty"`
 	Name        *string `json:"name,omitempty"`
+	Type        *string `json:"type,omitempty"`
 	Description *string `json:"description,omitempty"`
 }
 
+// validate ensures that all required fields are present
 func (s *Secret) validate() bool {
 	s.Errors = make([]*provide.Error, 0)
 
@@ -58,10 +60,10 @@ func (s *Secret) validate() bool {
 }
 
 // Store saves a secret encrypted (with the vault master key) in the database
-func (s *Secret) Store() (*[]byte, error) {
+func (s *Secret) Store() error {
 
 	if !s.validate() {
-		return nil, fmt.Errorf("invalid secret: name, type and data required")
+		return fmt.Errorf("invalid secret: name, type and data required")
 	}
 
 	db := dbconf.DatabaseConnection()
@@ -69,19 +71,20 @@ func (s *Secret) Store() (*[]byte, error) {
 	if s.encrypted == nil || !*s.encrypted {
 		err := s.encryptFields()
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt key material; %s", err.Error())
+			return fmt.Errorf("failed to encrypt key material; %s", err.Error())
 		}
 	}
 
 	success := s.save(db)
 	if success {
 		common.Log.Debugf("saved secret to db with id: %s", s.ID.String())
+		s.Data = nil
 	}
-	return s.Data, nil
+	return nil
 }
 
 // Retrieve saves a secret encrypted (with the vault master key) in the database
-func (s *Secret) Retrieve() (*[]byte, error) {
+func (s *Secret) Retrieve() (*Secret, error) {
 
 	if s.encrypted == nil || *s.encrypted {
 		err := s.decryptFields()
@@ -89,7 +92,34 @@ func (s *Secret) Retrieve() (*[]byte, error) {
 			return nil, fmt.Errorf("failed to decrypt secret material; %s", err.Error())
 		}
 	}
-	return s.Data, nil
+
+	decryptedSecretData := *s.Data
+	decryptedSecretAsString := string(decryptedSecretData[:])
+
+	s.DecryptedData = &decryptedSecretAsString
+	s.Data = nil
+	return s, nil
+}
+
+// Delete removes a secret from the database
+func (s *Secret) Delete(db *gorm.DB) bool {
+	if s.ID == uuid.Nil {
+		common.Log.Warning("attempted to delete secret instance which only exists in-memory")
+		return false
+	}
+
+	result := db.Delete(&s)
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		common.Log.Debug("got errors...")
+		for _, err := range errors {
+			s.Errors = append(s.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
+		}
+	}
+	success := len(s.Errors) == 0
+	return success
 }
 
 // Create and persist a secret

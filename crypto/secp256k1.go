@@ -70,11 +70,6 @@ func (k *Secp256k1) Verify(payload, sig []byte) error {
 	}
 	//common.Log.Debugf("unmarshaled ASN1 signature r, s (%s, %s) for key %s", signature.R, signature.S, k.ID)
 
-	// pubkey, err := *k.PublicKey
-	// if err != nil {
-	// 	return ErrCannotDecodeKey
-	// 	//return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to decode public key hex; %s", len(payload), k.ID, err.Error())
-	// }
 	secp256k1Key, err := ethcrypto.UnmarshalPubkey(*k.PublicKey)
 	if err != nil {
 		return ErrCannotVerifyPayload

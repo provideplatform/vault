@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -28,6 +29,12 @@ func InstallAPI(r *gin.Engine) {
 	r.POST("/api/v1/vaults/:id/keys/:keyId/sign", vaultKeySignHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/verify", vaultKeyVerifyHandler)
 
+	// encrypts the provided data with the specified key
+	r.POST("/api/v1/vaults/:id/keys/:keyId/encrypt", vaultKeyEncryptHandler)
+
+	// decrypts the provided data with the specified key
+	r.POST("/api/v1/vaults/:id/keys/:keyId/decrypt", vaultKeyDecryptHandler)
+
 	// lists the secrets stored in the vault
 	r.GET("/api/v1/vaults/:id/secrets", vaultSecretsListHandler)
 
@@ -42,7 +49,146 @@ func InstallAPI(r *gin.Engine) {
 
 }
 
-//
+func vaultKeyEncryptHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &KeyEncryptDecryptRequestResponse{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if params.Data == nil {
+		provide.RenderError("requires data to be encrypted", 422, c)
+		return
+	}
+
+	// handle empty nonces
+	nonce := []byte{}
+	if params.Nonce != nil {
+		nonce = []byte(*params.Nonce)
+		// nonce must be noncebytes long
+		if len(nonce) > 12 {
+			errorText := fmt.Sprintf("nonce too large - must be %s bytes or less", "12")
+			provide.RenderError(errorText, 422, c)
+			return
+		}
+		if len(nonce) < 12 {
+			//pad the nonce
+			padding := 12 - len(nonce)%12
+			padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+			nonce = append(nonce, padtext...)
+		}
+	} else {
+		nonce = nil
+	}
+
+	var key = &Key{}
+
+	db := dbconf.DatabaseConnection()
+	//db.LogMode(true)  //TODO this should be settable via the config but it's missing in the db factory
+	var query *gorm.DB
+
+	query = db.Table("keys")
+	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
+	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		query = query.Where("vaults.user_id = ?", bearer.UserID)
+	}
+	query.Find(&key)
+
+	if key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	encryptedData, err := key.Encrypt([]byte(*params.Data), nonce)
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	encryptedDataHex := hex.EncodeToString(encryptedData)
+
+	provide.Render(&KeyEncryptDecryptRequestResponse{
+		Data: common.StringOrNil(string(encryptedDataHex)),
+	}, 200, c)
+}
+
+func vaultKeyDecryptHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &KeyEncryptDecryptRequestResponse{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if params.Data == nil {
+		provide.RenderError("requires data to be decrypted", 422, c)
+		return
+	}
+
+	dataToDecrypt, err := hex.DecodeString(*params.Data)
+	if err != nil {
+		provide.RenderError("error decoding encrypted string to binary", 422, c)
+		return
+	}
+	var key = &Key{}
+
+	db := dbconf.DatabaseConnection()
+	//db.LogMode(true)  //TODO this should be settable via the config but it's missing in the db factory
+	var query *gorm.DB
+
+	query = db.Table("keys")
+	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
+	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		query = query.Where("vaults.user_id = ?", bearer.UserID)
+	}
+	query.Find(&key)
+
+	if key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	decryptedData, err := key.Decrypt(dataToDecrypt)
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	decryptedDataString := string(decryptedData[:])
+
+	provide.Render(&KeyEncryptDecryptRequestResponse{
+		Data: common.StringOrNil(decryptedDataString),
+	}, 200, c)
+}
+
+// vaultSecretRetrieveHandler handles the retrieval of raw secrets
 func vaultSecretRetrieveHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 

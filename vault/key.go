@@ -94,6 +94,17 @@ type KeySignVerifyRequestResponse struct {
 	Verified  *bool   `json:"verified,omitempty"`
 }
 
+// KeyEncryptDecryptRequestResponse contains the data to be encrypted/decrypted
+// data is submitted and received as a string
+// encrypted data is returned hex encoded
+// decrypted data is returned as received
+// nonce is optional and a random nonce will be created if not present
+// note that nonces must not be reused and using 2^32 random nonces is not secure
+type KeyEncryptDecryptRequestResponse struct {
+	Data  *string `json:"data,omitempty"`
+	Nonce *string `json:"nonce,omitempty"` //optional nonce parameter
+}
+
 // createAES256GCM creates a key using a random seed
 func (k *Key) createAES256GCM() error {
 

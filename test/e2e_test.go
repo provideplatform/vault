@@ -5,6 +5,7 @@ package test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 
 	uuid "github.com/kthomas/go.uuid"
@@ -12,6 +13,29 @@ import (
 	"github.com/provideapp/vault/vault"
 	provide "github.com/provideservices/provide-go"
 )
+
+func keyFactory(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*vault.Key, error) {
+
+	status, resp, err := provide.CreateVaultKey(token, vaultID, map[string]interface{}{
+		"type":        keyType,
+		"usage":       keyUsage,
+		"spec":        keySpec,
+		"name":        keyName,
+		"description": keyDescription,
+	})
+
+	if err != nil || status != 201 {
+		return nil, fmt.Errorf("failed to create key error: %s", err.Error())
+	}
+
+	key := &vault.Key{}
+	respRaw, err := json.Marshal(resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshall key data: %s", err.Error())
+	}
+	json.Unmarshal(respRaw, &key)
+	return key, nil
+}
 
 func vaultFactory(token, name, desc string) (*vault.Vault, error) {
 	status, resp, err := provide.CreateVault(token, map[string]interface{}{
@@ -55,8 +79,12 @@ func userFactory(email, password string) (*uuid.UUID, error) {
 }
 
 func userTokenFactory() (*string, error) {
-	email := "a.user@prvd.local"
-	password := "a.user5555"
+	newUUID, err := uuid.NewV4()
+	if err != nil {
+		common.Log.Debugf("error generating uuid %s", err.Error())
+	}
+	email := fmt.Sprintf("%s@provide-integration-tests.com", newUUID.String())
+	password := fmt.Sprintf("%s", newUUID.String())
 
 	userID, err := userFactory(email, password)
 	if err != nil || userID == nil {
@@ -107,14 +135,14 @@ func TestAPICreateVault(t *testing.T) {
 		t.Errorf("failed to create token; %s", err.Error())
 		return
 	}
-
+	t.Log("here1")
 	vault, err := vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
 	if err != nil {
 		t.Errorf("failed to create vault; %s", err.Error())
 		return
 	}
-
-	common.Log.Debugf("created vault; %s", vault.ID)
+	t.Logf("vault %T", vault)
+	common.Log.Debugf("created vault; %s", vault.ID.String())
 }
 
 func TestAPICreateKey(t *testing.T) {
@@ -130,15 +158,39 @@ func TestAPICreateKey(t *testing.T) {
 		return
 	}
 
-	status, _, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{})
+	status, _, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+		"type":        "asymmetric",
+		"usage":       "sign/verify",
+		"spec":        "secp256k1",
+		"name":        "integration test ethereum key",
+		"description": "organization eth/stablecoin wallet",
+	})
 	if err != nil || status != 201 {
-		t.Errorf("failed to create key for org id: %s", err.Error()) //vlt.ID?? not sure where the vault is being defined here
+		t.Errorf("failed to create key error: %s", err.Error())
 		return
 	}
 }
 
 func TestAPIDeleteKey(t *testing.T) {
-	status, _, err := provide.DeleteVaultKey("a", "b", "c")
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "secp256k1", "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	status, _, err := provide.DeleteVaultKey(*token, vault.ID.String(), key.ID.String())
 	if err != nil || status != 204 {
 		t.Errorf("failed to delete key for vault: %s", err.Error())
 		return
@@ -146,7 +198,26 @@ func TestAPIDeleteKey(t *testing.T) {
 }
 
 func TestAPISign(t *testing.T) {
-	status, _, err := provide.SignMessage("a", "b", "c", "d")
+
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "secp256k1", "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	status, _, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), "hello world")
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -154,8 +225,34 @@ func TestAPISign(t *testing.T) {
 }
 
 func TestAPIVerifySignature(t *testing.T) {
-	status, _, err := provide.VerifySignature("a", "b", "c", "d", "e")
-	if err != nil || status != 200 {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "secp256k1", "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), "hello world")
+	if err != nil || status != 201 {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+	//assert type to get something sensible from empty interface
+	response, _ := sigresponse.(map[string]interface{})
+
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), "hello world", response["signature"].(string))
+	if err != nil || status != 201 {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
 	}
@@ -178,7 +275,19 @@ func TestAPIDecrypt(t *testing.T) {
 }
 
 func TestAPIListSecrets(t *testing.T) {
-	status, _, err := provide.ListVaultSecrets("a", "b", map[string]interface{}{})
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	status, _, err := provide.ListVaultSecrets(*token, vault.ID.String(), map[string]interface{}{})
 	if err != nil || status != 200 {
 		t.Errorf("failed to list secrets for vault: %s", err.Error())
 		return
@@ -186,17 +295,53 @@ func TestAPIListSecrets(t *testing.T) {
 }
 
 func TestAPICreateSecret(t *testing.T) {
-	status, _, err := provide.CreateVaultSecret("a", "b", map[string]interface{}{
-		"organization_id": "asdf",
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	status, _, err := provide.CreateVaultSecret(*token, vault.ID.String(), map[string]interface{}{
+		"secret": "1234", "name": "secretsecret", "type": "secret type",
 	})
 	if err != nil || status != 201 {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
 		return
 	}
+
+	//TODO pull the secret back and make sure it's what we put in
 }
 
 func TestAPIDeleteSecret(t *testing.T) {
-	status, _, err := provide.DeleteVaultSecret("a", "b", "c")
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	status, secretResponse, err := provide.CreateVaultSecret(*token, vault.ID.String(), map[string]interface{}{
+		"secret": "1234", "name": "secretsecret", "type": "secret type",
+	})
+	if err != nil || status != 201 {
+		t.Errorf("failed to create secret for vault: %s", err.Error())
+		return
+	}
+
+	response, _ := secretResponse.(map[string]interface{})
+
+	status, _, err = provide.DeleteVaultSecret(*token, vault.ID.String(), response["id"].(string))
 	if err != nil || status != 204 {
 		t.Errorf("failed to delete secret for vault: %s", err.Error())
 		return

@@ -5,9 +5,7 @@ package test
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
-	"time"
 
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"

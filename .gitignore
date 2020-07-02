@@ -43,4 +43,5 @@ vendor/
 
 cover.html
 coverage.txt
+profile.cov
 profile.out

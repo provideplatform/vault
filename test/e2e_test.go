@@ -3,20 +3,41 @@
 package test
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
+	"github.com/provideapp/vault/vault"
 	provide "github.com/provideservices/provide-go"
 )
 
 func init() {
 	//hackyhack to get over the hump
-	email := "a.user@prvd.local"
+	email := fmt.Sprintf("a.user%d@prvd.local", time.Now().UnixNano())
 	password := "a.user5555"
 
 	userFactory(email, password)
+}
+
+func vaultFactory(token, name, desc string) (*vault.Vault, error) {
+	status, resp, err := provide.CreateVault(token, map[string]interface{}{
+		"name":        name,
+		"description": desc,
+	})
+	if err != nil || status != 201 {
+		return nil, err
+	}
+	vlt := &vault.Vault{}
+	respRaw, err := json.Marshal(resp)
+	if err != nil {
+		return nil, err
+	}
+	json.Unmarshal(respRaw, &vlt)
+	return vlt, nil
 }
 
 func userFactory(email, password string) (*uuid.UUID, error) {
@@ -44,7 +65,6 @@ func userFactory(email, password string) (*uuid.UUID, error) {
 }
 
 func userTokenFactory() (*string, error) {
-
 	email := "a.user@prvd.local"
 	password := "a.user5555"
 
@@ -69,42 +89,58 @@ func userTokenFactory() (*string, error) {
 	return token, nil
 }
 
-func organizationFactory(token, name string) (*uuid.UUID, error) {
-	status, resp, err := provide.CreateOrganization(token, map[string]interface{}{
-		"name": name,
-	})
-	if err != nil || status != 200 {
-		return nil, errors.New("failed to create organization")
-	}
-	var orgID *uuid.UUID
-	if org, orgOk := resp.(map[string]interface{}); orgOk {
-		if id, idok := org["id"].(string); idok {
-			orgUUID, err := uuid.FromString(id)
-			if err != nil {
-				return nil, err
-			}
-			orgID = &orgUUID
-		}
-	}
-	return orgID, nil
-}
+// func organizationFactory(token, name string) (*uuid.UUID, error) {
+// 	status, resp, err := provide.CreateOrganization(token, map[string]interface{}{
+// 		"name": name,
+// 	})
+// 	if err != nil || status != 200 {
+// 		return nil, errors.New("failed to create organization")
+// 	}
+// 	var orgID *uuid.UUID
+// 	if org, orgOk := resp.(map[string]interface{}); orgOk {
+// 		if id, idok := org["id"].(string); idok {
+// 			orgUUID, err := uuid.FromString(id)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			orgID = &orgUUID
+// 		}
+// 	}
+// 	return orgID, nil
+// }
 
 // e2e suite
 
 func TestAPICreateVault(t *testing.T) {
-	status, _, err := provide.CreateVault("", map[string]interface{}{
-		"organization_id": "asdf",
-	})
-	if err != nil || status != 200 {
-		t.Errorf("failed to create vault for org id: %s", err.Error())
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
 		return
 	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	common.Log.Debugf("created vault; %s", vault.ID)
 }
 
 func TestAPICreateKey(t *testing.T) {
-	status, _, err := provide.CreateVaultKey("a", "b", map[string]interface{}{
-		"organization_id": "asdf",
-	})
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	status, _, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{})
 	if err != nil || status != 201 {
 		t.Errorf("failed to create key for org id: %s", err.Error()) //vlt.ID?? not sure where the vault is being defined here
 		return

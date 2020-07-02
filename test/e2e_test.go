@@ -15,14 +15,6 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
-func init() {
-	//hackyhack to get over the hump
-	email := fmt.Sprintf("a.user%d@prvd.local", time.Now().UnixNano())
-	password := "a.user5555"
-
-	userFactory(email, password)
-}
-
 func vaultFactory(token, name, desc string) (*vault.Vault, error) {
 	status, resp, err := provide.CreateVault(token, map[string]interface{}{
 		"name":        name,

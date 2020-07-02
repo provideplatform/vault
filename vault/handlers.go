@@ -42,7 +42,7 @@ func InstallAPI(r *gin.Engine) {
 	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretRetrieveHandler)
 
 	// stores a secret encrypted in the vault
-	r.POST("api/v1/vaults/:id", vaultSecretStoreHandler)
+	r.POST("api/v1/vaults/:id/secrets", vaultSecretStoreHandler)
 
 	// deletes a secret from the vault
 	r.DELETE("api/v1/vaults/:id/secrets/:secretId", vaultSecretDeleteHandler)
@@ -241,8 +241,8 @@ func vaultSecretStoreHandler(c *gin.Context) {
 		return
 	}
 
-	if params.Data == nil || params.Name == nil || params.Description == nil {
-		provide.RenderError("secret, name, description input fields required", 422, c)
+	if params.Data == nil || params.Name == nil || params.Type == nil {
+		provide.RenderError("secret, name, type input fields required", 422, c)
 		return
 	}
 
@@ -316,7 +316,7 @@ func vaultSecretDeleteHandler(c *gin.Context) {
 		return
 	}
 
-	provide.Render("secret deleted", 200, c)
+	provide.Render("secret deleted", 204, c)
 	return
 }
 
@@ -622,7 +622,7 @@ func vaultKeySignHandler(c *gin.Context) {
 
 	provide.Render(&KeySignVerifyRequestResponse{
 		Signature: common.StringOrNil(string(sighex)),
-	}, 200, c)
+	}, 201, c)
 }
 
 func vaultKeyVerifyHandler(c *gin.Context) {
@@ -680,7 +680,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 
 	provide.Render(&KeySignVerifyRequestResponse{
 		Verified: &verified,
-	}, 200, c)
+	}, 201, c)
 }
 
 func vaultSecretsListHandler(c *gin.Context) {

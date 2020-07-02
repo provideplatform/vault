@@ -16,11 +16,11 @@ if [[ -z "${DATABASE_PASSWORD}" ]]; then
 fi
 
 if [[ -z "${DATABASE_SUPERUSER}" ]]; then
-  DATABASE_SUPERUSER=$(whoami)
+  DATABASE_SUPERUSER=prvd
 fi
 
 if [[ -z "${DATABASE_SUPERUSER_PASSWORD}" ]]; then
-  DATABASE_SUPERUSER_PASSWORD=
+  DATABASE_SUPERUSER_PASSWORD=prvdp455
 fi
 
 if [[ -z "${DATABASE_SSL_MODE}" ]]; then
@@ -43,8 +43,8 @@ if [[ -z "${RACE}" ]]; then
   RACE=true
 fi
 
-dropdb -p $DATABASE_PORT $DATABASE_NAME || true >/dev/null
-dropuser -p $DATABASE_PORT $DATABASE_USER || true >/dev/null
+PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropdb -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_NAME || true >/dev/null
+PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropuser -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_USER || true >/dev/null
 
 DATABASE_HOST=$DATABASE_HOST \
 DATABASE_PORT=$DATABASE_PORT \
@@ -248,6 +248,8 @@ for d in "${pkgs[@]}" ; do
     DATABASE_NAME=vault_test \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
+    IDENT_API_HOST=localhost:8081 \
+    IDENT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
     go test ./... -v \
                        -race \
@@ -269,6 +271,8 @@ for d in "${pkgs[@]}" ; do
     DATABASE_NAME=vault_test \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
+    IDENT_API_HOST=localhost:8081 \
+    IDENT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
     go test ./... -v \
                        -timeout 1800s \

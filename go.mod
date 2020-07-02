@@ -25,7 +25,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/provideapp/ident v0.0.0-20200524081406-b769dde4917c
-	github.com/provideservices/provide-go v0.0.0-20200630033145-a5709cb75a1f
+	github.com/provideservices/provide-go v0.0.0-20200702113408-a5fff913a376
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
 

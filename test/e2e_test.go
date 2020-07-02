@@ -33,6 +33,14 @@ func TestCreateKey(t *testing.T) {
 	}
 }
 
+func TestDeleteKey(t *testing.T) {
+	status, _, err := provide.DeleteVaultKey(*orgToken.Token, map[string]interface{}{})
+	if err != nil || status != 204 {
+		t.Errorf("failed to delete key for vault: %s", vlt.ID)
+		return
+	}
+}
+
 func TestSign(t *testing.T) {
 	status, _, err := provide.SignMessage(*orgToken.Token, map[string]interface{}{
 		"organization_id": organizationID,
@@ -82,24 +90,16 @@ func TestCreateSecret(t *testing.T) {
 	status, _, err := provide.CreateVaultSecret(*orgToken.Token, map[string]interface{}{
 		"organization_id": organizationID,
 	})
-	if err == nil && status == 201 {
-		common.Log.Debugf("Created default vault for organization: %s", *organization.Name)
-		msg.Ack()
-	} else {
-		common.Log.Warningf("Failed to create default vault for organization: %s", *organization.Name)
-		natsutil.AttemptNack(msg, createOrganizationTimeout)
+	if err != nil || status != 201 {
+		t.Errorf("failed to create secret for vault: %s", vlt.ID)
+		return
 	}
 }
 
 func TestDeleteSecret(t *testing.T) {
-	status, _, err := provide.DeleteVaultSecret(*orgToken.Token, map[string]interface{}{
-		"organization_id": organizationID,
-	})
-	if err == nil && status == 201 {
-		common.Log.Debugf("Created default vault for organization: %s", *organization.Name)
-		msg.Ack()
-	} else {
-		common.Log.Warningf("Failed to create default vault for organization: %s", *organization.Name)
-		natsutil.AttemptNack(msg, createOrganizationTimeout)
+	status, _, err := provide.DeleteVaultSecret(*orgToken.Token, map[string]interface{}{})
+	if err != nil || status != 204 {
+		t.Errorf("failed to delete secret for vault: %s", vlt.ID)
+		return
 	}
 }

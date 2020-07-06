@@ -113,7 +113,7 @@ func TestAPICreateVault(t *testing.T) {
 		t.Errorf("failed to create token; %s", err.Error())
 		return
 	}
-	t.Log("here1")
+
 	vault, err := vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
 	if err != nil {
 		t.Errorf("failed to create vault; %s", err.Error())

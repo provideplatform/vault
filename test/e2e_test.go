@@ -75,14 +75,13 @@ func userFactory(email, password string) (*uuid.UUID, error) {
 			usrID = &usrUUID
 		}
 	}
-	common.Log.Debugf("%s", resp)
 	return usrID, nil
 }
 
 func userTokenFactory() (*string, error) {
 	newUUID, err := uuid.NewV4()
 	if err != nil {
-		common.Log.Debugf("error generating uuid %s", err.Error())
+		return nil, errors.New(fmt.Sprintf("error generating uuid %s", err.Error()))
 	}
 	email := fmt.Sprintf("%s@provide-integration-tests.com", newUUID.String())
 	password := fmt.Sprintf("%s", newUUID.String())
@@ -114,13 +113,12 @@ func TestAPICreateVault(t *testing.T) {
 		return
 	}
 
-	vault, err := vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
+	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
 	if err != nil {
 		t.Errorf("failed to create vault; %s", err.Error())
 		return
 	}
-	t.Logf("vault %T", vault)
-	common.Log.Debugf("created vault; %s", vault.ID.String())
+
 }
 
 func TestAPICreateKey(t *testing.T) {
@@ -364,7 +362,7 @@ func TestAPIDecrypt(t *testing.T) {
 	}
 
 	data := common.RandomString(128)
-	nonce := "1"
+	nonce := common.RandomString(12)
 
 	status, encryptedDataResponse, err := provide.EncryptWithNonce(*token, vault.ID.String(), key.ID.String(), data, nonce)
 
@@ -378,6 +376,7 @@ func TestAPIDecrypt(t *testing.T) {
 	status, decryptedDataResponse, err := provide.Decrypt(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"data": encryptedData["data"].(string),
 	})
+
 	decryptedData, _ := decryptedDataResponse.(map[string]interface{})
 
 	if decryptedData["data"].(string) != data {
@@ -444,6 +443,7 @@ func TestAPIListSecrets(t *testing.T) {
 	name := fmt.Sprintf("secretname-%s", common.RandomString(12))
 	description := "secret description"
 	secretType := "secret type"
+
 	status, _, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
 	if err != nil || status != 201 {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
@@ -529,7 +529,7 @@ func TestAPICreateAndRetrieveSecret(t *testing.T) {
 	response, _ := createSecretResponse.(map[string]interface{})
 
 	status, retrieveSecretResponse, err := provide.RetrieveVaultSecret(*token, vault.ID.String(), response["id"].(string), map[string]interface{}{})
-	t.Logf("retrievedSecretResponse %s", retrieveSecretResponse)
+
 	retrievedSecret, _ := retrieveSecretResponse.(map[string]interface{})
 
 	if retrievedSecret["rawsecret"].(string) != secret {

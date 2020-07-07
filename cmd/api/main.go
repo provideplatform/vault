@@ -88,7 +88,7 @@ func runAPI() {
 	r.GET("/status", statusHandler)
 
 	r.Use(token.AuthMiddleware())
-	// r.Use(common.AccountingMiddleware())
+	r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
 	r.Use(provide.TrackAPICalls())
 

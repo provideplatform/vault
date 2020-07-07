@@ -49,6 +49,10 @@ test: build
 	./ops/run_local_dependencies.sh
 	./ops/run_unit_tests.sh
 
+test_local: build
+	./ops/run_local_dependencies.sh
+	./ops/run_local_unit_tests.sh
+
 integration: build
 	./ops/run_local_dependencies.sh
 	./ops/run_integration_tests.sh

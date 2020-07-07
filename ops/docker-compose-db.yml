@@ -1,0 +1,34 @@
+version: '3.5'
+
+services:
+  postgres:
+    image: postgres
+    container_name: postgres-local
+    environment:
+      - POSTGRES_DB=prvd
+      - POSTGRES_USER=prvd
+      - POSTGRES_PASSWORD=prvdp455
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "prvd", "-d", "prvd"]
+      interval: 1m
+      timeout: 1s
+      retries: 2
+      start_period: 10s
+    hostname: postgres
+    volumes:
+      - vault-db:/var/lib/postgresql/data
+    networks:
+      - vault
+    ports:
+      - 5432:5432
+    restart: always
+
+networks:
+  vault:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.40.0.0/24
+
+volumes:
+  vault-db:

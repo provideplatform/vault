@@ -12,7 +12,7 @@ if [[ -z "${DATABASE_USER}" ]]; then
 fi
 
 if [[ -z "${DATABASE_PASSWORD}" ]]; then
-  DATABASE_PASSWORD=
+  DATABASE_PASSWORD=vaulttest
 fi
 
 if [[ -z "${DATABASE_SUPERUSER}" ]]; then

@@ -24,8 +24,8 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/provideapp/ident v0.0.0-20200524081406-b769dde4917c
-	github.com/provideservices/provide-go v0.0.0-20200702113408-a5fff913a376
+	github.com/provideapp/ident v0.0.0-00010101000000-000000000000
+	github.com/provideservices/provide-go v0.0.0-20200707104606-353123840c98
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
 

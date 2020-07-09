@@ -48,6 +48,81 @@ func TestAES256GCMEncrypt(t *testing.T) {
 	common.Log.Debugf("encrypted %d-byte message (%d bytes encrypted) using AES-256-GCM key for vault: %s", len(msg), len(encval), vlt.ID)
 }
 
+func TestAES256GCMEncryptNonceTooLong(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key encrypt decrypt unit test!")
+		return
+	}
+
+	key := vault.AES256GCMFactory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	nonce := []byte(common.RandomString(13))
+	_, err := key.Encrypt(msg, nonce)
+
+	if err != nil {
+		t.Logf("got error %s", err.Error())
+	}
+
+	// it should result in an error ;)
+	if err == nil {
+		t.Errorf("should have failed with nonce too long error")
+		return
+	}
+
+}
+
+func TestAES256GCMEncryptShortNonce(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for AES-256-GCM key encrypt decrypt unit test!")
+		return
+	}
+
+	key := vault.AES256GCMFactory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	nonce := []byte(common.RandomString(2))
+	_, err := key.Encrypt(msg, nonce)
+
+	if err != nil {
+		t.Errorf("failed! symmetric encryption failed using AES-256-GCM key %s; %s", key.ID, err.Error())
+		return
+	}
+}
+
+func TestChaCha20EncryptShortNonce(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for chacha20 key encrypt decrypt unit test!")
+		return
+	}
+
+	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create chacha20 key for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	nonce := []byte(common.RandomString(2))
+	_, err := key.Encrypt(msg, nonce)
+
+	if err != nil {
+		t.Errorf("failed! symmetric encryption failed using chacha20 key %s; %s", key.ID, err.Error())
+		return
+	}
+}
+
 func TestCreateKeyAES256GCM(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {

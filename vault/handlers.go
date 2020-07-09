@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -74,18 +73,6 @@ func vaultKeyEncryptHandler(c *gin.Context) {
 	nonce := []byte{}
 	if params.Nonce != nil {
 		nonce = []byte(*params.Nonce)
-		// nonce must be noncebytes long
-		if len(nonce) > 12 {
-			errorText := fmt.Sprintf("nonce too large - must be %s bytes or less", "12")
-			provide.RenderError(errorText, 422, c)
-			return
-		}
-		if len(nonce) < 12 {
-			//pad the nonce
-			padding := 12 - len(nonce)%12
-			padtext := bytes.Repeat([]byte{byte(padding)}, padding)
-			nonce = append(nonce, padtext...)
-		}
 	} else {
 		nonce = nil
 	}
@@ -241,17 +228,17 @@ func vaultSecretStoreHandler(c *gin.Context) {
 		return
 	}
 
-	if params.Data == nil || params.Name == nil || params.Type == nil {
-		provide.RenderError("secret, name, type input fields required", 422, c)
-		return
-	}
-
 	var secret = &Secret{}
-	secret.Name = params.Name
-	secret.Description = params.Description
-	secret.Type = params.Type
+	secret.Name = common.StringOrNil(*params.Name)
+	secret.Description = common.StringOrNil(*params.Description)
+	secret.Type = common.StringOrNil(*params.Type)
 	secretAsBytes := []byte(*params.Data)
 	secret.Data = &secretAsBytes
+
+	if !secret.Validate() {
+		provide.RenderError("invalid secret parameters", 422, c)
+		return
+	}
 
 	var vault = &Vault{}
 
@@ -709,7 +696,8 @@ func vaultSecretsListHandler(c *gin.Context) {
 	var secrets []*Secret
 	provide.Paginate(c, vault.ListSecretsQuery(db), &Secret{}).Find(&secrets)
 	for _, secret := range secrets {
-		common.Log.Debugf("secret: %s", *secret.Name)
+		//remove the encrypted secret from the output
+		secret.Data = nil
 	}
 	provide.Render(secrets, 200, c)
 }

@@ -126,6 +126,22 @@ func TestSecretStoreNoSecret(t *testing.T) {
 	t.Log("correctly failed to validate secret without secret")
 }
 
+func TestSecretStoreTooLong(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for secret store unit test!")
+		return
+	}
+
+	secretText := common.RandomString(4097)
+	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "description")
+	if secret != nil {
+		t.Errorf("validation failure in secret generation (no secret provided) for vault: %s", vlt.ID)
+		return
+	}
+	t.Log("correctly failed to validate secret that was too long")
+}
+
 func TestSecretDelete(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {

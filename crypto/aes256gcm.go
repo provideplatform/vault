@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -50,6 +51,18 @@ func (k *AES256GCM) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 			return nil, ErrCannotEncrypt
 		}
+	}
+
+	// nonce must be NonceSizeAES256GCM bytes in length
+	if len(nonce) > NonceSizeAES256GCM {
+		return nil, ErrNonceTooLong
+	}
+
+	if len(nonce) < NonceSizeAES256GCM {
+		//pad the nonce
+		padding := NonceSizeAES256GCM - len(nonce)%NonceSizeAES256GCM
+		padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+		nonce = append(nonce, padtext...)
 	}
 
 	aesgcm, err := cipher.NewGCM(block)

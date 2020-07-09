@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base32"
 	"encoding/binary"
-	"errors"
 	"io"
 
 	"golang.org/x/crypto/ed25519"
@@ -24,18 +23,6 @@ const (
 
 // Errors
 var (
-	ErrInvalidPrefixByte = errors.New("invalid prefix byte")
-	ErrInvalidKey        = errors.New("invalid key")
-	ErrInvalidPublicKey  = errors.New("invalid public key")
-	ErrInvalidSeedLen    = errors.New("invalid seed length")
-	ErrInvalidSeed       = errors.New("invalid seed")
-	ErrInvalidEncoding   = errors.New("invalid encoded key")
-	ErrInvalidSignature  = errors.New("signature verification failed")
-	ErrCannotSign        = errors.New("can not sign, no private key available")
-	ErrPublicKeyOnly     = errors.New("no seed or private key available")
-	ErrIncompatibleKey   = errors.New("incompatible key")
-
-	ErrInvalidChecksum = errors.New("nkeys: invalid checksum")
 
 	// Set our encoding to not include padding '=='
 	b32Enc = base32.StdEncoding.WithPadding(base32.NoPadding)

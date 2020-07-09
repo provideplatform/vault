@@ -34,8 +34,11 @@ type SecretStoreRequest struct {
 	Description *string `json:"description,omitempty"`
 }
 
-// validate ensures that all required fields are present
-func (s *Secret) validate() bool {
+// MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored
+const MaxSecretLengthInBytes = 4096
+
+// Validate ensures that all required fields are present
+func (s *Secret) Validate() bool {
 	s.Errors = make([]*provide.Error, 0)
 
 	if s.Name == nil || common.StringOrNil(*s.Name) == nil {
@@ -56,14 +59,20 @@ func (s *Secret) validate() bool {
 		})
 	}
 
+	if len(*s.Data) > MaxSecretLengthInBytes {
+		s.Errors = append(s.Errors, &provide.Error{
+			Message: common.StringOrNil("secret data too long"),
+		})
+	}
+
 	return len(s.Errors) == 0
 }
 
 // Store saves a secret encrypted (with the vault master key) in the database
 func (s *Secret) Store() error {
 
-	if !s.validate() {
-		return fmt.Errorf("invalid secret: name, type and data required")
+	if !s.Validate() {
+		return fmt.Errorf("invalid secret: name, type and data (<%d-bytes) required", MaxSecretLengthInBytes)
 	}
 
 	db := dbconf.DatabaseConnection()

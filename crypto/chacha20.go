@@ -1,8 +1,8 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/rand"
-	"errors"
 	"io"
 
 	"golang.org/x/crypto/chacha20"
@@ -10,44 +10,6 @@ import (
 
 // NonceSizeChaCha20 is the size of chacha20 nonce for encryption/decryption (in bytes).
 const NonceSizeChaCha20 = 12
-
-var (
-	// ErrCannotGenerateSeed is the error returned if seed generation fails.
-	ErrCannotGenerateSeed = errors.New("cannot generate seed")
-
-	// ErrCannotEncrypt is the error returned if the encryption fails.
-	ErrCannotEncrypt = errors.New("failed to encrypt")
-
-	// ErrCannotDecrypt is the error returned if the decryption fails.
-	ErrCannotDecrypt = errors.New("failed to decrypt")
-
-	// ErrCannotDecodeSeed is the error returned if the seed cannot be decoded.
-	ErrCannotDecodeSeed = errors.New("cannot decode seed")
-
-	// ErrCannotReadSeed is the error returned if the seed cannot be decoded.
-	ErrCannotReadSeed = errors.New("cannot read seed")
-
-	// ErrCannotSignPayload is the error returned if the payload cannot be signed
-	ErrCannotSignPayload = errors.New("cannot sign payload")
-
-	// ErrCannotVerifyPayload is the error returned if the payload cannot be verified
-	ErrCannotVerifyPayload = errors.New("cannot verify payload")
-
-	// ErrNilPrivateKey is the error returned when required private key is not present
-	ErrNilPrivateKey = errors.New("nil private key")
-
-	// ErrCannotUnmarshallSignature is the error returned when the signature cannot be unmarshalled
-	ErrCannotUnmarshallSignature = errors.New("cannot unmarshall signature")
-
-	// ErrCannotDecodeKey is the error returned when the key cannot be decoded
-	ErrCannotDecodeKey = errors.New("cannot decode key")
-
-	// ErrCannotGenerateKey is the error returned if key generation fails
-	ErrCannotGenerateKey = errors.New("cannot generate key")
-
-	// ErrCannotGenerateNonce is the error returned if a random nonce generation fails
-	ErrCannotGenerateNonce = errors.New("cannot generate nonce")
-)
 
 // ChaCha is the internal struct for a keypair using seed.
 type ChaCha struct {
@@ -93,6 +55,18 @@ func (k *ChaCha) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 			return nil, ErrCannotGenerateNonce
 		}
+	}
+
+	// nonce must be NonceSizeChaCha20 bytes in length
+	if len(nonce) > NonceSizeChaCha20 {
+		return nil, ErrNonceTooLong
+	}
+
+	if len(nonce) < NonceSizeChaCha20 {
+		//pad the nonce
+		padding := NonceSizeChaCha20 - len(nonce)%NonceSizeChaCha20
+		padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+		nonce = append(nonce, padtext...)
 	}
 
 	//NB: shared, unencrypted seed stored in only one memory location

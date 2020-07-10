@@ -1828,3 +1828,73 @@ func TestRSA4096Verify(t *testing.T) {
 
 	common.Log.Debugf("verified message using rsa keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
 }
+
+func TestRSA3072Verify(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for rsa3072 key verify unit test!")
+		return
+	}
+
+	key := vault.RSA3072Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("failed to sign message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	if sig == nil {
+		t.Errorf("failed to sign message using rsa keypair for vault: %s nil signature!", vlt.ID)
+		return
+	}
+
+	err = key.Verify(msg, sig)
+	if err != nil {
+		t.Errorf("failed to verify message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("verified message using rsa keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
+
+func TestRSA2048Verify(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for rsa2048 key verify unit test!")
+		return
+	}
+
+	key := vault.RSA2048Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("failed to sign message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	if sig == nil {
+		t.Errorf("failed to sign message using rsa keypair for vault: %s nil signature!", vlt.ID)
+		return
+	}
+
+	err = key.Verify(msg, sig)
+	if err != nil {
+		t.Errorf("failed to verify message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("verified message using rsa keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}

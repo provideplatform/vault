@@ -59,8 +59,12 @@ const NonceSizeSymmetric = 12
 // const KeySpecECCSecp2048 = "ECC-NIST-P384"
 // const KeySpecECCSecp521r1 = "ECC-NIST-P521"
 // const KeySpecECCSecpP256k1 = "ECC-SECG-P256K1"
-// const KeySpecRSA2048 = "RSA-2048"
-// const KeySpecRSA3072 = "RSA-3072"
+
+// KeySpecRSA2048 rsa 2048 key spec
+const KeySpecRSA2048 = "RSA-2048"
+
+// KeySpecRSA3072 rsa 3072 key spec
+const KeySpecRSA3072 = "RSA-3072"
 
 // KeySpecRSA4096 rsa 4096 key spec
 const KeySpecRSA4096 = "RSA-4096"
@@ -265,13 +269,13 @@ func (k *Key) createSecp256k1Keypair() error {
 // createRSA4096Keypair creates a keypair using RSA4096
 func (k *Key) createRSAKeypair(bitsize int) error {
 
-	rsa4096KeyPair, err := vaultcrypto.CreateRSAKeyPair(bitsize)
+	rsaKeyPair, err := vaultcrypto.CreateRSAKeyPair(bitsize)
 	if err != nil {
 		return fmt.Errorf("failed to create rsa%d keypair; %s", bitsize, err.Error())
 	}
 
-	k.PrivateKey = rsa4096KeyPair.PrivateKey
-	k.PublicKey = rsa4096KeyPair.PublicKey
+	k.PrivateKey = rsaKeyPair.PrivateKey
+	k.PublicKey = rsaKeyPair.PublicKey
 
 	common.Log.Debugf("created rsa%d key for vault: %s; public key: 0x%s", bitsize, k.VaultID, *k.PublicKey)
 	return nil
@@ -523,6 +527,16 @@ func (k *Key) create() error {
 			}
 		case KeySpecRSA4096:
 			err := k.createRSAKeypair(4096)
+			if err != nil {
+				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
+			}
+		case KeySpecRSA3072:
+			err := k.createRSAKeypair(3072)
+			if err != nil {
+				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
+			}
+		case KeySpecRSA2048:
+			err := k.createRSAKeypair(2048)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
 			}
@@ -831,7 +845,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -875,6 +889,22 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		rsa4096.PrivateKey = k.PrivateKey
 		sig, sigerr = rsa4096.Sign(payload)
 
+	case KeySpecRSA3072:
+		if k.PrivateKey == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
+		}
+		rsa3072 := vaultcrypto.RSAKeyPair{}
+		rsa3072.PrivateKey = k.PrivateKey
+		sig, sigerr = rsa3072.Sign(payload)
+
+	case KeySpecRSA2048:
+		if k.PrivateKey == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
+		}
+		rsa2048 := vaultcrypto.RSAKeyPair{}
+		rsa2048.PrivateKey = k.PrivateKey
+		sig, sigerr = rsa2048.Sign(payload)
+
 	default:
 		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 	}
@@ -896,7 +926,7 @@ func (k *Key) Verify(payload, sig []byte) error {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048) {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -928,12 +958,19 @@ func (k *Key) Verify(payload, sig []byte) error {
 		return secp256k1.Verify(payload, sig)
 
 	case KeySpecRSA4096:
-
 		rsa4096 := vaultcrypto.RSAKeyPair{}
 		rsa4096.PublicKey = k.PublicKey
-
 		return rsa4096.Verify(payload, sig)
 
+	case KeySpecRSA3072:
+		rsa3072 := vaultcrypto.RSAKeyPair{}
+		rsa3072.PublicKey = k.PublicKey
+		return rsa3072.Verify(payload, sig)
+
+	case KeySpecRSA2048:
+		rsa2048 := vaultcrypto.RSAKeyPair{}
+		rsa2048.PublicKey = k.PublicKey
+		return rsa2048.Verify(payload, sig)
 	}
 
 	return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
@@ -983,9 +1020,9 @@ func (k *Key) Validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("symmetric key in %s usage mode must be %s or %s", KeyUsageEncryptDecrypt, KeySpecAES256GCM, KeySpecChaCha20)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
 		})
-	} else if *k.Type == KeyTypeAsymmetric && *k.Usage == KeyUsageSignVerify && (k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCC25519 && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096)) {
+	} else if *k.Type == KeyTypeAsymmetric && *k.Usage == KeyUsageSignVerify && (k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCC25519 && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048)) {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s, %s, %s, %s", KeyUsageSignVerify, KeySpecECCBabyJubJub, KeySpecECCC25519, KeySpecECCEd25519, KeySpecECCSecp256k1, KeySpecRSA4096)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
+			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s, %s, %s, %s, %s, %s", KeyUsageSignVerify, KeySpecECCBabyJubJub, KeySpecECCC25519, KeySpecECCEd25519, KeySpecECCSecp256k1, KeySpecRSA4096, KeySpecRSA3072, KeySpecRSA2048)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
 		})
 	}
 

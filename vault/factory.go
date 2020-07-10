@@ -238,3 +238,39 @@ func RSA4096Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *
 
 	return key
 }
+
+// RSA3072Factory RSA 3072-bit
+func RSA3072Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+	key := &Key{
+		VaultID:     vaultID,
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(description),
+		Spec:        common.StringOrNil(KeySpecRSA3072),
+		Type:        common.StringOrNil(KeyTypeAsymmetric),
+		Usage:       common.StringOrNil(KeyUsageSignVerify),
+	}
+
+	if !key.createPersisted(db) {
+		return nil
+	}
+
+	return key
+}
+
+// RSA2048Factory RSA 2048-bit
+func RSA2048Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+	key := &Key{
+		VaultID:     vaultID,
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(description),
+		Spec:        common.StringOrNil(KeySpecRSA3072),
+		Type:        common.StringOrNil(KeyTypeAsymmetric),
+		Usage:       common.StringOrNil(KeyUsageSignVerify),
+	}
+
+	if !key.createPersisted(db) {
+		return nil
+	}
+
+	return key
+}

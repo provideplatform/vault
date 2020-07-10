@@ -61,7 +61,9 @@ const NonceSizeSymmetric = 12
 // const KeySpecECCSecpP256k1 = "ECC-SECG-P256K1"
 // const KeySpecRSA2048 = "RSA-2048"
 // const KeySpecRSA3072 = "RSA-3072"
-// const KeySpecRSA4096 = "RSA-4096"
+
+// KeySpecRSA4096 rsa 4096 key spec
+const KeySpecRSA4096 = "RSA-4096"
 
 // Key represents a symmetric or asymmetric signing key
 type Key struct {
@@ -257,6 +259,21 @@ func (k *Key) createSecp256k1Keypair() error {
 	}
 
 	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, *k.PublicKey)
+	return nil
+}
+
+// createRSA4096Keypair creates a keypair using RSA4096
+func (k *Key) createRSAKeypair(bitsize int) error {
+
+	rsa4096KeyPair, err := vaultcrypto.CreateRSAKeyPair(bitsize)
+	if err != nil {
+		return fmt.Errorf("failed to create rsa%d keypair; %s", bitsize, err.Error())
+	}
+
+	k.PrivateKey = rsa4096KeyPair.PrivateKey
+	k.PublicKey = rsa4096KeyPair.PublicKey
+
+	common.Log.Debugf("created rsa%d key for vault: %s; public key: 0x%s", bitsize, k.VaultID, *k.PublicKey)
 	return nil
 }
 
@@ -503,6 +520,11 @@ func (k *Key) create() error {
 			err := k.createSecp256k1Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
+			}
+		case KeySpecRSA4096:
+			err := k.createRSAKeypair(4096)
+			if err != nil {
+				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
 			}
 		}
 	}
@@ -809,7 +831,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -845,6 +867,14 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 
 		sig, sigerr = secp256k1.Sign(payload)
 
+	case KeySpecRSA4096:
+		if k.PrivateKey == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
+		}
+		rsa4096 := vaultcrypto.RSAKeyPair{}
+		rsa4096.PrivateKey = k.PrivateKey
+		sig, sigerr = rsa4096.Sign(payload)
+
 	default:
 		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 	}
@@ -866,7 +896,7 @@ func (k *Key) Verify(payload, sig []byte) error {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
 	}
 
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096) {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -896,6 +926,13 @@ func (k *Key) Verify(payload, sig []byte) error {
 		secp256k1.PublicKey = k.PublicKey
 
 		return secp256k1.Verify(payload, sig)
+
+	case KeySpecRSA4096:
+
+		rsa4096 := vaultcrypto.RSAKeyPair{}
+		rsa4096.PublicKey = k.PublicKey
+
+		return rsa4096.Verify(payload, sig)
 
 	}
 
@@ -946,9 +983,9 @@ func (k *Key) Validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("symmetric key in %s usage mode must be %s or %s", KeyUsageEncryptDecrypt, KeySpecAES256GCM, KeySpecChaCha20)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
 		})
-	} else if *k.Type == KeyTypeAsymmetric && *k.Usage == KeyUsageSignVerify && (k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCC25519 && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1)) {
+	} else if *k.Type == KeyTypeAsymmetric && *k.Usage == KeyUsageSignVerify && (k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCC25519 && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096)) {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s, %s or %s", KeyUsageSignVerify, KeySpecECCBabyJubJub, KeySpecECCC25519, KeySpecECCEd25519, KeySpecECCSecp256k1)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
+			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s, %s, %s, %s", KeyUsageSignVerify, KeySpecECCBabyJubJub, KeySpecECCC25519, KeySpecECCEd25519, KeySpecECCSecp256k1, KeySpecRSA4096)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
 		})
 	}
 

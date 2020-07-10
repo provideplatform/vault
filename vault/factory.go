@@ -220,3 +220,21 @@ func Secp256k1Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string)
 
 	return key
 }
+
+// RSA4096Factory RSA 4096-bit
+func RSA4096Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+	key := &Key{
+		VaultID:     vaultID,
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(description),
+		Spec:        common.StringOrNil(KeySpecRSA4096),
+		Type:        common.StringOrNil(KeyTypeAsymmetric),
+		Usage:       common.StringOrNil(KeyUsageSignVerify),
+	}
+
+	if !key.createPersisted(db) {
+		return nil
+	}
+
+	return key
+}

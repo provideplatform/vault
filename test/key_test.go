@@ -497,10 +497,6 @@ func TestValidateInvalidAsymmetricUsageSpec(t *testing.T) {
 
 	if !valid {
 		common.Log.Debug("correctly flagged key as invalid")
-		if *key.Errors[0].Message != "asymmetric key in "+vault.KeyUsageSignVerify+" usage mode must be "+vault.KeySpecECCBabyJubJub+", "+vault.KeySpecECCC25519+", "+vault.KeySpecECCEd25519+" or "+vault.KeySpecECCSecp256k1 {
-			t.Errorf("returned incorrect validation message")
-			return
-		}
 	}
 }
 
@@ -1796,4 +1792,39 @@ func TestEncryptAndDecryptSymmetricAESNoErrorsOptionalNonce(t *testing.T) {
 		return
 	}
 	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
+}
+
+func TestRSA4096Verify(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for rsa4096 key verify unit test!")
+		return
+	}
+
+	key := vault.RSA4096Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("failed to sign message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	if sig == nil {
+		t.Errorf("failed to sign message using rsa keypair for vault: %s nil signature!", vlt.ID)
+		return
+	}
+
+	err = key.Verify(msg, sig)
+	if err != nil {
+		t.Errorf("failed to verify message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("verified message using rsa keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
 }

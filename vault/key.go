@@ -266,7 +266,7 @@ func (k *Key) createSecp256k1Keypair() error {
 	return nil
 }
 
-// createRSA4096Keypair creates a keypair using RSA4096
+// createRSAKeypair creates a keypair using RSA(-bitsize bits)
 func (k *Key) createRSAKeypair(bitsize int) error {
 
 	rsaKeyPair, err := vaultcrypto.CreateRSAKeyPair(bitsize)
@@ -618,8 +618,8 @@ func (k *Key) save(db *gorm.DB) bool {
 
 // Decrypt a ciphertext using the key according to its spec
 func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
-	if k.Usage == nil || *k.Usage != KeyUsageEncryptDecrypt {
-		return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key: %s; nil or invalid key usage", len(ciphertext), k.ID)
+	if k.Usage == nil {
+		return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key: %s; nil key usage", len(ciphertext), k.ID)
 	}
 
 	if k.Type != nil && *k.Type == KeyTypeSymmetric {
@@ -639,10 +639,42 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 	// k.mutex.Lock()
 	// defer k.mutex.Unlock()
 
+	if k.PrivateKey == nil {
+		return nil, fmt.Errorf("failed to decrypt using key: %s; nil private key", k.ID)
+	}
+
 	k.decryptFields()
 	defer k.encryptFields()
 
-	return nil, nil
+	var plaintext []byte
+	var err error
+
+	switch *k.Spec {
+	case KeySpecRSA4096:
+		rsa4096 := vaultcrypto.RSAKeyPair{}
+		rsa4096.PrivateKey = k.PrivateKey
+		plaintext, err = rsa4096.Decrypt(ciphertext)
+		if err != nil {
+			return nil, vaultcrypto.ErrCannotDecrypt
+		}
+
+	case KeySpecRSA3072:
+		rsa3072 := vaultcrypto.RSAKeyPair{}
+		rsa3072.PrivateKey = k.PrivateKey
+		plaintext, err = rsa3072.Decrypt(ciphertext)
+		if err != nil {
+			return nil, vaultcrypto.ErrCannotDecrypt
+		}
+
+	case KeySpecRSA2048:
+		rsa2048 := vaultcrypto.RSAKeyPair{}
+		rsa2048.PrivateKey = k.PrivateKey
+		plaintext, err = rsa2048.Decrypt(ciphertext)
+		if err != nil {
+			return nil, vaultcrypto.ErrCannotDecrypt
+		}
+	}
+	return plaintext, nil
 }
 
 // decryptSymmetric attempts symmetric AES-256-GCM decryption using the key;
@@ -756,8 +788,9 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 // nonce is optional and a random nonce will be generated if nil
 // never use more than 2^32 random nonces with a given key because of the risk of a repeat.
 func (k *Key) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
-	if k.Usage == nil || *k.Usage != KeyUsageEncryptDecrypt {
-		return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key: %s; nil or invalid key usage", len(plaintext), k.ID)
+	// HACK - disable the invalid usage for the moment because of RSA - is this needed, or can it be handled by the switch statement?
+	if k.Usage == nil {
+		return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key: %s; nil key usage", len(plaintext), k.ID)
 	}
 
 	if k.Type != nil && *k.Type == KeyTypeSymmetric {
@@ -774,6 +807,12 @@ func (k *Key) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 // encryptAsymmetric attempts asymmetric encryption using the public/private keypair;
 // returns the ciphertext any error
 func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.Log.Warningf("recovered from panic during encryptAsymmetric(); %s", r)
+		}
+	}()
+
 	if k.Type == nil || *k.Type != KeyTypeAsymmetric {
 		return nil, fmt.Errorf("failed to asymmetrically encrypt using key: %s; nil or invalid key type", k.ID)
 	}
@@ -781,7 +820,33 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 	k.decryptFields()
 	defer k.encryptFields()
 
-	return nil, nil
+	var ciphertext []byte
+	var err error
+
+	switch *k.Spec {
+	case KeySpecRSA4096:
+		rsakey := vaultcrypto.RSAKeyPair{}
+		rsakey.PublicKey = k.PublicKey
+		ciphertext, err = rsakey.Encrypt(plaintext)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
+		}
+	case KeySpecRSA3072:
+		rsakey := vaultcrypto.RSAKeyPair{}
+		rsakey.PublicKey = k.PublicKey
+		ciphertext, err = rsakey.Encrypt(plaintext)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
+		}
+	case KeySpecRSA2048:
+		rsakey := vaultcrypto.RSAKeyPair{}
+		rsakey.PublicKey = k.PublicKey
+		ciphertext, err = rsakey.Encrypt(plaintext)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
+		}
+	}
+	return ciphertext, nil
 }
 
 // encryptSymmetric attempts symmetric AES-256-GCM encryption using the key;

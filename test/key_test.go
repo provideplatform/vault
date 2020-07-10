@@ -1074,24 +1074,24 @@ func TestEncryptChaChaInvalidNilUsage(t *testing.T) {
 	}
 }
 
-func TestEncryptChaChaInvalidUsage(t *testing.T) {
-	vlt := vaultFactory()
-	if vlt.ID == uuid.Nil {
-		t.Error("failed! no vault created for derive symmetric key unit test!")
-		return
-	}
+// func TestEncryptChaChaInvalidUsage(t *testing.T) {
+// 	vlt := vaultFactory()
+// 	if vlt.ID == uuid.Nil {
+// 		t.Error("failed! no vault created for derive symmetric key unit test!")
+// 		return
+// 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+// 	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
 
-	plaintext := []byte(common.RandomString(128))
+// 	plaintext := []byte(common.RandomString(128))
 
-	*key.Usage = vault.KeyUsageSignVerify
-	_, err := key.Encrypt(plaintext, nil)
-	if err == nil {
-		t.Error("failed to trap invalid usage on key")
-		return
-	}
-}
+// 	*key.Usage = vault.KeyUsageSignVerify
+// 	_, err := key.Encrypt(plaintext, nil)
+// 	if err == nil {
+// 		t.Error("failed to trap invalid usage on key")
+// 		return
+// 	}
+// }
 
 func TestEncryptChaChaNilKeyType(t *testing.T) {
 	vlt := vaultFactory()
@@ -1897,4 +1897,112 @@ func TestRSA2048Verify(t *testing.T) {
 	}
 
 	common.Log.Debugf("verified message using rsa keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
+
+func TestEncryptAndDecryptRSA4096(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.RSA4096Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	nonce := make([]byte, NonceSizeSymmetric)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		t.Errorf("error creating random nonce %s", err.Error())
+		return
+	}
+
+	ciphertext, err := key.Encrypt(plaintext, nonce)
+	if err != nil {
+		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
+		return
+	}
+
+	decryptedtext, err := key.Decrypt(ciphertext)
+	if err != nil {
+		t.Errorf("failed to decrypt encrypted text  with error: %s", err.Error())
+		return
+	}
+
+	if hex.EncodeToString(decryptedtext) != hex.EncodeToString(plaintext) {
+		t.Error("decrypted text is not the same as original plaintext!")
+		return
+	}
+	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
+}
+
+func TestEncryptAndDecryptRSA3072(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.RSA3072Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	nonce := make([]byte, NonceSizeSymmetric)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		t.Errorf("error creating random nonce %s", err.Error())
+		return
+	}
+
+	ciphertext, err := key.Encrypt(plaintext, nonce)
+	if err != nil {
+		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
+		return
+	}
+
+	decryptedtext, err := key.Decrypt(ciphertext)
+	if err != nil {
+		t.Errorf("failed to decrypt encrypted text  with error: %s", err.Error())
+		return
+	}
+
+	if hex.EncodeToString(decryptedtext) != hex.EncodeToString(plaintext) {
+		t.Error("decrypted text is not the same as original plaintext!")
+		return
+	}
+	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
+}
+
+func TestEncryptAndDecryptRSA2048(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for derive symmetric key unit test!")
+		return
+	}
+
+	key := vault.RSA2048Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+
+	plaintext := []byte(common.RandomString(128))
+
+	nonce := make([]byte, NonceSizeSymmetric)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		t.Errorf("error creating random nonce %s", err.Error())
+		return
+	}
+
+	ciphertext, err := key.Encrypt(plaintext, nonce)
+	if err != nil {
+		t.Errorf("failed to encrypt plaintext with error: %s", err.Error())
+		return
+	}
+
+	decryptedtext, err := key.Decrypt(ciphertext)
+	if err != nil {
+		t.Errorf("failed to decrypt encrypted text  with error: %s", err.Error())
+		return
+	}
+
+	if hex.EncodeToString(decryptedtext) != hex.EncodeToString(plaintext) {
+		t.Error("decrypted text is not the same as original plaintext!")
+		return
+	}
+	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
 }

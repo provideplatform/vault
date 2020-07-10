@@ -14,6 +14,9 @@ type RSAKeyPair struct {
 	PublicKey  *[]byte
 }
 
+// NonceSizeRSA is the size of the optional RSA nonce for encryption/decryption (in bytes)
+const NonceSizeRSA = 32
+
 // // PrivateKey for information only
 // type PrivateKey struct {
 // 	PublicKey            // public part.
@@ -92,4 +95,38 @@ func (k *RSAKeyPair) Verify(payload, sig []byte) error {
 		return ErrCannotVerifyPayload
 	}
 	return nil
+}
+
+// Encrypt encrypts byte array using RSA public key
+func (k *RSAKeyPair) Encrypt(plaintext []byte) ([]byte, error) {
+	if k.PublicKey == nil {
+		return nil, ErrInvalidPublicKey
+	}
+
+	// get the rsa public key struct from the publickey bytes
+	var rsaKey rsa.PrivateKey
+	json.Unmarshal(*k.PublicKey, &rsaKey.PublicKey)
+
+	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, &rsaKey.PublicKey, plaintext, nil)
+	if err != nil {
+		return nil, ErrCannotEncrypt
+	}
+	return ciphertext, nil
+}
+
+// Decrypt decrypts byte array using RSA and input nonce
+func (k *RSAKeyPair) Decrypt(ciphertext []byte) ([]byte, error) {
+	if k.PrivateKey == nil {
+		return nil, ErrNilPrivateKey
+	}
+
+	//get the private key struct from the privatekey bytes
+	var rsaPrivateKey rsa.PrivateKey
+	json.Unmarshal(*k.PrivateKey, &rsaPrivateKey)
+
+	plaintext, err := rsaPrivateKey.Decrypt(nil, ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
+	if err != nil {
+		return nil, ErrCannotDecrypt
+	}
+	return plaintext, nil
 }

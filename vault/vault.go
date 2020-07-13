@@ -26,6 +26,17 @@ type Vault struct {
 	MasterKeyID *uuid.UUID `sql:"type:uuid" json:"-"`
 }
 
+// MasterUnlockKey is the encryption/decryption key for the vault master keys
+// initial implementation has this unencrypted in memory
+// secondary implementation will encrypt this with derived key (or similar)
+var MasterUnlockKey *[]byte
+
+// LockUnlockRequest provides the lock/unlock information
+type LockUnlockRequest struct {
+	UnlockKey *string `json:"unlock,omitempty"`
+	LockKey   *string `json:"lock,omitempty"`
+}
+
 // ListKeysQuery returns the fields to SELECT from vault keys table
 func (v *Vault) ListKeysQuery(db *gorm.DB) *gorm.DB {
 	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.seed, keys.private_key, keys.public_key, keys.vault_id").Where("keys.vault_id = ?", v.ID)

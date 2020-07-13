@@ -11,6 +11,7 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 
+	vaultcrypto "github.com/provideapp/vault/crypto"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/vault/common"
 	provide "github.com/provideservices/provide-go/common"
@@ -34,6 +35,71 @@ func InstallAPI(r *gin.Engine) {
 	r.POST("api/v1/vaults/:id/secrets", createVaultSecretHandler)
 	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretDetailsHandler)
 	r.DELETE("api/v1/vaults/:id/secrets/:secretId", deleteVaultSecretHandler)
+
+	r.POST("api/v1/vaults/keyhole", vaultKeyholeHandler)
+	r.GET("api/v1/vaults/keyhole", vaultNewKeyholeHandler)
+}
+
+func vaultNewKeyholeHandler(c *gin.Context) {
+	// this function creates and returns a new vault master key
+	// this is initially for test/dev purposes
+
+	privatekey, err := vaultcrypto.CreateAES256GCMSeed()
+	if err != nil {
+		return err
+	}
+	privateKeyHex := hex.EncodeToString(privatekey)
+	provide.Render(privateKeyHex, 200, c)
+	return 
+}
+
+// vaultKeyHoleHandler enables locking and unlocking the master key for all vaults
+func vaultKeyholeHandler(c *gin.Context) {
+	//q: what elements are required in the token to enable the locking/ unlocking of the vault?
+	_ = token.InContext(c)
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &LockUnlockRequest{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if params.UnlockKey == nil && params.LockKey == nil {
+		provide.RenderError("lock or unlock data required", 422, c)
+		return
+	}
+
+	if params.LockKey != nil {
+		// we will lock the vault so it no longer operates
+		// this is the default starting state of the vault
+
+		newMasterKey := 
+	}
+
+	if params.UnlockKey != nil {
+		// we will unlock the vault so it can perform key operations
+		// first take the unlock key from the parameters and hex decode it to []byte
+
+		// we will assume for the moment that the master unlock key
+		// is an AES-256-GCM key's private key, hex encoded
+
+		masterKey, err := hex.DecodeString(*params.UnlockKey)
+		if err != nil {
+			provide.RenderError("error decoding master key from hex", 500, c)
+			return
+		}
+
+		// set up the vault unlock key to be this aes256gcm private key
+		MasterUnlockKey = &masterKey
+		provide.Render("vault unlocked", 201, c)
+	}
 }
 
 func vaultKeyEncryptHandler(c *gin.Context) {

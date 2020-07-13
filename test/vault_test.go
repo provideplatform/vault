@@ -16,10 +16,11 @@ import (
 func init() {
 	//vaultpgputil.RequirePGP()
 	if vault.MasterUnlockKey == nil {
-		vault.MasterUnlockKey, err = vault.CreateSampleMasterUnlockKey()
+		masterkey, err := vault.CreateSampleMasterUnlockKey()
 		if err != nil {
-			t.Error("error creating master unsealing key")
+			//t.Error("error creating master unsealing key")
 		}
+		vault.MasterUnlockKey = &masterkey
 	}
 }
 

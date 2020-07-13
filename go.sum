@@ -404,6 +404,7 @@ github.com/prometheus/tsdb v0.10.0 h1:If5rVCMTp6W2SiRAQFlbpJNgVlgMEd+U2GZckwK38i
 github.com/prometheus/tsdb v0.10.0/go.mod h1:oi49uRhEe9dPUTlS3JRZOwJuVi6tmh10QSgwXEyGCt4=
 github.com/provideservices/provide-go v0.0.0-20200905224113-acf85fae2c2e h1:GpDrJOUlHuUa9w/JHmldMzQ22u8VU2DDqX1W1allMNI=
 github.com/provideservices/provide-go v0.0.0-20200905224113-acf85fae2c2e/go.mod h1:Pn7/Q7Q9AcvFlv9jP/2ABVfll6Ls/HlmqjRF8KM2dAM=
+github.com/provideservices/provide-go v0.0.0-20200906045411-986de3bb2f71 h1:ZpZLwDCXPHndX7L0+cQolcNl7Bh6mpVzhPQ/yW9rZlo=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rjeczalik/notify v0.9.1/go.mod h1:rKwnCoCGeuQnwBtTSPL9Dad03Vh2n40ePRrjvIXnJho=
 github.com/rjeczalik/notify v0.9.2 h1:MiTWrPj55mNDHEiIX5YUSKefw/+lCQVoAFmD6oQm5w8=

@@ -11,10 +11,10 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 
-	vaultcrypto "github.com/provideapp/vault/crypto"
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/vault/common"
-	provide "github.com/provideservices/provide-go/common"
+	vaultcrypto "github.com/provideapp/vault/crypto"
+	provide "github.com/provideservices/provide-go"
 )
 
 // InstallAPI installs the handlers using the given gin Engine
@@ -46,11 +46,12 @@ func vaultNewKeyholeHandler(c *gin.Context) {
 
 	privatekey, err := vaultcrypto.CreateAES256GCMSeed()
 	if err != nil {
-		return err
+		provide.RenderError("error creating master key", 500, c)
+		return
 	}
 	privateKeyHex := hex.EncodeToString(privatekey)
 	provide.Render(privateKeyHex, 200, c)
-	return 
+	return
 }
 
 // vaultKeyHoleHandler enables locking and unlocking the master key for all vaults
@@ -79,8 +80,12 @@ func vaultKeyholeHandler(c *gin.Context) {
 	if params.LockKey != nil {
 		// we will lock the vault so it no longer operates
 		// this is the default starting state of the vault
-
-		newMasterKey := 
+		// this doesn't make much sense (unless the locking is in itself
+		// an encryption action, but it will do for the moment)
+		// also better to wipe with random and then nil pointer
+		randomJunk := common.RandomString(32)
+		*MasterUnlockKey = []byte(randomJunk)
+		MasterUnlockKey = nil
 	}
 
 	if params.UnlockKey != nil {

@@ -13,7 +13,6 @@ import (
 
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/vault/common"
-	vaultcrypto "github.com/provideapp/vault/crypto"
 	provide "github.com/provideservices/provide-go"
 )
 
@@ -43,14 +42,12 @@ func InstallAPI(r *gin.Engine) {
 func vaultNewKeyholeHandler(c *gin.Context) {
 	// this function creates and returns a new vault master key
 	// this is initially for test/dev purposes
-
-	privatekey, err := vaultcrypto.CreateAES256GCMSeed()
+	masterKey, err := CreateSampleMasterUnlockKey()
 	if err != nil {
-		provide.RenderError("error creating master key", 500, c)
-		return
+		provide.RenderError(err.Error(), 500, c)
 	}
-	privateKeyHex := hex.EncodeToString(privatekey)
-	provide.Render(privateKeyHex, 200, c)
+
+	provide.Render(hex.EncodeToString(masterKey), 200, c)
 	return
 }
 

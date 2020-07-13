@@ -6,14 +6,19 @@ import (
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
-	vaultpgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 )
 
 func init() {
-	vaultpgputil.RequirePGP()
+	//vaultpgputil.RequirePGP()
+	if vault.MasterUnlockKey == nil {
+		vault.MasterUnlockKey, err = vault.CreateSampleMasterUnlockKey()
+		if err != nil {
+			t.Error("error creating master unsealing key")
+		}
+	}
 }
 
 var secretDB = dbconf.DatabaseConnection()

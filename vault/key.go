@@ -156,6 +156,16 @@ type KeySignVerifyRequestResponse struct {
 	DerivationPath *string         `json:"hd_derivation_path,omitempty"`
 }
 
+// CreateSampleMasterUnlockKey is a WIP method to create a new master unlock key
+func CreateSampleMasterUnlockKey() ([]byte, error) {
+	privatekey, err := vaultcrypto.CreateAES256GCMSeed()
+	if err != nil {
+		return nil, err
+	}
+	//privateKeyHex := hex.EncodeToString(privatekey)
+	return privatekey, nil
+}
+
 // createAES256GCM creates a key using a random seed
 func (k *Key) createAES256GCM() error {
 	privatekey, err := vaultcrypto.CreateAES256GCMSeed()

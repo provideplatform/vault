@@ -16,11 +16,15 @@ import (
 func init() {
 	//vaultpgputil.RequirePGP()
 	if vault.MasterUnlockKey == nil {
+		fmt.Sprintf("no master unsealing key found, creating one")
 		masterkey, err := vault.CreateSampleMasterUnlockKey()
 		if err != nil {
-			//t.Error("error creating master unsealing key")
+			fmt.Sprintf("error creating master unsealing key %s", err.Error())
 		}
-		vault.MasterUnlockKey = &masterkey
+		//vault.MasterUnlockKey = &masterkey
+		negKey := []byte(common.RandomString(32))
+		vault.MasterUnlockKey = &negKey
+		common.Log.Debugf("created a master unsealing key for vault... %T", masterkey)
 	}
 }
 
@@ -154,7 +158,7 @@ func TestDeleteVaultWithKeys(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key := vault.Ed25519Factory(vaultDB, &vlt.ID, "test key", "just some key :D")
 	if key == nil {
 		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
 		return
@@ -170,7 +174,7 @@ func TestDeleteVaultWithKeys(t *testing.T) {
 
 	t.Logf("deleted vault with ID %s", vlt.ID)
 
-	newKey := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	newKey := vault.Ed25519Factory(vaultDB, &vlt.ID, "test key", "just some key :D")
 	if newKey != nil {
 		t.Errorf("created Ed25519 keypair for deleted vault: %s %s", vlt.ID, *newKey.Errors[0].Message)
 		return

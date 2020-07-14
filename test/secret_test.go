@@ -3,6 +3,7 @@
 package test
 
 import (
+	"fmt"
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
@@ -14,11 +15,17 @@ import (
 func init() {
 	//vaultpgputil.RequirePGP()
 	if vault.MasterUnlockKey == nil {
+		fmt.Sprintf("no master unsealing key found, creating one")
 		masterkey, err := vault.CreateSampleMasterUnlockKey()
 		if err != nil {
-			//t.Error("error creating master unsealing key")
+			fmt.Sprintf("error creating master unsealing key %s", err.Error())
 		}
-		vault.MasterUnlockKey = &masterkey
+		//vault.MasterUnlockKey = &masterkey
+		// surprising result here, but it makes sense as the vault key is now encrypted with the sealing key,
+		// which is valid for all these vaults - not something you would want to do in production (!!)
+		negKey := []byte(common.RandomString(32))
+		vault.MasterUnlockKey = &negKey
+		common.Log.Debugf("created a master unsealing key for vault... %T", masterkey)
 	}
 }
 

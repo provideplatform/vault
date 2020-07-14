@@ -424,11 +424,12 @@ func (k *Key) decryptFields() error {
 		if k.Seed != nil {
 			// xxx sealunsealer key stuff
 			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is locked")
+				return fmt.Errorf("vault is sealed")
 			}
-			masterKey := vaultcrypto.AES256GCM{}
-			masterKey.PrivateKey = MasterUnlockKey
-			seed, err := masterKey.Decrypt(*k.Seed, nil)
+			masterVaultKey := vaultcrypto.AES256GCM{}
+			masterVaultKey.PrivateKey = MasterUnlockKey
+			encryptedKey := *k.Seed
+			seed, err := masterVaultKey.Decrypt(encryptedKey[NonceSizeSymmetric:], encryptedKey[0:NonceSizeSymmetric])
 			//seed, err := pgputil.PGPPubDecrypt([]byte(*k.Seed))
 			if err != nil {
 				return err
@@ -439,11 +440,12 @@ func (k *Key) decryptFields() error {
 		if k.PrivateKey != nil {
 			// xxx sealunsealer key stuff
 			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is locked")
+				return fmt.Errorf("vault is sealed")
 			}
-			masterKey := vaultcrypto.AES256GCM{}
-			masterKey.PrivateKey = MasterUnlockKey
-			privateKey, err := masterKey.Encrypt(*k.PrivateKey, nil)
+			masterVaultKey := vaultcrypto.AES256GCM{}
+			masterVaultKey.PrivateKey = MasterUnlockKey
+			encryptedKey := *k.PrivateKey
+			privateKey, err := masterVaultKey.Decrypt(encryptedKey[NonceSizeSymmetric:], encryptedKey[0:NonceSizeSymmetric])
 			//privateKey, err := pgputil.PGPPubDecrypt([]byte(*k.PrivateKey))
 			if err != nil {
 				return err
@@ -496,11 +498,11 @@ func (k *Key) encryptFields() error {
 		if k.Seed != nil {
 			//xxx this is where we will instead encrypt with vault.unlockmasterkey (AES)
 			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is locked")
+				return fmt.Errorf("vault is sealed")
 			}
-			masterKey := vaultcrypto.AES256GCM{}
-			masterKey.PrivateKey = MasterUnlockKey
-			seed, err := masterKey.Encrypt(*k.Seed, nil)
+			masterVaultKey := vaultcrypto.AES256GCM{}
+			masterVaultKey.PrivateKey = MasterUnlockKey
+			seed, err := masterVaultKey.Encrypt(*k.Seed, nil)
 			//seed, err := pgputil.PGPPubEncrypt([]byte(*k.Seed))
 			if err != nil {
 				return err
@@ -511,11 +513,11 @@ func (k *Key) encryptFields() error {
 		if k.PrivateKey != nil {
 			// xxx sealunsealer key stuff
 			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is locked")
+				return fmt.Errorf("vault is sealed")
 			}
-			masterKey := vaultcrypto.AES256GCM{}
-			masterKey.PrivateKey = MasterUnlockKey
-			privateKey, err := masterKey.Encrypt(*k.PrivateKey, nil)
+			masterVaultKey := vaultcrypto.AES256GCM{}
+			masterVaultKey.PrivateKey = MasterUnlockKey
+			privateKey, err := masterVaultKey.Encrypt(*k.PrivateKey, nil)
 			//privateKey, err := pgputil.PGPPubEncrypt([]byte(*k.PrivateKey))
 			if err != nil {
 				return err
@@ -581,7 +583,6 @@ func (k *Key) createPersisted(db *gorm.DB) bool {
 	if success {
 		k.Enrich()
 	}
-
 	return success
 }
 
@@ -674,7 +675,6 @@ func (k *Key) create() error {
 			return fmt.Errorf("failed to encrypt key material; %s", err.Error())
 		}
 	}
-
 	return nil
 }
 

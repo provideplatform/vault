@@ -7,10 +7,10 @@ import (
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
-	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	provide "github.com/provideservices/provide-go/api"
+	vaultcrypto "github.com/provideapp/vault/crypto"
 )
 
 // MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored
@@ -229,7 +229,15 @@ func (s *Secret) encryptFields() error {
 		common.Log.Tracef("encrypting master key fields for vault: %s", s.VaultID)
 
 		if masterKey.Seed != nil {
-			seed, err := pgputil.PGPPubEncrypt(*masterKey.Seed)
+			//xxx this is where we will instead encrypt with vault.unlockmasterkey (AES)
+			if MasterUnlockKey == nil {
+				return fmt.Errorf("vault is sealed")
+			}
+			masterVaultKey := vaultcrypto.AES256GCM{}
+			masterVaultKey.PrivateKey = MasterUnlockKey
+
+			seed, err := masterVaultKey.Encrypt(*masterKey.Seed, nil)
+			//seed, err := pgputil.PGPPubEncrypt(*masterKey.Seed)
 			if err != nil {
 				return err
 			}
@@ -237,7 +245,15 @@ func (s *Secret) encryptFields() error {
 		}
 
 		if masterKey.PrivateKey != nil {
-			privateKey, err := pgputil.PGPPubEncrypt(*masterKey.PrivateKey)
+			// xxx sealunsealer key stuff
+			if MasterUnlockKey == nil {
+				return fmt.Errorf("vault is sealed")
+			}
+			masterVaultKey := vaultcrypto.AES256GCM{}
+			masterVaultKey.PrivateKey = MasterUnlockKey
+
+			privateKey, err := masterVaultKey.Encrypt(*masterKey.PrivateKey, nil)
+			//privateKey, err := pgputil.PGPPubEncrypt(*masterKey.PrivateKey)
 			if err != nil {
 				return err
 			}
@@ -276,8 +292,21 @@ func (s *Secret) decryptFields() error {
 	if err != nil {
 		common.Log.Tracef("decrypting master key fields for vault: %s", s.VaultID)
 
+<<<<<<< HEAD
 		if s.Value != nil {
 			decryptedData, err := pgputil.PGPPubDecrypt([]byte(*s.Value))
+=======
+		if s.Data != nil {
+			// xxx sealunsealer key stuff
+			if MasterUnlockKey == nil {
+				return fmt.Errorf("vault is sealed")
+			}
+			masterVaultKey := vaultcrypto.AES256GCM{}
+			masterVaultKey.PrivateKey = MasterUnlockKey
+			encryptedData := *s.Data
+			decryptedData, err := masterVaultKey.Decrypt(encryptedData[NonceSizeSymmetric:], encryptedData[0:NonceSizeSymmetric])
+			//decryptedData, err := pgputil.PGPPubDecrypt([]byte(*s.Data))
+>>>>>>> unit tests passing - wubwubwub
 			if err != nil {
 				return err
 			}

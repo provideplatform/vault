@@ -13,7 +13,7 @@ import (
 
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/vault/common"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/common"
 )
 
 // InstallAPI installs the handlers using the given gin Engine
@@ -42,6 +42,14 @@ func InstallAPI(r *gin.Engine) {
 func vaultNewKeyholeHandler(c *gin.Context) {
 	// this function creates and returns a new vault master key
 	// this is initially for test/dev purposes
+	_ = token.InContext(c)
+
+	_, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
 	masterKey, err := CreateSampleMasterUnlockKey()
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)

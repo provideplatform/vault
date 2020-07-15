@@ -16,16 +16,17 @@ import (
 
 func init() {
 	//keyspgputil.RequirePGP()
-	if vault.MasterUnlockKey == nil {
-		common.Log.Debug("no master unsealing key found, creating one")
-		masterkey, err := vault.CreateSampleMasterUnlockKey()
+	if vault.InfinityKey == nil {
+		common.Log.Debug("no unsealing key found, creating one")
+		infinitykey, err := vault.CreateInfinityKey()
 		if err != nil {
-			common.Log.Debugf("error creating master unsealing key %s", err.Error())
+			common.Log.Debugf("error creating unsealing key %s", err.Error())
 		}
-		//vault.MasterUnlockKey = &masterkey
-		negKey := []byte(common.RandomString(32))
-		vault.MasterUnlockKey = &negKey
-		common.Log.Debugf("created a master unsealing key for vault... %T", masterkey)
+		err = vault.SetInfinityKey(&infinitykey)
+		if err != nil {
+			common.Log.Debugf("error creating unsealing key %s", err.Error())
+		}
+		common.Log.Debug("created unsealing key for vault...")
 	}
 }
 

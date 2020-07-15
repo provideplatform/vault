@@ -162,8 +162,7 @@ func CreateSampleMasterUnlockKey() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	//privateKeyHex := hex.EncodeToString(privatekey)
-	return privatekey, nil
+	return infinitykey, nil
 }
 
 // createAES256GCM creates a key using a random seed
@@ -422,35 +421,19 @@ func (k *Key) decryptFields() error {
 		common.Log.Tracef("decrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			// xxx sealunsealer key stuff
-			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is sealed")
-			}
-			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = MasterUnlockKey
-			encryptedKey := *k.Seed
-			seed, err := masterVaultKey.Decrypt(encryptedKey[NonceSizeSymmetric:], encryptedKey[0:NonceSizeSymmetric])
-			//seed, err := pgputil.PGPPubDecrypt([]byte(*k.Seed))
+			// unseal the data with the infinity key
+			k.Seed, err = unseal(k.Seed)
 			if err != nil {
 				return err
 			}
-			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
-			// xxx sealunsealer key stuff
-			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is sealed")
-			}
-			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = MasterUnlockKey
-			encryptedKey := *k.PrivateKey
-			privateKey, err := masterVaultKey.Decrypt(encryptedKey[NonceSizeSymmetric:], encryptedKey[0:NonceSizeSymmetric])
-			//privateKey, err := pgputil.PGPPubDecrypt([]byte(*k.PrivateKey))
+			// unseal the data with the infinity key
+			k.PrivateKey, err = unseal(k.PrivateKey)
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("decrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
@@ -459,7 +442,7 @@ func (k *Key) decryptFields() error {
 		defer masterKey.encryptFields()
 
 		if k.Seed != nil {
-			seed, err := masterKey.Decrypt([]byte(*k.Seed))
+			seed, err := masterKey.Decrypt(*k.Seed)
 			if err != nil {
 				return err
 			}
@@ -467,7 +450,7 @@ func (k *Key) decryptFields() error {
 		}
 
 		if k.PrivateKey != nil {
-			privateKey, err := masterKey.Decrypt([]byte(*k.PrivateKey))
+			privateKey, err := masterKey.Decrypt(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
@@ -496,33 +479,19 @@ func (k *Key) encryptFields() error {
 		common.Log.Tracef("encrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			//xxx this is where we will instead encrypt with vault.unlockmasterkey (AES)
-			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is sealed")
-			}
-			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = MasterUnlockKey
-			seed, err := masterVaultKey.Encrypt(*k.Seed, nil)
-			//seed, err := pgputil.PGPPubEncrypt([]byte(*k.Seed))
+			// seal the data with the infinity key
+			k.Seed, err = seal(k.Seed)
 			if err != nil {
 				return err
 			}
-			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
-			// xxx sealunsealer key stuff
-			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is sealed")
-			}
-			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = MasterUnlockKey
-			privateKey, err := masterVaultKey.Encrypt(*k.PrivateKey, nil)
-			//privateKey, err := pgputil.PGPPubEncrypt([]byte(*k.PrivateKey))
+			// seal the data with the infinity key
+			k.PrivateKey, err = seal(k.PrivateKey)
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("encrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)

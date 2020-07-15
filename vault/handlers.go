@@ -35,11 +35,11 @@ func InstallAPI(r *gin.Engine) {
 	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretDetailsHandler)
 	r.DELETE("api/v1/vaults/:id/secrets/:secretId", deleteVaultSecretHandler)
 
-	r.POST("api/v1/vaults/keyhole", vaultKeyholeHandler)
-	r.GET("api/v1/vaults/keyhole", vaultNewKeyholeHandler)
+	r.POST("api/v1/unseal", vaultSealHandler)
+	r.GET("api/v1/unseal", vaultNewSealHandler)
 }
 
-func vaultNewKeyholeHandler(c *gin.Context) {
+func vaultNewSealHandler(c *gin.Context) {
 	// this function creates and returns a new vault master key
 	// this is initially for test/dev purposes
 	_ = token.InContext(c)
@@ -50,17 +50,17 @@ func vaultNewKeyholeHandler(c *gin.Context) {
 		return
 	}
 
-	masterKey, err := CreateSampleMasterUnlockKey()
+	newInfinityKey, err := CreateInfinityKey()
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)
 	}
 
-	provide.Render(hex.EncodeToString(masterKey), 200, c)
+	provide.Render(hex.EncodeToString(newInfinityKey), 200, c)
 	return
 }
 
-// vaultKeyHoleHandler enables locking and unlocking the master key for all vaults
-func vaultKeyholeHandler(c *gin.Context) {
+// vaultSealHandler enables locking and unlocking the master key for all vaults
+func vaultSealHandler(c *gin.Context) {
 	//q: what elements are required in the token to enable the locking/ unlocking of the vault?
 	_ = token.InContext(c)
 
@@ -70,45 +70,48 @@ func vaultKeyholeHandler(c *gin.Context) {
 		return
 	}
 
-	params := &LockUnlockRequest{}
+	params := &SealUnsealRequest{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
 		return
 	}
 
-	if params.UnlockKey == nil && params.LockKey == nil {
-		provide.RenderError("lock or unlock data required", 422, c)
+	if params.UnsealKey == nil && params.SealKey == nil {
+		provide.RenderError("seal or unseal data required", 422, c)
 		return
 	}
 
-	if params.LockKey != nil {
+	if params.SealKey != nil {
 		// we will lock the vault so it no longer operates
 		// this is the default starting state of the vault
 		// this doesn't make much sense (unless the locking is in itself
 		// an encryption action, but it will do for the moment)
 		// also better to wipe with random and then nil pointer
 		randomJunk := common.RandomString(32)
-		*MasterUnlockKey = []byte(randomJunk)
-		MasterUnlockKey = nil
+		*InfinityKey = []byte(randomJunk)
+		InfinityKey = nil
 	}
 
-	if params.UnlockKey != nil {
+	if params.UnsealKey != nil {
 		// we will unlock the vault so it can perform key operations
 		// first take the unlock key from the parameters and hex decode it to []byte
 
-		// we will assume for the moment that the master unlock key
+		// we will assume for the moment that the master key (the infinity key! - brand pending)
 		// is an AES-256-GCM key's private key, hex encoded
 
-		masterKey, err := hex.DecodeString(*params.UnlockKey)
+		infinityKey, err := hex.DecodeString(*params.UnsealKey)
 		if err != nil {
-			provide.RenderError("error decoding master key from hex", 500, c)
+			provide.RenderError("error decoding unsealing key from hex", 500, c)
 			return
 		}
 
-		// set up the vault unlock key to be this aes256gcm private key
-		MasterUnlockKey = &masterKey
-		provide.Render("vault unlocked", 201, c)
+		err = SetInfinityKey(&infinityKey)
+		if err != nil {
+			provide.RenderError("error unsealing vault", 500, c)
+		}
+		//InfinityKey = &infinityKey
+		provide.Render("vault unsealed", 201, c)
 	}
 }
 

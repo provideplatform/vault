@@ -229,35 +229,19 @@ func (s *Secret) encryptFields() error {
 		common.Log.Tracef("encrypting master key fields for vault: %s", s.VaultID)
 
 		if masterKey.Seed != nil {
-			//xxx this is where we will instead encrypt with vault.unlockmasterkey (AES)
-			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is sealed")
-			}
-			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = MasterUnlockKey
-
-			seed, err := masterVaultKey.Encrypt(*masterKey.Seed, nil)
-			//seed, err := pgputil.PGPPubEncrypt(*masterKey.Seed)
+			// seal the data with the infinity key
+			masterKey.Seed, err = seal(masterKey.Seed)
 			if err != nil {
 				return err
 			}
-			masterKey.Seed = &seed
 		}
 
 		if masterKey.PrivateKey != nil {
-			// xxx sealunsealer key stuff
-			if MasterUnlockKey == nil {
-				return fmt.Errorf("vault is sealed")
-			}
-			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = MasterUnlockKey
-
-			privateKey, err := masterVaultKey.Encrypt(*masterKey.PrivateKey, nil)
-			//privateKey, err := pgputil.PGPPubEncrypt(*masterKey.PrivateKey)
+			// seal the data with the infinity key
+			masterKey.PrivateKey, err = seal(masterKey.PrivateKey)
 			if err != nil {
 				return err
 			}
-			masterKey.PrivateKey = &privateKey
 		}
 	} else {
 		masterKey.decryptFields()
@@ -293,6 +277,7 @@ func (s *Secret) decryptFields() error {
 		common.Log.Tracef("decrypting master key fields for vault: %s", s.VaultID)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 		if s.Value != nil {
 			decryptedData, err := pgputil.PGPPubDecrypt([]byte(*s.Value))
 =======
@@ -311,7 +296,24 @@ func (s *Secret) decryptFields() error {
 				return err
 			}
 			s.Value = &decryptedData
+=======
+		if masterKey.Seed != nil {
+			// unseal the data with the infinity key
+			masterKey.Seed, err = unseal(masterKey.Seed)
+			if err != nil {
+				return err
+			}
 		}
+
+		if masterKey.PrivateKey != nil {
+			// unseal the data with the infinity key
+			masterKey.PrivateKey, err = unseal(masterKey.PrivateKey)
+			if err != nil {
+				return err
+			}
+>>>>>>> refactoring + master key encryption
+		}
+
 	} else {
 		common.Log.Tracef("decrypting secret fields with master key %s for vault: %s", masterKey.ID, s.VaultID)
 

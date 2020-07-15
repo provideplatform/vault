@@ -35,7 +35,7 @@ func init() {
 	common.RequireJWTVerifiers()
 
 	//ensure the master unlock key is nil by default
-	vault.MasterUnlockKey = nil
+	vault.InfinityKey = nil
 
 	pgputil.RequirePGP()
 	// common.RequireAPIAccounting()

@@ -1,15 +1,12 @@
 package crypto
 
 import (
-	"crypto/ecdsa"
+	"bytes"
 	"crypto/elliptic"
-	"crypto/rand"
-	"encoding/asn1"
 
 	"github.com/ethereum/go-ethereum/common/math"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	"github.com/provideapp/vault/common"
 	"github.com/provideservices/provide-go"
 )
 
@@ -39,20 +36,20 @@ func CreateSecp256k1KeyPair() (*Secp256k1, error) {
 }
 
 // Sign uses SECP256k1 private key to sign the payload
+// note that this mechanism is designed for Ethereum signing
 func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 	if k.PrivateKey == nil {
 		return nil, ErrNilPrivateKey
 	}
 
-	secp256k1Key, err := ethcrypto.ToECDSA([]byte(*k.PrivateKey))
+	secp256k1Key, err := ethcrypto.ToECDSA(*k.PrivateKey)
 	if err != nil {
 		return nil, ErrCannotSignPayload
 	}
-	r, s, err := ecdsa.Sign(rand.Reader, secp256k1Key, payload)
-	if err != nil {
-		return nil, ErrCannotSignPayload
-	}
-	sig, err := asn1.Marshal(common.ECDSASignature{R: r, S: s})
+
+	hash := ethcrypto.Keccak256Hash(payload)
+
+	sig, err := ethcrypto.Sign(hash.Bytes(), secp256k1Key)
 	if err != nil {
 		return nil, ErrCannotSignPayload
 	}
@@ -62,22 +59,25 @@ func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 
 // Verify uses Secp256k1 public key to verify the payload's signature
 func (k *Secp256k1) Verify(payload, sig []byte) error {
-	signature := common.ECDSASignature{}
-	_, err := asn1.Unmarshal(sig, &signature)
-	if err != nil {
-		return ErrCannotUnmarshallSignature
-		//return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to unmarshal ASN1-encoded signature; %s", len(payload), k.ID, err.Error())
-	}
-	//common.Log.Debugf("unmarshaled ASN1 signature r, s (%s, %s) for key %s", signature.R, signature.S, k.ID)
 
-	secp256k1Key, err := ethcrypto.UnmarshalPubkey(*k.PublicKey)
+	// get the keccak256 hash of the payload
+	hash := ethcrypto.Keccak256Hash(payload)
+
+	// get the signature's public key
+	sigPublicKey, err := ethcrypto.Ecrecover(hash.Bytes(), sig)
 	if err != nil {
 		return ErrCannotVerifyPayload
-		//return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to unmarshal public key; %s", len(payload), k.ID, err.Error())
 	}
-	if !ecdsa.Verify(secp256k1Key, payload, signature.R, signature.S) {
+
+	// get the public key from the vault key
+	secp256k1PublicKey := k.PublicKey
+
+	// check if the signature's public key corresponds to the vault public key
+	verified := bytes.Equal(sigPublicKey, *secp256k1PublicKey)
+
+	if !verified {
 		return ErrCannotVerifyPayload
-		//return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s", len(payload), k.ID)
 	}
+
 	return nil
 }

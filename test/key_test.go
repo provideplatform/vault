@@ -748,7 +748,7 @@ func TestSecp256k1Verify(t *testing.T) {
 		return
 	}
 
-	msg := []byte(common.RandomString(10))
+	msg := []byte(common.RandomString(128))
 	sig, err := key.Sign(msg)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
@@ -767,6 +767,82 @@ func TestSecp256k1Verify(t *testing.T) {
 	}
 
 	common.Log.Debugf("verified message using secp256k1 keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
+
+func TestSecp256k1NoVerifyInvalidMessage(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for secp256k1 key verify unit test!")
+		return
+	}
+
+	key := vault.Secp256k1Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(128))
+	msg_invalid := []byte(common.RandomString(128))
+	sig, err := key.Sign(msg)
+	if err != nil {
+		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	if sig == nil {
+		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s nil signature!", vlt.ID)
+		return
+	}
+
+	err = key.Verify(msg_invalid, sig)
+	if err == nil {
+		t.Errorf("failed to not verify invalid message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("correctly failed to verify invalid message using secp256k1 keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
+}
+
+func TestSecp256k1NoVerifyInvalidSigningKey(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for secp256k1 key verify unit test!")
+		return
+	}
+
+	key1 := vault.Secp256k1Factory(keyDB, &vlt.ID, "test key1", "test signing key")
+	if key1 == nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	key2 := vault.Secp256k1Factory(keyDB, &vlt.ID, "test key2", "test invalid verifying key")
+	if key2 == nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(128))
+
+	sig, err := key1.Sign(msg)
+	if err != nil {
+		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	if sig == nil {
+		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s nil signature!", vlt.ID)
+		return
+	}
+
+	err = key2.Verify(msg, sig)
+	if err == nil {
+		t.Errorf("verified message using incorrect secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	common.Log.Debugf("correctly failed to verify message using invalid secp256k1 keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
 }
 
 func TestCreateEphemeralKeyAES256GCM_privatekey(t *testing.T) {

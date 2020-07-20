@@ -27,21 +27,6 @@ type Vault struct {
 	MasterKeyID *uuid.UUID `sql:"type:uuid" json:"-"`
 }
 
-// InfinityKey is the encryption/decryption key for the vault keys
-// which are used to decrypt the private keys/seeds
-// initial implementation has this unencrypted in memory
-// secondary implementation will encrypt this with derived key (or similar)
-var InfinityKey *[]byte
-
-// CloakingKey will ensure Infinity Key is encrypted in memory until required
-var CloakingKey *[]byte
-
-// SealUnsealRequest provides the seal/unseal information
-type SealUnsealRequest struct {
-	UnsealKey *string `json:"unseal,omitempty"`
-	SealKey   *string `json:"seal,omitempty"`
-}
-
 // ListKeysQuery returns the fields to SELECT from vault keys table
 func (v *Vault) ListKeysQuery(db *gorm.DB) *gorm.DB {
 	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.seed, keys.private_key, keys.public_key, keys.vault_id").Where("keys.vault_id = ?", v.ID)
@@ -201,6 +186,7 @@ func GetUserVaults(userID *uuid.UUID) []*Vault {
 	dbconf.DatabaseConnection().Where("user_id = ?", userID).Find(&vaults)
 	return vaults
 }
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 // GetVaults - retrieve the vaults for the specified parameters
@@ -383,3 +369,5 @@ func unseal(sealedKey *[]byte) (*[]byte, error) {
 	return &unsealedKey, nil
 >>>>>>> refactoring + master key encryption
 }
+=======
+>>>>>>> minor refactor to isolate sealer code

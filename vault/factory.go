@@ -263,7 +263,7 @@ func RSA2048Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
-		Spec:        common.StringOrNil(KeySpecRSA3072),
+		Spec:        common.StringOrNil(KeySpecRSA2048),
 		Type:        common.StringOrNil(KeyTypeAsymmetric),
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}

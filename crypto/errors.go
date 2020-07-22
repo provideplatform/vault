@@ -4,6 +4,9 @@ import "errors"
 
 var (
 
+	// ErrUnsupportedRSASigningAlgorithm is returned if the signing algorithm is not supported
+	ErrUnsupportedRSASigningAlgorithm = errors.New("unsupported RSA algorithm")
+
 	// ErrNonceTooLong is the error returned if the nonce provided is longer than permitted
 	ErrNonceTooLong = errors.New("nonce too long")
 

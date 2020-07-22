@@ -23,6 +23,9 @@ func init() {
 var keyDB = dbconf.DatabaseConnection()
 var NonceSizeSymmetric = 12
 
+// used for non-RSA sign and verify tests
+var NoAlgorithmRequired = ""
+
 func TestAES256GCMEncrypt(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {
@@ -578,7 +581,7 @@ func TestBabyJubJubSign(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("failed to sign message using babyJubJub keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -611,7 +614,7 @@ func TestBabyJubJubVerify(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("1failed to sign message using babyjubjub keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -627,7 +630,7 @@ func TestBabyJubJubVerify(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig)
+	err = key.Verify(msg, sig, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("4failed to verify message using babyjubjub keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -649,7 +652,7 @@ func TestEd25519Sign(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("failed to sign message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -682,7 +685,7 @@ func TestEd25519Verify(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -698,7 +701,7 @@ func TestEd25519Verify(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig)
+	err = key.Verify(msg, sig, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -721,7 +724,7 @@ func TestSecp256k1Sign(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -749,7 +752,7 @@ func TestSecp256k1Verify(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(128))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -760,7 +763,7 @@ func TestSecp256k1Verify(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig)
+	err = key.Verify(msg, sig, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("failed to verify message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -784,7 +787,7 @@ func TestSecp256k1NoVerifyInvalidMessage(t *testing.T) {
 
 	msg := []byte(common.RandomString(128))
 	msg_invalid := []byte(common.RandomString(128))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -795,7 +798,7 @@ func TestSecp256k1NoVerifyInvalidMessage(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg_invalid, sig)
+	err = key.Verify(msg_invalid, sig, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("failed to not verify invalid message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -825,7 +828,7 @@ func TestSecp256k1NoVerifyInvalidSigningKey(t *testing.T) {
 
 	msg := []byte(common.RandomString(128))
 
-	sig, err := key1.Sign(msg)
+	sig, err := key1.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -836,7 +839,7 @@ func TestSecp256k1NoVerifyInvalidSigningKey(t *testing.T) {
 		return
 	}
 
-	err = key2.Verify(msg, sig)
+	err = key2.Verify(msg, sig, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("verified message using incorrect secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1341,14 +1344,14 @@ func TestECDH(t *testing.T) {
 	peerSigningkey := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
 
 	// sign the peer ecdh key with the peer signing key
-	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey))
+	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey), NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("got error signing peer c25519 public key. Error: %s", err.Error())
 		return
 	}
 
 	//verify the peer signature worked ok
-	err = peerSigningkey.Verify([]byte(*peerECDHkey.PublicKey), peerSignature)
+	err = peerSigningkey.Verify([]byte(*peerECDHkey.PublicKey), peerSignature, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("error validating peer signature %s", err.Error())
 		return
@@ -1358,14 +1361,14 @@ func TestECDH(t *testing.T) {
 	}
 
 	mySigningKey := vault.Ed25519Factory(keyDB, &vlt.ID, "my ecdh signing key", "test key")
-	mySignature, err := mySigningKey.Sign([]byte(*myECDHkey.PublicKey))
+	mySignature, err := mySigningKey.Sign([]byte(*myECDHkey.PublicKey), NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("got error signing my c25519 public key. Error: %s", err.Error())
 		return
 	}
 
 	//verify my signature worked ok
-	err = mySigningKey.Verify([]byte(*myECDHkey.PublicKey), mySignature)
+	err = mySigningKey.Verify([]byte(*myECDHkey.PublicKey), mySignature, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("error validating my signature %s", err.Error())
 		return
@@ -1441,7 +1444,7 @@ func TestECDHNilPrivateKey(t *testing.T) {
 	peerSigningkey := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
 
 	// sign the peer ecdh key with the peer signing key
-	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey))
+	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey), NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("got error signing peer c25519 public key. Error: %s", err.Error())
 		return
@@ -1488,7 +1491,7 @@ func TestSignEd25519NilSeed(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 	key.Seed = nil
-	_, err := key.Sign(msg)
+	_, err := key.Sign(msg, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("signed message using Ed25519 keypair with nil seed for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1513,7 +1516,7 @@ func TestSignBabyJubJubNilPrivateKey(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 	key.PrivateKey = nil
-	_, err := key.Sign(msg)
+	_, err := key.Sign(msg, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("signed message using BabyJubJub keypair with nil private key for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1538,7 +1541,7 @@ func TestSign256k1NilPrivateKey(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 	key.PrivateKey = nil
-	_, err := key.Sign(msg)
+	_, err := key.Sign(msg, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("signed message using 256k1 keypair with nil private key for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1563,7 +1566,7 @@ func TestSign256k1NilType(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 	key.Type = nil
-	_, err := key.Sign(msg)
+	_, err := key.Sign(msg, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("signed message using 256k1 keypair with nil type for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1588,7 +1591,7 @@ func TestSign256k1NilUsage(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 	key.Usage = nil
-	_, err := key.Sign(msg)
+	_, err := key.Sign(msg, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("signed message using 256k1 keypair with nil type for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1613,7 +1616,7 @@ func TestSign256k1NilSpec(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 	key.Spec = nil
-	_, err := key.Sign(msg)
+	_, err := key.Sign(msg, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("signed message using 256k1 keypair with nil spec for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1637,14 +1640,14 @@ func TestVerifyEd25519NilUsage(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
 	}
 
 	key.Usage = nil
-	err = key.Verify(msg, sig)
+	err = key.Verify(msg, sig, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1667,14 +1670,14 @@ func TestVerifyEd25519NilSpec(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
 	}
 
 	key.Spec = nil
-	err = key.Verify(msg, sig)
+	err = key.Verify(msg, sig, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1697,14 +1700,14 @@ func TestVerifyEd25519NilType(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
 	}
 
 	key.Type = nil
-	err = key.Verify(msg, sig)
+	err = key.Verify(msg, sig, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1726,14 +1729,14 @@ func TestVerifyEd25519NilPublicKey(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
 	}
 
 	key.PublicKey = nil
-	err = key.Verify(msg, sig)
+	err = key.Verify(msg, sig, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1756,7 +1759,7 @@ func TestVerifyEd25519InvalidSpec(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg)
+	sig, err := key.Sign(msg, NoAlgorithmRequired)
 	if err != nil {
 		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -1764,7 +1767,7 @@ func TestVerifyEd25519InvalidSpec(t *testing.T) {
 
 	invalidSpec := "non-existent key"
 	key.Spec = &invalidSpec
-	err = key.Verify(msg, sig)
+	err = key.Verify(msg, sig, NoAlgorithmRequired)
 	if err == nil {
 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 		return

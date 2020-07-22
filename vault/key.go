@@ -98,6 +98,7 @@ type KeySignVerifyRequestResponse struct {
 	Message   *string `json:"message,omitempty"`
 	Signature *string `json:"signature,omitempty"`
 	Verified  *bool   `json:"verified,omitempty"`
+	Algorithm *string `json:"algorithm, omitempty"`
 }
 
 // KeyEncryptDecryptRequestResponse contains the data to be encrypted/decrypted
@@ -901,7 +902,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 }
 
 // Sign the input with the private key
-func (k *Key) Sign(payload []byte) ([]byte, error) {
+func (k *Key) Sign(payload []byte, algo string) ([]byte, error) {
 	if k.Type == nil || *k.Type != KeyTypeAsymmetric {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
 	}
@@ -952,7 +953,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		}
 		rsa4096 := vaultcrypto.RSAKeyPair{}
 		rsa4096.PrivateKey = k.PrivateKey
-		sig, sigerr = rsa4096.Sign(payload)
+		sig, sigerr = rsa4096.Sign(payload, algo)
 
 	case KeySpecRSA3072:
 		if k.PrivateKey == nil {
@@ -960,7 +961,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		}
 		rsa3072 := vaultcrypto.RSAKeyPair{}
 		rsa3072.PrivateKey = k.PrivateKey
-		sig, sigerr = rsa3072.Sign(payload)
+		sig, sigerr = rsa3072.Sign(payload, algo)
 
 	case KeySpecRSA2048:
 		if k.PrivateKey == nil {
@@ -968,7 +969,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 		}
 		rsa2048 := vaultcrypto.RSAKeyPair{}
 		rsa2048.PrivateKey = k.PrivateKey
-		sig, sigerr = rsa2048.Sign(payload)
+		sig, sigerr = rsa2048.Sign(payload, algo)
 
 	default:
 		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
@@ -982,7 +983,7 @@ func (k *Key) Sign(payload []byte) ([]byte, error) {
 }
 
 // Verify the given payload against a signature using the public key
-func (k *Key) Verify(payload, sig []byte) error {
+func (k *Key) Verify(payload, sig []byte, algo string) error {
 	if k.Type == nil || *k.Type != KeyTypeAsymmetric {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
 	}
@@ -1004,7 +1005,6 @@ func (k *Key) Verify(payload, sig []byte) error {
 
 	switch *k.Spec {
 	case KeySpecECCBabyJubJub:
-		// convert the hex string public key to bytes before verification TODO: decoding removed, so tidy this up
 		decodedPubKey := *k.PublicKey
 		return provide.TECVerify(decodedPubKey, payload, sig)
 
@@ -1025,17 +1025,17 @@ func (k *Key) Verify(payload, sig []byte) error {
 	case KeySpecRSA4096:
 		rsa4096 := vaultcrypto.RSAKeyPair{}
 		rsa4096.PublicKey = k.PublicKey
-		return rsa4096.Verify(payload, sig)
+		return rsa4096.Verify(payload, sig, algo)
 
 	case KeySpecRSA3072:
 		rsa3072 := vaultcrypto.RSAKeyPair{}
 		rsa3072.PublicKey = k.PublicKey
-		return rsa3072.Verify(payload, sig)
+		return rsa3072.Verify(payload, sig, algo)
 
 	case KeySpecRSA2048:
 		rsa2048 := vaultcrypto.RSAKeyPair{}
 		rsa2048.PublicKey = k.PublicKey
-		return rsa2048.Verify(payload, sig)
+		return rsa2048.Verify(payload, sig, algo)
 	}
 
 	return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)

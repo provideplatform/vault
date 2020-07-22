@@ -575,6 +575,11 @@ func vaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
+	var optionalRSAAlgorithm string
+	if params.Algorithm != nil {
+		optionalRSAAlgorithm = *params.Algorithm
+	}
+
 	var key = &Key{}
 
 	db := dbconf.DatabaseConnection()
@@ -598,7 +603,7 @@ func vaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	signature, err := key.Sign([]byte(*params.Message))
+	signature, err := key.Sign([]byte(*params.Message), optionalRSAAlgorithm)
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)
 		return
@@ -633,6 +638,11 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
+	var optionalRSAAlgorithm string
+	if params.Algorithm != nil {
+		optionalRSAAlgorithm = *params.Algorithm
+	}
+
 	var key = &Key{}
 
 	db := dbconf.DatabaseConnection()
@@ -662,7 +672,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	err = key.Verify([]byte(*params.Message), sig)
+	err = key.Verify([]byte(*params.Message), sig, optionalRSAAlgorithm)
 	verified := err == nil
 
 	provide.Render(&KeySignVerifyRequestResponse{

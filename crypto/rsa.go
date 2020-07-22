@@ -17,28 +17,102 @@ type RSAKeyPair struct {
 // NonceSizeRSA is the size of the optional RSA nonce for encryption/decryption (in bytes)
 const NonceSizeRSA = 32
 
-// type SigningMethodRSA struct {
-// 	Name string
-// 	Hash crypto.Hash
-// }
+// PSSSignature is used for handling signatures using RSASSA-PSS
+const PSSSignature = "PSS"
 
-// type SigningMethodRSAPSS struct {
-// 	*SigningMethodRSA
-// 	Options *rsa.PSSOptions
-// 	// VerifyOptions is optional. If set overrides Options for rsa.VerifyPPS.
-// 	// Used to accept tokens signed with rsa.PSSSaltLengthAuto, what doesn't follow
-// 	// https://tools.ietf.org/html/rfc7518#section-3.5 but was used previously.
-// 	// See https://github.com/dgrijalva/jwt-go/issues/285#issuecomment-437451244 for details.
-// 	VerifyOptions *rsa.PSSOptions
-// }
+// PKCSSignature is used for handling RSA signatures using RSASSA-PKCS1-V1_5-SIGN from RSA PKCS#1 v1.5
+const PKCSSignature = "PKCS1v15"
 
-// var (
-// 	SigningMethodPS256 *SigningMethodRSAPSS
-// 	SigningMethodPS384 *SigningMethodRSAPSS
-// 	SigningMethodPS512 *SigningMethodRSAPSS
-// )
+type SigningAlgorithmRSA struct {
+	Name string
+	Hash crypto.Hash
+	Type string
+}
 
-// // PrivateKey for information only
+type SigningMethodRSA struct {
+	*SigningAlgorithmRSA
+	Options *rsa.PSSOptions
+}
+
+var (
+	SignatureAlgoPS256 *SigningMethodRSA
+	SignatureAlgoPS384 *SigningMethodRSA
+	SignatureAlgoPS512 *SigningMethodRSA
+	SignatureAlgoRS256 *SigningMethodRSA
+	SignatureAlgoRS384 *SigningMethodRSA
+	SignatureAlgoRS512 *SigningMethodRSA
+)
+
+func init() {
+
+	// PS256
+	SignatureAlgoPS256 = &SigningMethodRSA{
+		&SigningAlgorithmRSA{
+			Name: "PS256",
+			Hash: crypto.SHA256,
+			Type: PSSSignature,
+		},
+		&rsa.PSSOptions{
+			SaltLength: rsa.PSSSaltLengthAuto,
+			Hash:       crypto.SHA256,
+		},
+	}
+
+	// PS384
+	SignatureAlgoPS384 = &SigningMethodRSA{
+		&SigningAlgorithmRSA{
+			Name: "PS384",
+			Hash: crypto.SHA384,
+			Type: PSSSignature,
+		},
+		&rsa.PSSOptions{
+			SaltLength: rsa.PSSSaltLengthAuto,
+			Hash:       crypto.SHA384,
+		},
+	}
+
+	// PS512
+	SignatureAlgoPS512 = &SigningMethodRSA{
+		&SigningAlgorithmRSA{
+			Name: "PS512",
+			Hash: crypto.SHA512,
+			Type: PSSSignature,
+		},
+		&rsa.PSSOptions{
+			SaltLength: rsa.PSSSaltLengthAuto,
+			Hash:       crypto.SHA512,
+		},
+	}
+
+	// RS256
+	SignatureAlgoRS256 = &SigningMethodRSA{
+		&SigningAlgorithmRSA{
+			Name: "RS256",
+			Hash: crypto.SHA256,
+			Type: PKCSSignature,
+		}, nil,
+	}
+
+	// RS384
+	SignatureAlgoRS384 = &SigningMethodRSA{
+		&SigningAlgorithmRSA{
+			Name: "RS384",
+			Hash: crypto.SHA384,
+			Type: PKCSSignature,
+		}, nil,
+	}
+
+	// RS512
+	SignatureAlgoRS512 = &SigningMethodRSA{
+		&SigningAlgorithmRSA{
+			Name: "RS512",
+			Hash: crypto.SHA512,
+			Type: PKCSSignature,
+		}, nil,
+	}
+}
+
+// // RSA PrivateKey internal struct for reference
 // type PrivateKey struct {
 // 	PublicKey            // public part.
 // 	D         *big.Int   // private exponent
@@ -76,147 +150,130 @@ func CreateRSAKeyPair(bitsize int) (*RSAKeyPair, error) {
 	return &RSAKeyPair, nil
 }
 
-// func init() {
+func selectSignatureMethod(algo string) (*SigningMethodRSA, error) {
 
-// 	// PS256 testing
-// 	SigningMethodPS256 = &SigningMethodRSAPSS{
-// 		&SigningMethodRSA{
-// 			Name: "PS256",
-// 			Hash: crypto.SHA256,
-// 		},
-// 		&rsa.PSSOptions{
-// 			SaltLength: rsa.PSSSaltLengthAuto,
-// 			Hash:       crypto.SHA256,
-// 		},
-// 		&rsa.PSSOptions{
-// 			SaltLength: rsa.PSSSaltLengthAuto,
-// 			Hash:       crypto.SHA256,
-// 		},
-// 	}
-// }
+	switch algo {
+	case "PS256":
+		return SignatureAlgoPS256, nil
+	case "PS384":
+		return SignatureAlgoPS384, nil
+	case "PS512":
+		return SignatureAlgoPS512, nil
+	case "RS256":
+		return SignatureAlgoRS256, nil
+	case "RS384":
+		return SignatureAlgoRS384, nil
+	case "RS512":
+		return SignatureAlgoRS512, nil
+	default:
+		return nil, ErrUnsupportedRSASigningAlgorithm
+	}
 
-// // Sign uses RSA private key to sign the payload (PSS Implementation)
-// // below should be a valid PS256 implementation
-// // using the same code as the jwt package
-// func (k *RSAKeyPair) Sign(payload []byte) ([]byte, error) {
-
-// 	if k.PrivateKey == nil {
-// 		return nil, ErrNilPrivateKey
-// 	}
-
-// 	//get the private key struct from the privatekey bytes
-// 	var rsaPrivateKey rsa.PrivateKey
-// 	json.Unmarshal(*k.PrivateKey, &rsaPrivateKey)
-
-// 	signature, err := SigningMethodPS256.Sign(string(payload), &rsaPrivateKey)
-
-// 	if err != nil {
-// 		common.Log.Debugf("here - signing error %s", err.Error())
-// 		return nil, ErrCannotSignPayload
-// 	}
-
-// 	return []byte(signature), nil
-// }
+}
 
 // Sign uses RSA private key to sign the payload (PS256 Implementation)
-func (k *RSAKeyPair) Sign(payload []byte) ([]byte, error) {
+func (k *RSAKeyPair) Sign(payload []byte, algo string) ([]byte, error) {
 
 	if k.PrivateKey == nil {
 		return nil, ErrNilPrivateKey
 	}
 
-	// hash the payload with SHA256
-	payloadHash := sha256.Sum256(payload)
-
-	// payloadHash := sha512.Sum384(payload)
-	// payloadHash := sha512.Sum512(payload)
-
-	// set the pss options (primarily for hashing algorithm)
-	opts := rsa.PSSOptions{
-		SaltLength: rsa.PSSSaltLengthAuto,
-		Hash:       crypto.SHA256,
-	}
-
-	//get the private key struct from the privatekey bytes
+	// get the private key struct from the privatekey bytes
 	var rsaPrivateKey rsa.PrivateKey
 	json.Unmarshal(*k.PrivateKey, &rsaPrivateKey)
 
-	signature, err := rsa.SignPSS(rand.Reader, &rsaPrivateKey, crypto.SHA256, payloadHash[:], &opts)
+	// get the signature algorithm
+	signingMethod, err := selectSignatureMethod(algo)
 	if err != nil {
-		return nil, ErrCannotSignPayload
+		return nil, err
+	}
+
+	// sign using the signature algorithm and private key
+	signature, err := signingMethod.Sign(&rsaPrivateKey, payload)
+	if err != nil {
+		return nil, err
 	}
 
 	return signature, nil
 }
 
-// // Sign handles the actual RSA signing using the provided method (currently only PS256 available)
-// // For this signing method, key must be an rsa.PrivateKey struct
-// func (m *SigningMethodRSAPSS) Sign(signingString string, rsaPrivateKey *rsa.PrivateKey) (string, error) {
+// Sign uses the specified signing algorithm to sign the payload
+func (algo *SigningMethodRSA) Sign(rsaPrivateKey *rsa.PrivateKey, payload []byte) ([]byte, error) {
 
-// 	hasher := m.Hash.New()
-// 	hasher.Write([]byte(signingString))
+	// hash the payload using the specified algorithm hashing algorithm
+	payloadHash := algo.Hash.New()
+	payloadHash.Write(payload)
 
-// 	// Sign the string and return the encoded bytes
-// 	signature, err := rsa.SignPSS(rand.Reader, rsaPrivateKey, m.Hash, hasher.Sum(nil), m.Options)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return string(signature), nil
-// }
+	var signature []byte
+	var err error
 
-// // Verify implements the Verify method from SigningMethod
-// // For this verify method, key must be an rsa.PublicKey struct
-// func (m *SigningMethodRSAPSS) Verify(signingString, sig []byte, rsaPublicKey *rsa.PublicKey) error {
+	// sign the payload using the specified signature algorithm (PKCS or PSS)
+	switch algo.Type {
+	case PSSSignature:
+		signature, err = rsa.SignPSS(rand.Reader, rsaPrivateKey, algo.Hash, payloadHash.Sum(nil), algo.Options)
 
-// 	hasher := m.Hash.New()
-// 	hasher.Write([]byte(signingString))
+	case PKCSSignature:
+		signature, err = rsa.SignPKCS1v15(rand.Reader, rsaPrivateKey, algo.Hash, payloadHash.Sum(nil))
+	}
 
-// 	return rsa.VerifyPSS(rsaPublicKey, m.Hash, hasher.Sum(nil), sig, m.Options)
-// }
+	if err != nil {
+		return nil, err
+	}
 
-// // Verify uses the RSA public key to verify a signature (PS256 implementation)
-// // using the same code as the jwt package
-// func (k *RSAKeyPair) Verify(payload, sig []byte) error {
-// 	if k.PublicKey == nil {
-// 		return ErrInvalidPublicKey
-// 	}
-
-// 	// get the rsa public key struct from the publickey bytes
-// 	var rsaKey rsa.PrivateKey
-// 	json.Unmarshal(*k.PublicKey, &rsaKey.PublicKey)
-
-// 	err := SigningMethodPS256.Verify(payload, sig, &rsaKey.PublicKey)
-// 	if err != nil {
-// 		return ErrCannotVerifyPayload
-// 	}
-// 	return nil
-// }
+	// sign the payload (just support PSS at the moment)
+	return signature, nil
+}
 
 // Verify uses the RSA public key to verify a signature (PS256 implementation)
-func (k *RSAKeyPair) Verify(payload, sig []byte) error {
+func (k *RSAKeyPair) Verify(payload, sig []byte, algo string) error {
 	if k.PublicKey == nil {
 		return ErrInvalidPublicKey
 	}
 
-	// hash the payload with SHA256
-	payloadHash := sha256.Sum256(payload)
-	// payloadHash := sha512.Sum384(payload)
-	// payloadHash := sha512.Sum512(payload)
+	signingMethod, err := selectSignatureMethod(algo)
+	if err != nil {
+		return err
+	}
+
+	//TODO validate key type - required for when the key is provided in external postdata
 
 	// get the rsa public key struct from the publickey bytes
 	var rsaKey rsa.PrivateKey
 	json.Unmarshal(*k.PublicKey, &rsaKey.PublicKey)
 
-	// set the pss options (primarily for hashing algorithm)
-	opts := rsa.PSSOptions{
-		SaltLength: rsa.PSSSaltLengthAuto,
-		Hash:       crypto.SHA256,
+	// verify the signature using the signature algorithm
+	err = signingMethod.Verify(payload, sig, &rsaKey.PublicKey)
+	if err != nil {
+		return err
 	}
 
-	err := rsa.VerifyPSS(&rsaKey.PublicKey, crypto.SHA256, payloadHash[:], sig, &opts)
-	if err != nil {
-		return ErrCannotVerifyPayload
+	return nil
+
+}
+
+// Verify uses the specified signing algorithm to verify the payload
+func (algo *SigningMethodRSA) Verify(payload, sig []byte, rsaPublicKey *rsa.PublicKey) error {
+
+	// hash the payload using the signature algorithm hash type
+	payloadHash := algo.Hash.New()
+	payloadHash.Write(payload)
+
+	var err error
+
+	// verify the payload using the specified signature algorithm (PKCS or PSS)
+	switch algo.Type {
+	case PSSSignature:
+		err = rsa.VerifyPSS(rsaPublicKey, algo.Hash, payloadHash.Sum(nil), sig, algo.Options)
+
+	case PKCSSignature:
+		err = rsa.VerifyPKCS1v15(rsaPublicKey, algo.Hash, payloadHash.Sum(nil), sig)
 	}
+
+	if err != nil {
+		return err
+	}
+
+	//no errors found, signature verified
 	return nil
 }
 
@@ -230,6 +287,7 @@ func (k *RSAKeyPair) Encrypt(plaintext []byte) ([]byte, error) {
 	var rsaKey rsa.PrivateKey
 	json.Unmarshal(*k.PublicKey, &rsaKey.PublicKey)
 
+	// encrypt using OAEP
 	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, &rsaKey.PublicKey, plaintext, nil)
 	if err != nil {
 		return nil, ErrCannotEncrypt
@@ -247,6 +305,7 @@ func (k *RSAKeyPair) Decrypt(ciphertext []byte) ([]byte, error) {
 	var rsaPrivateKey rsa.PrivateKey
 	json.Unmarshal(*k.PrivateKey, &rsaPrivateKey)
 
+	// decrypt using OAEP
 	plaintext, err := rsaPrivateKey.Decrypt(nil, ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})
 	if err != nil {
 		return nil, ErrCannotDecrypt

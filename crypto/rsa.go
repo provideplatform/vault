@@ -6,8 +6,6 @@ import (
 	rsa "crypto/rsa"
 	"crypto/sha256"
 	"encoding/json"
-
-	"github.com/provideapp/vault/common"
 )
 
 // RSAKeyPair is the internal struct for an asymmetric keypair
@@ -296,7 +294,6 @@ func (k *RSAKeyPair) Encrypt(plaintext []byte) ([]byte, error) {
 		return nil, ErrEncryptionPayloadTooLong
 	}
 
-	common.Log.Debugf("rsa keylength: %d", rsaKey.PublicKey.Size())
 	// encrypt using OAEP
 	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, &rsaKey.PublicKey, plaintext, nil)
 	if err != nil {

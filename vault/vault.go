@@ -185,3 +185,92 @@ func GetUserVaults(userID *uuid.UUID) []*Vault {
 	dbconf.DatabaseConnection().Where("user_id = ?", userID).Find(&vaults)
 	return vaults
 }
+
+// GetVaults - retrieve the vaults for the specified parameters
+// not used for the moment - paginate refactoring needed
+func GetVaults(applicationID, organizationID, userID *uuid.UUID) []*Vault {
+	var vaults []*Vault
+	var query *gorm.DB
+
+	db := dbconf.DatabaseConnection()
+	if applicationID != nil && *applicationID != uuid.Nil {
+		query = db.Where("application_id = ?", applicationID)
+	} else if organizationID != nil && *organizationID != uuid.Nil {
+		query = db.Where("organization_id = ?", organizationID)
+	} else if userID != nil && *userID != uuid.Nil {
+		query = db.Where("user_id = ?", userID)
+	}
+	query.Find(&vaults)
+
+	return vaults
+}
+
+// GetVault returns a vault for the specified parameters
+func GetVault(vaultID string, applicationID, organizationID, userID *uuid.UUID) *Vault {
+
+	// Set up the database connection
+	db := dbconf.DatabaseConnection()
+	var query *gorm.DB
+
+	var vault = &Vault{}
+
+	query = db.Where("id = ?", vaultID)
+	if applicationID != nil && *applicationID != uuid.Nil {
+		query = query.Where("vaults.application_id = ?", applicationID)
+	} else if organizationID != nil && *organizationID != uuid.Nil {
+		query = query.Where("vaults.organization_id = ?", organizationID)
+	} else if userID != nil && *userID != uuid.Nil {
+		query = query.Where("vaults.user_id = ?", userID)
+	}
+	query.Find(&vault)
+
+	return vault
+}
+
+// GetVaultKey returns a vault key for the specified parameters
+func GetVaultKey(keyID, vaultID string, applicationID, organizationID, userID *uuid.UUID) *Key {
+
+	// Set up the database connection
+	db := dbconf.DatabaseConnection()
+	var query *gorm.DB
+
+	var key = &Key{}
+
+	query = db.Table("keys")
+	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
+	query = query.Where("keys.id = ? AND keys.vault_id = ?", keyID, vaultID)
+	if applicationID != nil && *applicationID != uuid.Nil {
+		query = query.Where("vaults.application_id = ?", applicationID)
+	} else if organizationID != nil && *organizationID != uuid.Nil {
+		query = query.Where("vaults.organization_id = ?", organizationID)
+	} else if userID != nil && *userID != uuid.Nil {
+		query = query.Where("vaults.user_id = ?", userID)
+	}
+	query.Find(&key)
+
+	return key
+}
+
+// GetVaultSecret returns a vault secret for the specified parameters
+func GetVaultSecret(secretID, vaultID string, applicationID, organizationID, userID *uuid.UUID) *Secret {
+
+	// Set up the database connection
+	db := dbconf.DatabaseConnection()
+	var query *gorm.DB
+
+	var secret = &Secret{}
+
+	query = db.Table("secrets")
+	query = query.Joins("inner join vaults on secrets.vault_id = vaults.id")
+	query = query.Where("secrets.id = ? AND secrets.vault_id = ?", secretID, vaultID)
+	if applicationID != nil && *applicationID != uuid.Nil {
+		query = query.Where("vaults.application_id = ?", applicationID)
+	} else if organizationID != nil && *organizationID != uuid.Nil {
+		query = query.Where("vaults.organization_id = ?", organizationID)
+	} else if userID != nil && *userID != uuid.Nil {
+		query = query.Where("vaults.user_id = ?", userID)
+	}
+	query.Find(&secret)
+
+	return secret
+}

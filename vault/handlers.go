@@ -78,22 +78,7 @@ func vaultKeyEncryptHandler(c *gin.Context) {
 	}
 
 	var key = &Key{}
-
-	db := dbconf.DatabaseConnection()
-	//db.LogMode(true)  //TODO this should be settable via the config but it's missing in the db factory
-	var query *gorm.DB
-
-	query = db.Table("keys")
-	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
-	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("vaults.user_id = ?", bearer.UserID)
-	}
-	query.Find(&key)
+	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -140,22 +125,7 @@ func vaultKeyDecryptHandler(c *gin.Context) {
 		return
 	}
 	var key = &Key{}
-
-	db := dbconf.DatabaseConnection()
-	//db.LogMode(true)  //TODO this should be settable via the config but it's missing in the db factory
-	var query *gorm.DB
-
-	query = db.Table("keys")
-	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
-	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("vaults.user_id = ?", bearer.UserID)
-	}
-	query.Find(&key)
+	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -180,21 +150,7 @@ func vaultSecretRetrieveHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
 	var secret = &Secret{}
-
-	db := dbconf.DatabaseConnection()
-	var query *gorm.DB
-
-	query = db.Table("secrets")
-	query = query.Joins("inner join vaults on secrets.vault_id = vaults.id")
-	query = query.Where("secrets.id = ? AND secrets.vault_id = ?", c.Param("secretId"), c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("vaults.user_id = ?", bearer.UserID)
-	}
-	query.Find(&secret)
+	secret = GetVaultSecret(c.Param("secretID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if secret.ID == uuid.Nil {
 		provide.RenderError("secret not found", 404, c)
@@ -241,19 +197,7 @@ func vaultSecretStoreHandler(c *gin.Context) {
 	}
 
 	var vault = &Vault{}
-
-	db := dbconf.DatabaseConnection()
-	var query *gorm.DB
-
-	query = db.Where("id = ?", c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("user_id = ?", bearer.UserID)
-	}
-	query.Find(&vault)
+	vault = GetVault(c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if vault == nil || vault.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
@@ -276,21 +220,7 @@ func vaultSecretDeleteHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
 	var secret = &Secret{}
-
-	db := dbconf.DatabaseConnection()
-	var query *gorm.DB
-
-	query = db.Table("secrets")
-	query = query.Joins("inner join vaults on secrets.vault_id = vaults.id")
-	query = query.Where("secrets.id = ? AND secrets.vault_id = ?", c.Param("secretId"), c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("vaults.user_id = ?", bearer.UserID)
-	}
-	query.Find(&secret)
+	secret = GetVaultSecret(c.Param("secretID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if secret.ID == uuid.Nil {
 		provide.RenderError("secret not found", 404, c)
@@ -298,6 +228,7 @@ func vaultSecretDeleteHandler(c *gin.Context) {
 	}
 	common.Log.Debugf("secret id: %s", secret.ID)
 
+	db := dbconf.DatabaseConnection()
 	if !secret.Delete(db) {
 		provide.RenderError("error deleting secret", 500, c)
 		return
@@ -311,6 +242,8 @@ func vaultsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
 	var vaults []*Vault
+	//vaults = GetVaults(bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+
 	var query *gorm.DB
 
 	db := dbconf.DatabaseConnection()
@@ -490,19 +423,7 @@ func createVaultKeyHandler(c *gin.Context) {
 	}
 
 	vault := &Vault{}
-
-	db := dbconf.DatabaseConnection()
-	var query *gorm.DB
-
-	query = db.Where("id = ?", c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("user_id = ?", bearer.UserID)
-	}
-	query.Find(&vault)
+	vault = GetVault(c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if vault == nil || vault.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
@@ -512,6 +433,7 @@ func createVaultKeyHandler(c *gin.Context) {
 	key.VaultID = &vault.ID
 	key.vault = vault
 
+	db := dbconf.DatabaseConnection()
 	if key.createPersisted(db) {
 		provide.Render(key, 201, c)
 	} else {
@@ -525,27 +447,14 @@ func deleteVaultKeyHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
 	var key = &Key{}
-
-	db := dbconf.DatabaseConnection()
-	var query *gorm.DB
-
-	query = db.Table("keys")
-	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
-	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("vaults.user_id = ?", bearer.UserID)
-	}
-	query.Find(&key)
+	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
 		return
 	}
 
+	db := dbconf.DatabaseConnection()
 	if !key.Delete(db) {
 		provide.RenderError("key not deleted", 500, c)
 		return
@@ -581,22 +490,7 @@ func vaultKeySignHandler(c *gin.Context) {
 	}
 
 	var key = &Key{}
-
-	db := dbconf.DatabaseConnection()
-	//db.LogMode(true)  //TODO this should be settable via the config but it's missing in the db factory
-	var query *gorm.DB
-
-	query = db.Table("keys")
-	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
-	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("vaults.user_id = ?", bearer.UserID)
-	}
-	query.Find(&key)
+	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -638,27 +532,13 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	var optionalRSAAlgorithm string
+	var optionalVerificationAlgorithm string
 	if params.Algorithm != nil {
-		optionalRSAAlgorithm = *params.Algorithm
+		optionalVerificationAlgorithm = *params.Algorithm
 	}
 
 	var key = &Key{}
-
-	db := dbconf.DatabaseConnection()
-	var query *gorm.DB
-
-	query = db.Table("keys")
-	query = query.Joins("inner join vaults on keys.vault_id = vaults.id")
-	query = query.Where("keys.id = ? AND keys.vault_id = ?", c.Param("keyId"), c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("vaults.application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("vaults.organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("vaults.user_id = ?", bearer.UserID)
-	}
-	query.Find(&key)
+	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -672,7 +552,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	err = key.Verify([]byte(*params.Message), sig, optionalRSAAlgorithm)
+	err = key.Verify([]byte(*params.Message), sig, optionalVerificationAlgorithm)
 	verified := err == nil
 
 	provide.Render(&KeySignVerifyRequestResponse{
@@ -684,25 +564,14 @@ func vaultSecretsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
 	var vault = &Vault{}
-
-	db := dbconf.DatabaseConnection()
-	var query *gorm.DB
-
-	query = db.Where("id = ?", c.Param("id"))
-	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("user_id = ?", bearer.UserID)
-	}
-	query.Find(&vault)
+	vault = GetVault(c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if vault.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
 		return
 	}
 
+	db := dbconf.DatabaseConnection()
 	var secrets []*Secret
 	provide.Paginate(c, vault.ListSecretsQuery(db), &Secret{}).Find(&secrets)
 	for _, secret := range secrets {

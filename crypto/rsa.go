@@ -6,6 +6,8 @@ import (
 	rsa "crypto/rsa"
 	"crypto/sha256"
 	"encoding/json"
+
+	"github.com/provideapp/vault/common"
 )
 
 // RSAKeyPair is the internal struct for an asymmetric keypair
@@ -220,7 +222,7 @@ func (algo *SigningMethodRSA) Sign(rsaPrivateKey *rsa.PrivateKey, payload []byte
 		return nil, err
 	}
 
-	// sign the payload (just support PSS at the moment)
+	// sign the payload
 	return signature, nil
 }
 
@@ -234,8 +236,6 @@ func (k *RSAKeyPair) Verify(payload, sig []byte, algo string) error {
 	if err != nil {
 		return err
 	}
-
-	//TODO validate key type - required for when the key is provided in external postdata
 
 	// get the rsa public key struct from the publickey bytes
 	var rsaKey rsa.PrivateKey
@@ -269,6 +269,7 @@ func (algo *SigningMethodRSA) Verify(payload, sig []byte, rsaPublicKey *rsa.Publ
 		err = rsa.VerifyPKCS1v15(rsaPublicKey, algo.Hash, payloadHash.Sum(nil), sig)
 	}
 
+	// if we have an error, it's an invalid signature
 	if err != nil {
 		return err
 	}
@@ -287,6 +288,15 @@ func (k *RSAKeyPair) Encrypt(plaintext []byte) ([]byte, error) {
 	var rsaKey rsa.PrivateKey
 	json.Unmarshal(*k.PublicKey, &rsaKey.PublicKey)
 
+	// check if we're trying to encrypt too large a payload
+	// formula (for OAEP encryption) is keylen(bytes) -2 -2*hashsize(bytes)
+	// we are using SHA256, so formula is keylen(bytes) - 66
+	maxlen := rsaKey.PublicKey.Size() - 66
+	if len(plaintext) > maxlen {
+		return nil, ErrEncryptionPayloadTooLong
+	}
+
+	common.Log.Debugf("rsa keylength: %d", rsaKey.PublicKey.Size())
 	// encrypt using OAEP
 	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, &rsaKey.PublicKey, plaintext, nil)
 	if err != nil {

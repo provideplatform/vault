@@ -506,3 +506,104 @@ func TestEncryptAndDecryptRSA2048NilPrivateKey(t *testing.T) {
 
 	common.Log.Debugf("correctly failed to decrypt with no private key err: %s", err.Error())
 }
+
+func TestRSAEncryptTooLongPayloadNegativeTesting(t *testing.T) {
+	tt := []struct {
+		keyStrength  int
+		payloadBytes int
+	}{
+		{2048, 191},
+		{3072, 319},
+		{4096, 447},
+	}
+
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for rsa negative unit test!")
+		return
+	}
+
+	for _, tc := range tt {
+
+		var key *vault.Key
+		switch tc.keyStrength {
+		case 2048:
+			key = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
+		case 3072:
+			key = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
+		case 4096:
+			key = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
+		}
+
+		if key == nil {
+			t.Errorf("failed to create rsa%d keypair for vault: %s", tc.keyStrength, vlt.ID)
+			return
+		}
+
+		plaintext := []byte(common.RandomString(tc.payloadBytes))
+
+		nonce := make([]byte, NonceSizeSymmetric)
+		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+			t.Errorf("error creating random nonce %s", err.Error())
+			return
+		}
+
+		_, err := key.Encrypt(plaintext, nonce)
+		if err == nil {
+			t.Errorf("encrypted too large plaintext")
+			return
+		}
+
+		common.Log.Debugf("correctly failed to encrypt %d-byte message using rsa%d keypair for vault: %s, err: %s", tc.payloadBytes, tc.keyStrength, vlt.ID, err.Error())
+	}
+}
+
+func TestRSAOAEPEncryptJustRightPayload(t *testing.T) {
+	tt := []struct {
+		keyStrength  int
+		payloadBytes int
+	}{
+		{2048, 190},
+		{3072, 318},
+		{4096, 446},
+	}
+
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for rsa negative unit test!")
+		return
+	}
+
+	for _, tc := range tt {
+
+		var key *vault.Key
+		switch tc.keyStrength {
+		case 2048:
+			key = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
+		case 3072:
+			key = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
+		case 4096:
+			key = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
+		}
+
+		if key == nil {
+			t.Errorf("failed to create rsa%d keypair for vault: %s", tc.keyStrength, vlt.ID)
+			return
+		}
+
+		plaintext := []byte(common.RandomString(tc.payloadBytes))
+
+		nonce := make([]byte, NonceSizeSymmetric)
+		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+			t.Errorf("error creating random nonce %s", err.Error())
+			return
+		}
+
+		_, err := key.Encrypt(plaintext, nonce)
+		if err != nil {
+			t.Errorf("error encrypting maximum-allowed plaintext (%d-bytes for RSA%d keypair. err: %s", len(plaintext), tc.keyStrength, err.Error())
+		}
+
+		common.Log.Debugf("correctly encrypted %d-byte message using rsa%d keypair for vault: %s.", len(plaintext), tc.keyStrength, vlt.ID)
+	}
+}

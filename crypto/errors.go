@@ -4,6 +4,9 @@ import "errors"
 
 var (
 
+	// ErrEncryptionPayloadTooLong is returned if the plaintext to be encrypted is too long for the algorithm
+	ErrEncryptionPayloadTooLong = errors.New("encryption payload too long")
+
 	// ErrUnsupportedRSASigningAlgorithm is returned if the signing algorithm is not supported
 	ErrUnsupportedRSASigningAlgorithm = errors.New("unsupported RSA algorithm")
 

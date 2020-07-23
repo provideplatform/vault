@@ -826,23 +826,23 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 
 	switch *k.Spec {
 	case KeySpecRSA4096:
-		rsakey := vaultcrypto.RSAKeyPair{}
-		rsakey.PublicKey = k.PublicKey
-		ciphertext, err = rsakey.Encrypt(plaintext)
+		rsa4096key := vaultcrypto.RSAKeyPair{}
+		rsa4096key.PublicKey = k.PublicKey
+		ciphertext, err = rsa4096key.Encrypt(plaintext)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
 		}
 	case KeySpecRSA3072:
-		rsakey := vaultcrypto.RSAKeyPair{}
-		rsakey.PublicKey = k.PublicKey
-		ciphertext, err = rsakey.Encrypt(plaintext)
+		rsa3072key := vaultcrypto.RSAKeyPair{}
+		rsa3072key.PublicKey = k.PublicKey
+		ciphertext, err = rsa3072key.Encrypt(plaintext)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
 		}
 	case KeySpecRSA2048:
-		rsakey := vaultcrypto.RSAKeyPair{}
-		rsakey.PublicKey = k.PublicKey
-		ciphertext, err = rsakey.Encrypt(plaintext)
+		rsa2048key := vaultcrypto.RSAKeyPair{}
+		rsa2048key.PublicKey = k.PublicKey
+		ciphertext, err = rsa2048key.Encrypt(plaintext)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
 		}

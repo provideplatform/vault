@@ -4,6 +4,9 @@ import "errors"
 
 var (
 
+	// ErrCannotGeneratePublicKey is returned if the public key of a keypair cannot be generated
+	ErrCannotGeneratePublicKey = errors.New("cannot generate public key")
+
 	// ErrEncryptionPayloadTooLong is returned if the plaintext to be encrypted is too long for the algorithm
 	ErrEncryptionPayloadTooLong = errors.New("encryption payload too long")
 

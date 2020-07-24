@@ -21,32 +21,34 @@ const NonceSizeRSA = 32
 const PSSSignature = "PSS"
 
 // PKCSSignature is used for handling RSA signatures using RSASSA-PKCS1-V1_5-SIGN from RSA PKCS#1 v1.5
-const PKCSSignature = "PKCS1v15"
+const PKCSSignature = "PKCS"
 
+// SigningAlgorithmRSA stores the signing algorithm details for RSA signing/verifying
 type SigningAlgorithmRSA struct {
 	Name string
 	Hash crypto.Hash
 	Type string
 }
 
+// SigningMethodRSA stores the signing method details and options for RSA signing/verifying
 type SigningMethodRSA struct {
 	*SigningAlgorithmRSA
 	Options *rsa.PSSOptions
 }
 
 var (
-	SignatureAlgoPS256 *SigningMethodRSA
-	SignatureAlgoPS384 *SigningMethodRSA
-	SignatureAlgoPS512 *SigningMethodRSA
-	SignatureAlgoRS256 *SigningMethodRSA
-	SignatureAlgoRS384 *SigningMethodRSA
-	SignatureAlgoRS512 *SigningMethodRSA
+	signatureAlgoPS256 *SigningMethodRSA
+	signatureAlgoPS384 *SigningMethodRSA
+	signatureAlgoPS512 *SigningMethodRSA
+	signatureAlgoRS256 *SigningMethodRSA
+	signatureAlgoRS384 *SigningMethodRSA
+	signatureAlgoRS512 *SigningMethodRSA
 )
 
 func init() {
 
 	// PS256
-	SignatureAlgoPS256 = &SigningMethodRSA{
+	signatureAlgoPS256 = &SigningMethodRSA{
 		&SigningAlgorithmRSA{
 			Name: "PS256",
 			Hash: crypto.SHA256,
@@ -59,7 +61,7 @@ func init() {
 	}
 
 	// PS384
-	SignatureAlgoPS384 = &SigningMethodRSA{
+	signatureAlgoPS384 = &SigningMethodRSA{
 		&SigningAlgorithmRSA{
 			Name: "PS384",
 			Hash: crypto.SHA384,
@@ -72,7 +74,7 @@ func init() {
 	}
 
 	// PS512
-	SignatureAlgoPS512 = &SigningMethodRSA{
+	signatureAlgoPS512 = &SigningMethodRSA{
 		&SigningAlgorithmRSA{
 			Name: "PS512",
 			Hash: crypto.SHA512,
@@ -85,7 +87,7 @@ func init() {
 	}
 
 	// RS256
-	SignatureAlgoRS256 = &SigningMethodRSA{
+	signatureAlgoRS256 = &SigningMethodRSA{
 		&SigningAlgorithmRSA{
 			Name: "RS256",
 			Hash: crypto.SHA256,
@@ -94,7 +96,7 @@ func init() {
 	}
 
 	// RS384
-	SignatureAlgoRS384 = &SigningMethodRSA{
+	signatureAlgoRS384 = &SigningMethodRSA{
 		&SigningAlgorithmRSA{
 			Name: "RS384",
 			Hash: crypto.SHA384,
@@ -103,7 +105,7 @@ func init() {
 	}
 
 	// RS512
-	SignatureAlgoRS512 = &SigningMethodRSA{
+	signatureAlgoRS512 = &SigningMethodRSA{
 		&SigningAlgorithmRSA{
 			Name: "RS512",
 			Hash: crypto.SHA512,
@@ -154,17 +156,17 @@ func selectSignatureMethod(algo string) (*SigningMethodRSA, error) {
 
 	switch algo {
 	case "PS256":
-		return SignatureAlgoPS256, nil
+		return signatureAlgoPS256, nil
 	case "PS384":
-		return SignatureAlgoPS384, nil
+		return signatureAlgoPS384, nil
 	case "PS512":
-		return SignatureAlgoPS512, nil
+		return signatureAlgoPS512, nil
 	case "RS256":
-		return SignatureAlgoRS256, nil
+		return signatureAlgoRS256, nil
 	case "RS384":
-		return SignatureAlgoRS384, nil
+		return signatureAlgoRS384, nil
 	case "RS512":
-		return SignatureAlgoRS512, nil
+		return signatureAlgoRS512, nil
 	default:
 		return nil, ErrUnsupportedRSASigningAlgorithm
 	}

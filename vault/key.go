@@ -63,6 +63,15 @@ const NonceSizeSymmetric = 12
 // KeySpecRSA2048 rsa 2048 key spec
 const KeySpecRSA2048 = "RSA-2048"
 
+// KeyBits4096 is the bit length for 4096-bit keys
+const KeyBits4096 = 4096
+
+// KeyBits3072 is the bit length for 3072-bit keys
+const KeyBits3072 = 3072
+
+// KeyBits2048 is the bit length for 2048-bit keys
+const KeyBits2048 = 2048
+
 // KeySpecRSA3072 rsa 3072 key spec
 const KeySpecRSA3072 = "RSA-3072"
 
@@ -98,7 +107,7 @@ type KeySignVerifyRequestResponse struct {
 	Message   *string `json:"message,omitempty"`
 	Signature *string `json:"signature,omitempty"`
 	Verified  *bool   `json:"verified,omitempty"`
-	Algorithm *string `json:"algorithm, omitempty"`
+	Algorithm *string `json:"algorithm,omitempty"`
 }
 
 // KeyEncryptDecryptRequestResponse contains the data to be encrypted/decrypted
@@ -114,13 +123,14 @@ type KeyEncryptDecryptRequestResponse struct {
 
 // createAES256GCM creates a key using a random seed
 func (k *Key) createAES256GCM() error {
-
 	privatekey, err := vaultcrypto.CreateAES256GCMSeed()
 	if err != nil {
 		return err
 	}
 
 	k.PrivateKey = &privatekey
+	*k.Type = KeyTypeSymmetric
+
 	common.Log.Debugf("created AES256GCM key for vault: %s;", k.VaultID)
 	return nil
 }
@@ -136,6 +146,7 @@ func (k *Key) createBabyJubJubKeypair() error {
 
 	k.PrivateKey = &privateKey
 	k.PublicKey = &publicKey
+	*k.Type = KeyTypeAsymmetric
 
 	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
 	return nil
@@ -143,28 +154,29 @@ func (k *Key) createBabyJubJubKeypair() error {
 
 // createC25519Keypair creates an c25519 keypair suitable for Diffie-Hellman key exchange
 func (k *Key) createC25519Keypair() error {
-
 	c25519KeyPair, err := vaultcrypto.CreateC25519KeyPair()
 	if err != nil {
-		return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
+		return vaultcrypto.ErrCannotGenerateKey
 	}
+
 	k.PrivateKey = c25519KeyPair.PrivateKey
 	k.PublicKey = c25519KeyPair.PublicKey
+	*k.Type = KeyTypeAsymmetric
 
 	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, hex.EncodeToString(*c25519KeyPair.PublicKey))
-
 	return nil
 }
 
 // createChaCha20 creates a key using a random seed
 func (k *Key) createChaCha20() error {
-
 	seed, err := vaultcrypto.CreateChaChaSeed()
 	if err != nil {
-		return err
+		return vaultcrypto.ErrCannotGenerateKey
 	}
 
 	k.Seed = &seed
+	*k.Type = KeyTypeSymmetric
+
 	common.Log.Debugf("created chacha20 key for vault: %s;", k.VaultID)
 	return nil
 
@@ -227,21 +239,22 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 func (k *Key) createEd25519Keypair() error {
 	keypair, err := vaultcrypto.CreatePair(vaultcrypto.PrefixByteSeed)
 	if err != nil {
-		return fmt.Errorf("failed to create Ed25519 keypair; %s", err.Error())
+		return vaultcrypto.ErrCannotGenerateKey
 	}
 
 	seed, err := keypair.Seed()
 	if err != nil {
-		return fmt.Errorf("failed to read encoded seed of Ed25519 keypair; %s", err.Error())
+		return vaultcrypto.ErrCannotGenerateSeed
 	}
 
 	publicKey, err := keypair.PublicKey()
 	if err != nil {
-		return fmt.Errorf("failed to read public key of Ed25519 keypair; %s", err.Error())
+		return vaultcrypto.ErrCannotGeneratePublicKey
 	}
 
 	k.Seed = &seed
 	k.PublicKey = &publicKey
+	*k.Type = KeyTypeAsymmetric
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, *k.PublicKey)
 	return nil
@@ -249,14 +262,14 @@ func (k *Key) createEd25519Keypair() error {
 
 // createSecp256k1Keypair creates a keypair on the secp256k1 curve
 func (k *Key) createSecp256k1Keypair() error {
-
 	secp256k1KeyPair, err := vaultcrypto.CreateSecp256k1KeyPair()
 	if err != nil {
-		return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
+		return vaultcrypto.ErrCannotGenerateKey
 	}
 
 	k.PrivateKey = secp256k1KeyPair.PrivateKey
 	k.PublicKey = secp256k1KeyPair.PublicKey
+	*k.Type = KeyTypeAsymmetric
 
 	if k.Description == nil {
 		desc := fmt.Sprintf("secp256k1 keypair; address: %s", *secp256k1KeyPair.Address)
@@ -269,14 +282,14 @@ func (k *Key) createSecp256k1Keypair() error {
 
 // createRSAKeypair creates a keypair using RSA(-bitsize bits)
 func (k *Key) createRSAKeypair(bitsize int) error {
-
 	rsaKeyPair, err := vaultcrypto.CreateRSAKeyPair(bitsize)
 	if err != nil {
-		return fmt.Errorf("failed to create rsa%d keypair; %s", bitsize, err.Error())
+		return vaultcrypto.ErrCannotGenerateKey
 	}
 
 	k.PrivateKey = rsaKeyPair.PrivateKey
 	k.PublicKey = rsaKeyPair.PublicKey
+	*k.Type = KeyTypeAsymmetric
 
 	common.Log.Debugf("created rsa%d key for vault: %s; public key: 0x%s", bitsize, k.VaultID, *k.PublicKey)
 	return nil
@@ -456,7 +469,6 @@ func (k *Key) Enrich() {
 				addr := ethcrypto.PubkeyToAddress(*publicKey)
 				k.Address = common.StringOrNil(addr.Hex())
 			}
-
 		}
 	}
 }
@@ -527,17 +539,17 @@ func (k *Key) create() error {
 				return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
 			}
 		case KeySpecRSA4096:
-			err := k.createRSAKeypair(4096)
+			err := k.createRSAKeypair(KeyBits4096)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
 			}
 		case KeySpecRSA3072:
-			err := k.createRSAKeypair(3072)
+			err := k.createRSAKeypair(KeyBits3072)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
 			}
 		case KeySpecRSA2048:
-			err := k.createRSAKeypair(2048)
+			err := k.createRSAKeypair(KeyBits2048)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
 			}
@@ -619,9 +631,6 @@ func (k *Key) save(db *gorm.DB) bool {
 
 // Decrypt a ciphertext using the key according to its spec
 func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
-	if k.Usage == nil {
-		return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key: %s; nil key usage", len(ciphertext), k.ID)
-	}
 
 	if k.Type != nil && *k.Type == KeyTypeSymmetric {
 		return k.decryptSymmetric(ciphertext[NonceSizeSymmetric:], ciphertext[0:NonceSizeSymmetric])
@@ -678,15 +687,12 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-// decryptSymmetric attempts symmetric AES-256-GCM decryption using the key;
+// decryptSymmetric attempts symmetric decryption,
 // returns the plaintext and any error
 func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	// k.mutex.Lock()
 	// defer k.mutex.Unlock()
 	//TODO validate mutex
-
-	// k.decryptFields()
-	// defer k.encryptFields()
 
 	if *k.Spec == KeySpecAES256GCM && k.PrivateKey == nil {
 		return nil, fmt.Errorf("failed to decrypt using key: %s; nil private key", k.ID)
@@ -703,7 +709,6 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 
 	switch *k.Spec {
 	case KeySpecAES256GCM:
-
 		aes256 := vaultcrypto.AES256GCM{}
 		aes256.PrivateKey = k.PrivateKey
 
@@ -714,7 +719,6 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 		}
 
 	case KeySpecChaCha20:
-
 		chacha := vaultcrypto.ChaCha{}
 		chacha.Seed = k.Seed
 
@@ -732,14 +736,6 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 // using the given nonce and key generation context identifier; note that the nonce
 // must not be reused or the secret will be exposed...
 func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (*Key, error) {
-	if k.Type == nil || *k.Type != KeyTypeSymmetric {
-		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key type", k.ID)
-	}
-
-	if k.Usage == nil || *k.Usage != KeyUsageEncryptDecrypt {
-		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key usage", k.ID)
-	}
-
 	if k.Spec == nil || (*k.Spec != KeySpecChaCha20) {
 		return nil, fmt.Errorf("failed to derive symmetric key from key: %s; nil or invalid key spec", k.ID)
 	}
@@ -789,11 +785,6 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 // nonce is optional and a random nonce will be generated if nil
 // never use more than 2^32 random nonces with a given key because of the risk of a repeat.
 func (k *Key) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
-	// HACK - disable the invalid usage for the moment because of RSA - is this needed, or can it be handled by the switch statement?
-	if k.Usage == nil {
-		return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key: %s; nil key usage", len(plaintext), k.ID)
-	}
-
 	if k.Type != nil && *k.Type == KeyTypeSymmetric {
 		return k.encryptSymmetric(plaintext, nonce)
 	}
@@ -805,7 +796,7 @@ func (k *Key) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 	return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key: %s; nil or invalid key type", len(plaintext), k.ID)
 }
 
-// encryptAsymmetric attempts asymmetric encryption using the public/private keypair;
+// encryptAsymmetric attempts asymmetric encryption using the public key;
 // returns the ciphertext any error
 func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 	defer func() {
@@ -813,10 +804,6 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 			common.Log.Warningf("recovered from panic during encryptAsymmetric(); %s", r)
 		}
 	}()
-
-	if k.Type == nil || *k.Type != KeyTypeAsymmetric {
-		return nil, fmt.Errorf("failed to asymmetrically encrypt using key: %s; nil or invalid key type", k.ID)
-	}
 
 	k.decryptFields()
 	defer k.encryptFields()
@@ -832,6 +819,7 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
 		}
+
 	case KeySpecRSA3072:
 		rsa3072key := vaultcrypto.RSAKeyPair{}
 		rsa3072key.PublicKey = k.PublicKey
@@ -839,6 +827,7 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
 		}
+
 	case KeySpecRSA2048:
 		rsa2048key := vaultcrypto.RSAKeyPair{}
 		rsa2048key.PublicKey = k.PublicKey
@@ -903,14 +892,6 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 
 // Sign the input with the private key
 func (k *Key) Sign(payload []byte, algo string) ([]byte, error) {
-	if k.Type == nil || *k.Type != KeyTypeAsymmetric {
-		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
-	}
-
-	if k.Usage == nil || *k.Usage != KeyUsageSignVerify {
-		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
-	}
-
 	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
@@ -944,7 +925,6 @@ func (k *Key) Sign(payload []byte, algo string) ([]byte, error) {
 		}
 		secp256k1 := vaultcrypto.Secp256k1{}
 		secp256k1.PrivateKey = k.PrivateKey
-
 		sig, sigerr = secp256k1.Sign(payload)
 
 	case KeySpecRSA4096:
@@ -984,14 +964,6 @@ func (k *Key) Sign(payload []byte, algo string) ([]byte, error) {
 
 // Verify the given payload against a signature using the public key
 func (k *Key) Verify(payload, sig []byte, algo string) error {
-	if k.Type == nil || *k.Type != KeyTypeAsymmetric {
-		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key type", len(payload), k.ID)
-	}
-
-	if k.Usage == nil || *k.Usage != KeyUsageSignVerify {
-		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key usage", len(payload), k.ID)
-	}
-
 	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048) {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
@@ -1016,10 +988,8 @@ func (k *Key) Verify(payload, sig []byte, algo string) error {
 		return ec25519Key.Verify(payload, sig)
 
 	case KeySpecECCSecp256k1:
-
 		secp256k1 := vaultcrypto.Secp256k1{}
 		secp256k1.PublicKey = k.PublicKey
-
 		return secp256k1.Verify(payload, sig)
 
 	case KeySpecRSA4096:
@@ -1057,12 +1027,6 @@ func (k *Key) Validate() bool {
 		})
 	}
 
-	if k.Usage == nil {
-		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil("key usage required"),
-		})
-	}
-
 	if k.Spec == nil {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil("key spec required"),
@@ -1076,18 +1040,6 @@ func (k *Key) Validate() bool {
 	} else if *k.Type != KeyTypeAsymmetric && *k.Type != KeyTypeSymmetric {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("key type must be one of %s or %s", KeyTypeAsymmetric, KeyTypeSymmetric)),
-		})
-	} else if *k.Type == KeyTypeSymmetric && *k.Usage != KeyUsageEncryptDecrypt {
-		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("symmetric key requires %s usage mode", KeyUsageEncryptDecrypt)),
-		})
-	} else if *k.Type == KeyTypeSymmetric && *k.Usage == KeyUsageEncryptDecrypt && (k.Spec == nil || (*k.Spec != KeySpecAES256GCM && *k.Spec != KeySpecChaCha20)) {
-		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("symmetric key in %s usage mode must be %s or %s", KeyUsageEncryptDecrypt, KeySpecAES256GCM, KeySpecChaCha20)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
-		})
-	} else if *k.Type == KeyTypeAsymmetric && *k.Usage == KeyUsageSignVerify && (k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCC25519 && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048)) {
-		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("asymmetric key in %s usage mode must be %s, %s, %s, %s, %s, %s, %s", KeyUsageSignVerify, KeySpecECCBabyJubJub, KeySpecECCC25519, KeySpecECCEd25519, KeySpecECCSecp256k1, KeySpecRSA4096, KeySpecRSA3072, KeySpecRSA2048)), // TODO: support KeySpecRSA2048, KeySpecRSA3072, KeySpecRSA4096
 		})
 	}
 

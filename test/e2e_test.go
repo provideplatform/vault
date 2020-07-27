@@ -193,7 +193,7 @@ func TestAPISign(t *testing.T) {
 		return
 	}
 
-	status, _, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), "hello world")
+	status, _, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), "hello world", "")
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -220,7 +220,7 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 	}
 
 	messageToSign := common.RandomString(1000)
-	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign)
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, "")
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -228,7 +228,7 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 	//assert type to get something sensible from empty interface
 	response, _ := sigresponse.(map[string]interface{})
 
-	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string))
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), "")
 	if err != nil || status != 201 {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
@@ -255,7 +255,7 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 	}
 
 	messageToSign := common.RandomString(1000)
-	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign)
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, "")
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -263,7 +263,7 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 	//assert type to get something sensible from empty interface
 	response, _ := sigresponse.(map[string]interface{})
 
-	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string))
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), "")
 	if err != nil || status != 201 {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return

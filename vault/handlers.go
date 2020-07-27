@@ -78,7 +78,7 @@ func vaultKeyEncryptHandler(c *gin.Context) {
 	}
 
 	var key = &Key{}
-	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -125,7 +125,7 @@ func vaultKeyDecryptHandler(c *gin.Context) {
 		return
 	}
 	var key = &Key{}
-	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -150,7 +150,7 @@ func vaultSecretRetrieveHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
 	var secret = &Secret{}
-	secret = GetVaultSecret(c.Param("secretID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if secret.ID == uuid.Nil {
 		provide.RenderError("secret not found", 404, c)
@@ -220,7 +220,7 @@ func vaultSecretDeleteHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
 	var secret = &Secret{}
-	secret = GetVaultSecret(c.Param("secretID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if secret.ID == uuid.Nil {
 		provide.RenderError("secret not found", 404, c)
@@ -447,7 +447,7 @@ func deleteVaultKeyHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
 	var key = &Key{}
-	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -490,7 +490,7 @@ func vaultKeySignHandler(c *gin.Context) {
 	}
 
 	var key = &Key{}
-	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -538,7 +538,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 	}
 
 	var key = &Key{}
-	key = GetVaultKey(c.Param("keyID"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)

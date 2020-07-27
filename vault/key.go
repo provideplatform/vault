@@ -143,13 +143,13 @@ func (k *Key) createBabyJubJubKeypair() error {
 		return fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
 	}
 
-	publicKeyHex := hex.EncodeToString(publicKey)
+	//publicKeyHex := hex.EncodeToString(publicKey)
 
 	k.PrivateKey = &privateKey
 	k.PublicKey = &publicKey
 	*k.Type = KeyTypeAsymmetric
 
-	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
+	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, publicKey)
 	return nil
 }
 

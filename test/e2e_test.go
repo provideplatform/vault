@@ -134,13 +134,17 @@ func TestAPICreateKey(t *testing.T) {
 		return
 	}
 
-	status, _, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+	status, keyresponse, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
 		"type":        "asymmetric",
 		"usage":       "sign/verify",
 		"spec":        "secp256k1",
 		"name":        "integration test ethereum key",
 		"description": "organization eth/stablecoin wallet",
 	})
+
+	response, _ := keyresponse.(map[string]interface{})
+	t.Logf("got back following response from create 256k1 handler: %s", response)
+
 	if err != nil || status != 201 {
 		t.Errorf("failed to create key error: %s", err.Error())
 		return

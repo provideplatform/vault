@@ -88,13 +88,14 @@ type Key struct {
 	Name        *string    `sql:"not null" json:"name"`
 	Description *string    `json:"description"`
 	Seed        *[]byte    `sql:"type:bytea" json:"-"`
-	PublicKey   *[]byte    `sql:"type:bytea" json:"public_key,omitempty"`
+	PublicKey   *[]byte    `sql:"type:bytea" json:"-"`
 	PrivateKey  *[]byte    `sql:"type:bytea" json:"-"`
 
 	Address             *string `sql:"-" json:"address,omitempty"`
 	Ephemeral           *bool   `sql:"-" json:"ephemeral,omitempty"`
 	EphemeralPrivateKey *[]byte `sql:"-" json:"private_key,omitempty"`
 	EphemeralSeed       *[]byte `sql:"-" json:"seed,omitempty"`
+	PublicKeyHex        *string `sql:"-" json:"public_key,omitempty"`
 
 	encrypted *bool      `sql:"-"`
 	mutex     sync.Mutex `sql:"-"`
@@ -460,8 +461,8 @@ func (k *Key) encryptFields() error {
 // Enrich the key; typically a no-op; useful for public keys which
 // have a compressed representation (i.e., crypto address)
 func (k *Key) Enrich() {
-	if k.Spec != nil && *k.Spec == KeySpecECCSecp256k1 {
-		if k.PublicKey != nil {
+	if k.PublicKey != nil {
+		if k.Spec != nil && *k.Spec == KeySpecECCSecp256k1 {
 			pubkey := *k.PublicKey
 			x, y := elliptic.Unmarshal(secp256k1.S256(), pubkey)
 			if x != nil {
@@ -470,6 +471,8 @@ func (k *Key) Enrich() {
 				k.Address = common.StringOrNil(addr.Hex())
 			}
 		}
+
+		k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 	}
 }
 

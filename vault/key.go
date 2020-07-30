@@ -805,8 +805,9 @@ func (k *Key) deriveSecp256k1KeyFromHDWallet(coin string, idx int) (*vaultcrypto
 		if coin != vaultcrypto.EthereumCoin {
 			return nil, fmt.Errorf("wallet is configured for %s coin, not %s", vaultcrypto.EthereumCoin, coin)
 		}
-		hdWallet := vaultcrypto.HDWallet{}
-		hdWallet.Seed = k.Seed
+		hdWallet := &vaultcrypto.HDWallet{
+			Seed: k.Seed,
+		}
 		derivedKey, err := hdWallet.CreateKeyFromWallet(vaultcrypto.EthereumCoin, uint32(idx))
 		if err != nil {
 			return nil, fmt.Errorf("could not derive HD Wallet key (index: %s) for Ethereum using HD Wallet Master Key %s", string(idx), k.ID)

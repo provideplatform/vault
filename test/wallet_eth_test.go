@@ -3,7 +3,6 @@
 package test
 
 import (
-	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -56,24 +55,26 @@ func TestDeriveKeyFromEthHDWallet(t *testing.T) {
 		return
 	}
 
+	idx := 1
+
 	// test a sign with the key
 	payload := []byte(common.RandomString(128))
-	sig, err := walletKey.Sign(payload, &SigningOptions{
-		HDWallet: &{
-			Coin: "ETH",
-			Index: 1,
+	sig, err := walletKey.Sign(payload, &vault.SigningOptions{
+		HDWallet: &vault.HDWalletOptions{
+			Coin:  common.StringOrNil("ETH"),
+			Index: &idx,
 		},
 	})
 	if err != nil {
 		t.Errorf("error signing payload %s", err.Error())
 	}
 	t.Log("about to verify with wallet key")
-	err = walletKey.Verify(payload, sig, &SigningOptions{
-		HDWallet: &{
-			Coin: "ETH",
-			Index: 1,
+	err = walletKey.Verify(payload, sig, &vault.SigningOptions{
+		HDWallet: &vault.HDWalletOptions{
+			Coin:  common.StringOrNil("ETH"),
+			Index: &idx,
 		},
-	}
+	})
 	if err != nil {
 		t.Errorf("error validating signature: Error: %s", err.Error())
 		return
@@ -102,14 +103,24 @@ func TestDeriveXKeysFromEthHDWallet(t *testing.T) {
 		// test a sign with the key
 		payload := []byte(common.RandomString(128))
 		start = time.Now()
-		sig, err := walletKey.Sign(payload, fmt.Sprintf(`{"hdwallet":{"coin":"ETH", "index":%d}}`, i)) //hack frigging algo to double for index
+		sig, err := walletKey.Sign(payload, &vault.SigningOptions{
+			HDWallet: &vault.HDWalletOptions{
+				Coin:  common.StringOrNil("ETH"),
+				Index: &i,
+			},
+		})
 		if err != nil {
 			t.Errorf("error signing payload %s", err.Error())
 		}
 
 		log.Printf("Signing took %s", time.Since(start))
 		start = time.Now()
-		err = walletKey.Verify(payload, sig, fmt.Sprintf(`{"hdwallet":{"coin":"ETH", "index":%d}}`, i)) //hack frigging algo to double for index
+		err = walletKey.Verify(payload, sig, &vault.SigningOptions{
+			HDWallet: &vault.HDWalletOptions{
+				Coin:  common.StringOrNil("ETH"),
+				Index: &i,
+			},
+		})
 		if err != nil {
 			t.Errorf("error validating signature: Error: %s", err.Error())
 			return

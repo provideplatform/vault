@@ -13,11 +13,13 @@ require (
 	github.com/kthomas/go-pgputil v0.0.0-20200602073402-784e96083943
 	github.com/kthomas/go-self-signed-cert v0.0.0-20200602041729-f9878375d46e
 	github.com/kthomas/go.uuid v1.2.1-0.20190324131420-28d1fa77e9a4
+	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/onsi/ginkgo v1.12.3
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/provideapp/ident v0.0.0-00010101000000-000000000000
 	github.com/provideservices/provide-go v0.0.0-20200707104606-353123840c98
+	github.com/tyler-smith/go-bip39 v1.0.2
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
 

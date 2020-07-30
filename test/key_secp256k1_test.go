@@ -68,7 +68,7 @@ func TestSecp256k1Sign(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg, NoAlgorithmRequired)
+	sig, err := key.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -96,7 +96,7 @@ func TestSecp256k1Verify(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(128))
-	sig, err := key.Sign(msg, NoAlgorithmRequired)
+	sig, err := key.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -107,7 +107,7 @@ func TestSecp256k1Verify(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig, NoAlgorithmRequired)
+	err = key.Verify(msg, sig, nil)
 	if err != nil {
 		t.Errorf("failed to verify message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -131,7 +131,7 @@ func TestSecp256k1NoVerifyInvalidMessage(t *testing.T) {
 
 	msg := []byte(common.RandomString(128))
 	msg_invalid := []byte(common.RandomString(128))
-	sig, err := key.Sign(msg, NoAlgorithmRequired)
+	sig, err := key.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -142,7 +142,7 @@ func TestSecp256k1NoVerifyInvalidMessage(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg_invalid, sig, NoAlgorithmRequired)
+	err = key.Verify(msg_invalid, sig, nil)
 	if err == nil {
 		t.Errorf("failed to not verify invalid message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -172,7 +172,7 @@ func TestSecp256k1NoVerifyInvalidSigningKey(t *testing.T) {
 
 	msg := []byte(common.RandomString(128))
 
-	sig, err := key1.Sign(msg, NoAlgorithmRequired)
+	sig, err := key1.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -183,7 +183,7 @@ func TestSecp256k1NoVerifyInvalidSigningKey(t *testing.T) {
 		return
 	}
 
-	err = key2.Verify(msg, sig, NoAlgorithmRequired)
+	err = key2.Verify(msg, sig, nil)
 	if err == nil {
 		t.Errorf("verified message using incorrect secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -220,7 +220,7 @@ func TestSign256k1NilPrivateKey(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 	key.PrivateKey = nil
-	_, err := key.Sign(msg, NoAlgorithmRequired)
+	_, err := key.Sign(msg, nil)
 	if err == nil {
 		t.Errorf("signed message using 256k1 keypair with nil private key for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -245,7 +245,7 @@ func TestSign256k1NilSpec(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 	key.Spec = nil
-	_, err := key.Sign(msg, NoAlgorithmRequired)
+	_, err := key.Sign(msg, nil)
 	if err == nil {
 		t.Errorf("signed message using 256k1 keypair with nil spec for vault: %s %s", vlt.ID, err.Error())
 		return

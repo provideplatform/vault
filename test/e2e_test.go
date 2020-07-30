@@ -465,3 +465,39 @@ func TestAPIDecryptNoNonce(t *testing.T) {
 		return
 	}
 }
+
+func TestCreateHDWallet(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "hdwallet", "EthHdWallet", "BIP39", "hdwallet name", "wallet description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	messageToSign := common.RandomString(1000)
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, "0")
+	if err != nil || status != 201 {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+	//assert type to get something sensible from empty interface
+	response, _ := sigresponse.(map[string]interface{})
+
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), "0")
+	if err != nil || status != 201 {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+
+}

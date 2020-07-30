@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
@@ -28,11 +29,20 @@ const KeyTypeAsymmetric = "asymmetric"
 // KeyTypeSymmetric symmetric key type
 const KeyTypeSymmetric = "symmetric"
 
+// KeyTypeHDWallet hd wallet key type
+const KeyTypeHDWallet = "hdwallet"
+
 // KeyUsageEncryptDecrypt encrypt/decrypt usage
 const KeyUsageEncryptDecrypt = "encrypt/decrypt"
 
 // KeyUsageSignVerify sign/verify usage
 const KeyUsageSignVerify = "sign/verify"
+
+// KeyUsageEthereumHDWallet derivation path for ethereum hd wallets
+const KeyUsageEthereumHDWallet = "EthHdWallet"
+
+// KeyUsageBitcoinHDWallet derivation path for bitcoin hd wallets
+const KeyUsageBitcoinHDWallet = "BtcHdWallet"
 
 // KeySpecAES256GCM AES-256-GCM key spec
 const KeySpecAES256GCM = "AES-256-GCM"
@@ -51,6 +61,9 @@ const KeySpecECCEd25519 = "Ed25519"
 
 // KeySpecECCSecp256k1 secp256k1 key spec
 const KeySpecECCSecp256k1 = "secp256k1"
+
+// KeySpecBIP39 BIP39 key spec
+const KeySpecBIP39 = "BIP39"
 
 // NonceSizeSymmetric chacha20 & aes256 encrypt/decrypt nonce size
 const NonceSizeSymmetric = 12
@@ -83,7 +96,7 @@ type Key struct {
 	provide.Model
 	VaultID     *uuid.UUID `sql:"not null;type:uuid" json:"vault_id"`
 	Type        *string    `sql:"not null" json:"type"`  // symmetric or asymmetric
-	Usage       *string    `sql:"not null" json:"usage"` // encrypt/decrypt or sign/verify (sign/verify only valid for asymmetric keys)
+	Usage       *string    `sql:"not null" json:"usage"` //TODO: purpose to change...
 	Spec        *string    `sql:"not null" json:"spec"`
 	Name        *string    `sql:"not null" json:"name"`
 	Description *string    `json:"description"`
@@ -281,6 +294,24 @@ func (k *Key) createSecp256k1Keypair() error {
 	return nil
 }
 
+func (k *Key) createHDWallet() error {
+	hdWallet, err := vaultcrypto.CreateHDWalletSeedPhrase()
+	if err != nil {
+		return fmt.Errorf("unable to create Ethereum HD wallet")
+	}
+
+	k.Seed = hdWallet.Seed
+	*k.Type = KeyTypeHDWallet
+
+	if k.Description == nil {
+		desc := fmt.Sprint("BIP39 HD Wallet")
+		k.Description = common.StringOrNil(desc)
+	}
+
+	common.Log.Debugf("created HD wallet for vault: %s;", k.VaultID)
+	return nil
+}
+
 // createRSAKeypair creates a keypair using RSA(-bitsize bits)
 func (k *Key) createRSAKeypair(bitsize int) error {
 	rsaKeyPair, err := vaultcrypto.CreateRSAKeyPair(bitsize)
@@ -359,7 +390,7 @@ func (k *Key) decryptFields() error {
 		common.Log.Tracef("decrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			seed, err := pgputil.PGPPubDecrypt([]byte(*k.Seed))
+			seed, err := pgputil.PGPPubDecrypt(*k.Seed)
 			if err != nil {
 				return err
 			}
@@ -367,7 +398,7 @@ func (k *Key) decryptFields() error {
 		}
 
 		if k.PrivateKey != nil {
-			privateKey, err := pgputil.PGPPubDecrypt([]byte(*k.PrivateKey))
+			privateKey, err := pgputil.PGPPubDecrypt(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
@@ -417,7 +448,7 @@ func (k *Key) encryptFields() error {
 		common.Log.Tracef("encrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			seed, err := pgputil.PGPPubEncrypt([]byte(*k.Seed))
+			seed, err := pgputil.PGPPubEncrypt(*k.Seed)
 			if err != nil {
 				return err
 			}
@@ -535,6 +566,11 @@ func (k *Key) create() error {
 			err := k.createEd25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
+			}
+		case KeySpecBIP39:
+			err := k.createHDWallet()
+			if err != nil {
+				return fmt.Errorf("failed to create hd wallet; %s", err.Error())
 			}
 		case KeySpecECCSecp256k1:
 			err := k.createSecp256k1Keypair()
@@ -735,6 +771,38 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
+// DeriveHDWallet derives a hd wallet from a supported key
+func (k *Key) deriveSecp256k1KeyFromHDWallet(idx int) (*vaultcrypto.Secp256k1, error) {
+	if k.Spec == nil || *k.Spec != KeySpecBIP39 {
+		return nil, fmt.Errorf("failed to derive HD wallet from key: %s; nil or invalid key spec", k.ID)
+	}
+
+	if k.Seed == nil {
+		return nil, fmt.Errorf("failed to derive HD wallet from key: %s; nil seed", k.ID)
+	}
+
+	k.decryptFields()
+	defer k.encryptFields()
+
+	switch *k.Usage {
+
+	case KeyUsageEthereumHDWallet:
+		hdWallet := vaultcrypto.HDWallet{}
+		hdWallet.Seed = k.Seed
+		derivedKey, err := hdWallet.CreateKeyFromWallet(vaultcrypto.EthereumCoin, uint32(idx))
+		if err != nil {
+			return nil, fmt.Errorf("could not derive HD Wallet key (index: %s) for Ethereum using HD Wallet Master Key %s", string(idx), k.ID)
+		}
+		return derivedKey, nil
+
+	case KeyUsageBitcoinHDWallet:
+		return nil, fmt.Errorf("still to be implemented: usage specification %s", *k.Usage)
+
+	default:
+		return nil, fmt.Errorf("unsupported usage specification %s", *k.Usage)
+	}
+}
+
 // DeriveSymmetric derives a symmetric key from the secret stored in k.Seed
 // using the given nonce and key generation context identifier; note that the nonce
 // must not be reused or the secret will be exposed...
@@ -895,7 +963,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 
 // Sign the input with the private key
 func (k *Key) Sign(payload []byte, algo string) ([]byte, error) {
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecBIP39) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -921,6 +989,22 @@ func (k *Key) Sign(payload []byte, algo string) ([]byte, error) {
 			return nil, fmt.Errorf("failed to create public key from seed using key: %s; %s", k.ID, err.Error())
 		}
 		sig, sigerr = ec25519Key.Sign(payload)
+
+	case KeySpecBIP39:
+		if k.Seed == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil seed phrase", len(payload), k.ID)
+		}
+		// convert the keyindex to an int
+		keyIndex, err := strconv.Atoi(algo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert index to integer")
+		}
+		// derive the secp256k1 key using the keyindex
+		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(keyIndex)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; error generating derived key %s", len(payload), k.ID, err.Error())
+		}
+		sig, sigerr = secp256k1derived.Sign(payload)
 
 	case KeySpecECCSecp256k1:
 		if k.PrivateKey == nil {
@@ -967,11 +1051,15 @@ func (k *Key) Sign(payload []byte, algo string) ([]byte, error) {
 
 // Verify the given payload against a signature using the public key
 func (k *Key) Verify(payload, sig []byte, algo string) error {
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecBIP39) {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
-	if k.PublicKey == nil {
+	if *k.Type == KeyTypeHDWallet && k.Seed == nil {
+		return fmt.Errorf("failed to verify signature of %d-byte payload using derived key: %s; no seed phrase available", len(payload), k.ID)
+	}
+
+	if *k.Type == KeyTypeAsymmetric && k.PublicKey == nil {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
 	}
 
@@ -990,7 +1078,23 @@ func (k *Key) Verify(payload, sig []byte, algo string) error {
 		}
 		return ec25519Key.Verify(payload, sig)
 
+	case KeySpecBIP39:
+		// convert the key index to an int
+		keyIndex, err := strconv.Atoi(algo)
+		if err != nil {
+			return fmt.Errorf("failed to convert index to integer")
+		}
+		//derive the secp256k1 key for verification
+		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(keyIndex)
+		if err != nil {
+			return fmt.Errorf("failed to sign %d-byte payload using key: %s; error generating derived key %s", len(payload), k.ID, err.Error())
+		}
+		return secp256k1derived.Verify(payload, sig)
+
 	case KeySpecECCSecp256k1:
+		if k.PublicKey == nil {
+			return fmt.Errorf("failed to sign %d-byte payload using key: %s; nil public key", len(payload), k.ID)
+		}
 		secp256k1 := vaultcrypto.Secp256k1{}
 		secp256k1.PublicKey = k.PublicKey
 		return secp256k1.Verify(payload, sig)
@@ -1040,9 +1144,9 @@ func (k *Key) Validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil("key type required"),
 		})
-	} else if *k.Type != KeyTypeAsymmetric && *k.Type != KeyTypeSymmetric {
+	} else if *k.Type != KeyTypeAsymmetric && *k.Type != KeyTypeSymmetric && *k.Type != KeyTypeHDWallet {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("key type must be one of %s or %s", KeyTypeAsymmetric, KeyTypeSymmetric)),
+			Message: common.StringOrNil(fmt.Sprintf("key type must be (%s, %s or %s)", KeyTypeAsymmetric, KeyTypeSymmetric, KeyTypeHDWallet)),
 		})
 	}
 

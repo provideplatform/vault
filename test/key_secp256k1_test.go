@@ -51,7 +51,7 @@ func TestCreateKeySecp256k1(t *testing.T) {
 		return
 	}
 
-	common.Log.Debugf("created secp256k1 keypair for vault: %s", vlt.ID)
+	common.Log.Debugf("created secp256k1 keypair for vault: %s with address %s", vlt.ID, *key.Address)
 }
 
 func TestSecp256k1Sign(t *testing.T) {

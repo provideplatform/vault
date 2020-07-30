@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -53,6 +52,9 @@ const KeySpecChaCha20 = "ChaCha20"
 // KeySpecECCBabyJubJub babyJubJub key spec
 const KeySpecECCBabyJubJub = "babyJubJub"
 
+// KeySpecECCBIP39 BIP39 key spec
+const KeySpecECCBIP39 = "BIP39"
+
 // KeySpecECCC25519 C25519 key spec
 const KeySpecECCC25519 = "C25519"
 
@@ -61,9 +63,6 @@ const KeySpecECCEd25519 = "Ed25519"
 
 // KeySpecECCSecp256k1 secp256k1 key spec
 const KeySpecECCSecp256k1 = "secp256k1"
-
-// KeySpecBIP39 BIP39 key spec
-const KeySpecBIP39 = "BIP39"
 
 // NonceSizeSymmetric chacha20 & aes256 encrypt/decrypt nonce size
 const NonceSizeSymmetric = 12
@@ -93,18 +92,8 @@ const KeySpecRSA4096 = "RSA-4096"
 
 // HDWalletOptions struct contains options for the HD wallet operations
 type HDWalletOptions struct {
-	Coin  string `json:"coin,omitempty"`
-	Index int    `json:"index,omitempty"`
-}
-
-// SigningOptions contains the options for the signing algorithm
-// such as rsa algorithm (RS256, RS384, RS512, PS256, PS384, PS512)
-// hd wallet coin type (BTC, ETH)
-// hd wallet iteration (deterministic account index)
-// and likely other stuff in the future...
-type SigningOptions struct {
-	SigningAlgorithm string          `json:"algorithm,omitempty"`
-	HDWallet         HDWalletOptions `json:"hdwallet,omitempty"`
+	Coin  *string `json:"coin,omitempty"`
+	Index *int    `json:"index,omitempty"`
 }
 
 // Key represents a symmetric or asymmetric signing key
@@ -131,15 +120,6 @@ type Key struct {
 	vault     *Vault     `sql:"-"` // vault cache
 }
 
-// KeySignVerifyRequestResponse represents the API request/response parameters
-// needed to sign or verify an arbitrary message
-type KeySignVerifyRequestResponse struct {
-	Message   *string `json:"message,omitempty"`
-	Signature *string `json:"signature,omitempty"`
-	Verified  *bool   `json:"verified,omitempty"`
-	Algorithm *string `json:"algorithm,omitempty"`
-}
-
 // KeyEncryptDecryptRequestResponse contains the data to be encrypted/decrypted
 // data is submitted and received as a string
 // encrypted data is returned hex encoded
@@ -149,6 +129,25 @@ type KeySignVerifyRequestResponse struct {
 type KeyEncryptDecryptRequestResponse struct {
 	Data  *string `json:"data,omitempty"`
 	Nonce *string `json:"nonce,omitempty"` //optional nonce parameter
+}
+
+// SigningOptions contains the options for the signing algorithm
+// such as rsa algorithm (RS256, RS384, RS512, PS256, PS384, PS512)
+// hd wallet coin type (BTC, ETH)
+// hd wallet iteration (deterministic account index)
+// and likely other stuff in the future...
+type SigningOptions struct {
+	Algorithm *string          `json:"algorithm,omitempty"`
+	HDWallet  *HDWalletOptions `json:"hdwallet,omitempty"`
+}
+
+// KeySignVerifyRequestResponse represents the API request/response parameters
+// needed to sign or verify an arbitrary message
+type KeySignVerifyRequestResponse struct {
+	Message   *string         `json:"message,omitempty"`
+	Options   *SigningOptions `json:"options,omitempty"`
+	Signature *string         `json:"signature,omitempty"`
+	Verified  *bool           `json:"verified,omitempty"`
 }
 
 // createAES256GCM creates a key using a random seed
@@ -583,7 +582,7 @@ func (k *Key) create() error {
 			if err != nil {
 				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
 			}
-		case KeySpecBIP39:
+		case KeySpecECCBIP39:
 			err := k.createHDWallet()
 			if err != nil {
 				return fmt.Errorf("failed to create hd wallet; %s", err.Error())
@@ -789,7 +788,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 
 // DeriveHDWallet derives a hd wallet from a supported key
 func (k *Key) deriveSecp256k1KeyFromHDWallet(coin string, idx int) (*vaultcrypto.Secp256k1, error) {
-	if k.Spec == nil || *k.Spec != KeySpecBIP39 {
+	if k.Spec == nil || *k.Spec != KeySpecECCBIP39 {
 		return nil, fmt.Errorf("failed to derive HD wallet from key: %s; nil or invalid key spec", k.ID)
 	}
 
@@ -983,28 +982,10 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-// processSigningOptions converts the optional signature parameters into structured data
-func processSigningOptions(input string) (*SigningOptions, error) {
-	signingOptions := SigningOptions{}
-	json.Unmarshal([]byte(input), &signingOptions)
-
-	//perform minor validation (no non-zero index without coin)
-	if signingOptions.HDWallet.Index != 0 && signingOptions.HDWallet.Coin == "" {
-		return nil, fmt.Errorf("invalid signature options, coin is required for non-zero index")
-	}
-	return &signingOptions, nil
-}
-
 // Sign the input with the private key
-func (k *Key) Sign(payload []byte, opts string) ([]byte, error) {
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecBIP39) {
+func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
-	}
-
-	// convert the optional options into the SigningOptions struct
-	options, err := processSigningOptions(opts)
-	if err != nil {
-		return nil, err
 	}
 
 	k.decryptFields()
@@ -1020,6 +1001,20 @@ func (k *Key) Sign(payload []byte, opts string) ([]byte, error) {
 		}
 		sig, sigerr = provide.TECSign([]byte(*k.PrivateKey), payload)
 
+	case KeySpecECCBIP39:
+		if k.Seed == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil seed phrase", len(payload), k.ID)
+		}
+		if opts == nil || opts.Algorithm == nil || opts.HDWallet.Coin == nil || opts.HDWallet.Index == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil or invalid signing options", len(payload), k.ID)
+		}
+		// derive the secp256k1 key using the keyindex
+		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(*opts.HDWallet.Coin, *opts.HDWallet.Index)
+		if err != nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; error generating derived key %s", len(payload), k.ID, err.Error())
+		}
+		sig, sigerr = secp256k1derived.Sign(payload)
+
 	case KeySpecECCEd25519:
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
@@ -1029,17 +1024,6 @@ func (k *Key) Sign(payload []byte, opts string) ([]byte, error) {
 			return nil, fmt.Errorf("failed to create public key from seed using key: %s; %s", k.ID, err.Error())
 		}
 		sig, sigerr = ec25519Key.Sign(payload)
-
-	case KeySpecBIP39:
-		if k.Seed == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil seed phrase", len(payload), k.ID)
-		}
-		// derive the secp256k1 key using the keyindex
-		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(options.HDWallet.Coin, options.HDWallet.Index)
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; error generating derived key %s", len(payload), k.ID, err.Error())
-		}
-		sig, sigerr = secp256k1derived.Sign(payload)
 
 	case KeySpecECCSecp256k1:
 		if k.PrivateKey == nil {
@@ -1055,7 +1039,7 @@ func (k *Key) Sign(payload []byte, opts string) ([]byte, error) {
 		}
 		rsa4096 := vaultcrypto.RSAKeyPair{}
 		rsa4096.PrivateKey = k.PrivateKey
-		sig, sigerr = rsa4096.Sign(payload, options.SigningAlgorithm)
+		sig, sigerr = rsa4096.Sign(payload, *opts.Algorithm)
 
 	case KeySpecRSA3072:
 		if k.PrivateKey == nil {
@@ -1063,7 +1047,7 @@ func (k *Key) Sign(payload []byte, opts string) ([]byte, error) {
 		}
 		rsa3072 := vaultcrypto.RSAKeyPair{}
 		rsa3072.PrivateKey = k.PrivateKey
-		sig, sigerr = rsa3072.Sign(payload, options.SigningAlgorithm)
+		sig, sigerr = rsa3072.Sign(payload, *opts.Algorithm)
 
 	case KeySpecRSA2048:
 		if k.PrivateKey == nil {
@@ -1071,7 +1055,7 @@ func (k *Key) Sign(payload []byte, opts string) ([]byte, error) {
 		}
 		rsa2048 := vaultcrypto.RSAKeyPair{}
 		rsa2048.PrivateKey = k.PrivateKey
-		sig, sigerr = rsa2048.Sign(payload, options.SigningAlgorithm)
+		sig, sigerr = rsa2048.Sign(payload, *opts.Algorithm)
 
 	default:
 		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
@@ -1085,8 +1069,8 @@ func (k *Key) Sign(payload []byte, opts string) ([]byte, error) {
 }
 
 // Verify the given payload against a signature using the public key
-func (k *Key) Verify(payload, sig []byte, opts string) error {
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecBIP39) {
+func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39) {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -1096,12 +1080,6 @@ func (k *Key) Verify(payload, sig []byte, opts string) error {
 
 	if *k.Type == KeyTypeAsymmetric && k.PublicKey == nil {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
-	}
-
-	// convert the optional options into the SigningOptions struct
-	options, err := processSigningOptions(opts)
-	if err != nil {
-		return err
 	}
 
 	k.decryptFields()
@@ -1119,9 +1097,12 @@ func (k *Key) Verify(payload, sig []byte, opts string) error {
 		}
 		return ec25519Key.Verify(payload, sig)
 
-	case KeySpecBIP39:
+	case KeySpecECCBIP39:
+		if opts == nil || opts.Algorithm == nil || opts.HDWallet.Coin == nil || opts.HDWallet.Index == nil {
+			return fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil or invalid signing options", len(payload), k.ID)
+		}
 		//derive the secp256k1 key for verification
-		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(options.HDWallet.Coin, options.HDWallet.Index)
+		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(*opts.HDWallet.Coin, *opts.HDWallet.Index)
 		if err != nil {
 			return fmt.Errorf("failed to sign %d-byte payload using key: %s; error generating derived key %s", len(payload), k.ID, err.Error())
 		}
@@ -1138,17 +1119,17 @@ func (k *Key) Verify(payload, sig []byte, opts string) error {
 	case KeySpecRSA4096:
 		rsa4096 := vaultcrypto.RSAKeyPair{}
 		rsa4096.PublicKey = k.PublicKey
-		return rsa4096.Verify(payload, sig, options.SigningAlgorithm)
+		return rsa4096.Verify(payload, sig, *opts.Algorithm)
 
 	case KeySpecRSA3072:
 		rsa3072 := vaultcrypto.RSAKeyPair{}
 		rsa3072.PublicKey = k.PublicKey
-		return rsa3072.Verify(payload, sig, options.SigningAlgorithm)
+		return rsa3072.Verify(payload, sig, *opts.Algorithm)
 
 	case KeySpecRSA2048:
 		rsa2048 := vaultcrypto.RSAKeyPair{}
 		rsa2048.PublicKey = k.PublicKey
-		return rsa2048.Verify(payload, sig, options.SigningAlgorithm)
+		return rsa2048.Verify(payload, sig, *opts.Algorithm)
 	}
 
 	return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
@@ -1188,3 +1169,13 @@ func (k *Key) Validate() bool {
 
 	return len(k.Errors) == 0
 }
+
+// // Validate the signing options
+// func (so *SigningOptions) Validate() error {
+// 	//perform minor validation (no non-zero index without coin)
+// 	validCoin := so.HDWallet != nil && so.HDWallet.Coin != nil && *so.HDWallet.Coin != ""
+// 	validIdx := so.HDWallet != nil && so.HDWallet.Index != nil && *so.HDWallet.Index == 0
+// 	if validCoin && validIdx {
+// 		return nil, fmt.Errorf("invalid signature options, coin is required for non-zero index")
+// 	}
+// }

@@ -484,11 +484,6 @@ func vaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	var optionalRSAAlgorithm string
-	if params.Algorithm != nil {
-		optionalRSAAlgorithm = *params.Algorithm
-	}
-
 	var key = &Key{}
 	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
@@ -497,7 +492,7 @@ func vaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	signature, err := key.Sign([]byte(*params.Message), optionalRSAAlgorithm)
+	signature, err := key.Sign([]byte(*params.Message), params.Options)
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)
 		return
@@ -532,11 +527,6 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	var optionalVerificationAlgorithm string
-	if params.Algorithm != nil {
-		optionalVerificationAlgorithm = *params.Algorithm
-	}
-
 	var key = &Key{}
 	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
@@ -552,7 +542,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	err = key.Verify([]byte(*params.Message), sig, optionalVerificationAlgorithm)
+	err = key.Verify([]byte(*params.Message), sig, params.Options)
 	verified := err == nil
 
 	provide.Render(&KeySignVerifyRequestResponse{

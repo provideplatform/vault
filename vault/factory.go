@@ -227,7 +227,7 @@ func EthHDWalletFactory(db *gorm.DB, vaultID *uuid.UUID, name, description strin
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
-		Spec:        common.StringOrNil(KeySpecBIP39),
+		Spec:        common.StringOrNil(KeySpecECCBIP39),
 		Type:        common.StringOrNil(KeyTypeHDWallet),
 		Usage:       common.StringOrNil(KeyUsageEthereumHDWallet),
 	}

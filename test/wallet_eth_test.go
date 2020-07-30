@@ -58,12 +58,22 @@ func TestDeriveKeyFromEthHDWallet(t *testing.T) {
 
 	// test a sign with the key
 	payload := []byte(common.RandomString(128))
-	sig, err := walletKey.Sign(payload, `{"hdwallet":{"coin":"ETH", "index":1}}`) //hack frigging algo to double for index
+	sig, err := walletKey.Sign(payload, &SigningOptions{
+		HDWallet: &{
+			Coin: "ETH",
+			Index: 1,
+		},
+	})
 	if err != nil {
 		t.Errorf("error signing payload %s", err.Error())
 	}
 	t.Log("about to verify with wallet key")
-	err = walletKey.Verify(payload, sig, `{"hdwallet":{"coin":"ETH", "index":1}}`) //hack frigging algo to double for index
+	err = walletKey.Verify(payload, sig, &SigningOptions{
+		HDWallet: &{
+			Coin: "ETH",
+			Index: 1,
+		},
+	}
 	if err != nil {
 		t.Errorf("error validating signature: Error: %s", err.Error())
 		return

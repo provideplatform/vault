@@ -274,41 +274,40 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 	}
 }
 
-// RSA integration tests coming to a theatre near you soon
-// func TestAPIVerifyRSA2048Signature(t *testing.T) {
-// 	token, err := userTokenFactory()
-// 	if err != nil {
-// 		t.Errorf("failed to create token; %s", err.Error())
-// 		return
-// 	}
+func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
 
-// 	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
-// 	if err != nil {
-// 		t.Errorf("failed to create vault; %s", err.Error())
-// 		return
-// 	}
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
 
-// 	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecRSA2048, "namey name", "cute description")
-// 	if err != nil {
-// 		t.Errorf("failed to create key; %s", err.Error())
-// 		return
-// 	}
-// 	t.Log("got here")
-// 	messageToSign := common.RandomString(1000)
-// 	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, "PS256")
-// 	if err != nil || status != 201 {
-// 		t.Errorf("failed to sign message %s", err.Error())
-// 		return
-// 	}
-// 	//assert type to get something sensible from empty interface
-// 	response, _ := sigresponse.(map[string]interface{})
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecRSA2048, "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+	t.Log("got here")
+	messageToSign := common.RandomString(1000)
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, `{"algorithm":"PS256"}`)
+	if err != nil || status != 201 {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+	//assert type to get something sensible from empty interface
+	response, _ := sigresponse.(map[string]interface{})
 
-// 	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), "PS256")
-// 	if err != nil || status != 201 {
-// 		t.Errorf("failed to verify signature for vault: %s", err.Error())
-// 		return
-// 	}
-// }
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), `{"algorithm":"PS256"}`)
+	if err != nil || status != 201 {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+}
 
 func TestAPIEncrypt(t *testing.T) {
 	token, err := userTokenFactory()
@@ -486,7 +485,7 @@ func TestCreateHDWallet(t *testing.T) {
 	}
 
 	messageToSign := common.RandomString(1000)
-	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, "0")
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, `{"hdwallet":{"coin":"ETH", "index":0}}`)
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -494,7 +493,7 @@ func TestCreateHDWallet(t *testing.T) {
 	//assert type to get something sensible from empty interface
 	response, _ := sigresponse.(map[string]interface{})
 
-	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), "0")
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), `{"hdwallet":{"coin":"ETH", "index":0}}`)
 	if err != nil || status != 201 {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return

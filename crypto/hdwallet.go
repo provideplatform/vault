@@ -3,7 +3,6 @@ package crypto
 import (
 	"encoding/hex"
 	"fmt"
-	"strconv"
 
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/provideapp/vault/common"
@@ -15,23 +14,29 @@ type HDWallet struct {
 	Seed *[]byte // contains the mnemonic seed phrase
 }
 
-// EthereumCoin is the coin index of Ethereum in the BIP39 spec
-const EthereumCoin = uint32(60)
+// EthereumCoin is the standard abbreviation for native coin of the Ethereum chain
+const EthereumCoin = "ETH"
 
-// BitcoinCoin is the coin index of Bitcoin in the BIP39 spec
-const BitcoinCoin = uint32(0)
+// EthereumCoinCode from the BIP39 spec
+const EthereumCoinCode = uint(60)
+
+// BitcoinCoin is the standard abbreviation for native coin of the Bitcoin chain
+const BitcoinCoin = "BTC"
+
+// BitcoinCoinCode from the BIP39 spec
+const BitcoinCoinCode = uint(0)
 
 // CreateKeyFromWallet deterministically creates a secp256k1 key
 // include private and public key and ETH address
 // which can be used to sign Ethereum transactions
-func (w *HDWallet) CreateKeyFromWallet(coin, index uint32) (*Secp256k1, error) {
+func (w *HDWallet) CreateKeyFromWallet(coin string, index uint32) (*Secp256k1, error) {
 
-	var coinPath string
+	var coinPath uint
 	switch coin {
 	case EthereumCoin:
-		coinPath = "60"
+		coinPath = EthereumCoinCode
 	case BitcoinCoin:
-		coinPath = "0"
+		coinPath = BitcoinCoinCode
 	default:
 		//not supported
 		return nil, fmt.Errorf("unsupported coin type")
@@ -43,7 +48,7 @@ func (w *HDWallet) CreateKeyFromWallet(coin, index uint32) (*Secp256k1, error) {
 		return nil, fmt.Errorf("error generating wallet from mnemonic %s", err.Error())
 	}
 
-	pathstr := fmt.Sprintf("m/44'/%s'/0'/0/%s", coinPath, strconv.Itoa(int(index)))
+	pathstr := fmt.Sprintf("m/44'/%d'/0'/0/%d", coinPath, index)
 	common.Log.Debugf("path string generated: %s", pathstr)
 
 	path := hdwallet.MustParseDerivationPath(pathstr)

@@ -1006,7 +1006,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil seed phrase", len(payload), k.ID)
 		}
-		if opts == nil || opts.Algorithm == nil || opts.HDWallet.Coin == nil || opts.HDWallet.Index == nil {
+		if opts == nil || opts.HDWallet.Coin == nil || opts.HDWallet.Index == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil or invalid signing options", len(payload), k.ID)
 		}
 		// derive the secp256k1 key using the keyindex
@@ -1035,6 +1035,9 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		sig, sigerr = secp256k1.Sign(payload)
 
 	case KeySpecRSA4096:
+		if opts == nil || opts.Algorithm == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+		}
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
@@ -1043,6 +1046,9 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		sig, sigerr = rsa4096.Sign(payload, *opts.Algorithm)
 
 	case KeySpecRSA3072:
+		if opts == nil || opts.Algorithm == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+		}
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
@@ -1051,6 +1057,9 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		sig, sigerr = rsa3072.Sign(payload, *opts.Algorithm)
 
 	case KeySpecRSA2048:
+		if opts == nil || opts.Algorithm == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+		}
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
@@ -1099,7 +1108,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 		return ec25519Key.Verify(payload, sig)
 
 	case KeySpecECCBIP39:
-		if opts == nil || opts.Algorithm == nil || opts.HDWallet.Coin == nil || opts.HDWallet.Index == nil {
+		if opts == nil || opts.HDWallet.Coin == nil || opts.HDWallet.Index == nil {
 			return fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil or invalid signing options", len(payload), k.ID)
 		}
 		//derive the secp256k1 key for verification
@@ -1118,16 +1127,25 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 		return secp256k1.Verify(payload, sig)
 
 	case KeySpecRSA4096:
+		if opts == nil || opts.Algorithm == nil {
+			return fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+		}
 		rsa4096 := vaultcrypto.RSAKeyPair{}
 		rsa4096.PublicKey = k.PublicKey
 		return rsa4096.Verify(payload, sig, *opts.Algorithm)
 
 	case KeySpecRSA3072:
+		if opts == nil || opts.Algorithm == nil {
+			return fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+		}
 		rsa3072 := vaultcrypto.RSAKeyPair{}
 		rsa3072.PublicKey = k.PublicKey
 		return rsa3072.Verify(payload, sig, *opts.Algorithm)
 
 	case KeySpecRSA2048:
+		if opts == nil || opts.Algorithm == nil {
+			return fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+		}
 		rsa2048 := vaultcrypto.RSAKeyPair{}
 		rsa2048.PublicKey = k.PublicKey
 		return rsa2048.Verify(payload, sig, *opts.Algorithm)

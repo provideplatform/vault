@@ -197,7 +197,7 @@ func TestAPISign(t *testing.T) {
 		return
 	}
 
-	status, _, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), "hello world", "")
+	status, _, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), "hello world", nil)
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -224,7 +224,7 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 	}
 
 	messageToSign := common.RandomString(1000)
-	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, "")
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -232,7 +232,7 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 	//assert type to get something sensible from empty interface
 	response, _ := sigresponse.(map[string]interface{})
 
-	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), "")
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), nil)
 	if err != nil || status != 201 {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
@@ -259,7 +259,7 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 	}
 
 	messageToSign := common.RandomString(1000)
-	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, "")
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -267,7 +267,7 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 	//assert type to get something sensible from empty interface
 	response, _ := sigresponse.(map[string]interface{})
 
-	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), "")
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), nil)
 	if err != nil || status != 201 {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
@@ -292,17 +292,22 @@ func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
 	}
-	t.Log("got here")
+
 	messageToSign := common.RandomString(1000)
-	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, `{"algorithm":"PS256"}`)
+
+	opts := map[string]interface{}{}
+	json.Unmarshal([]byte(`{"algorithm":"PS256"}`), &opts)
+
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
 	}
+
 	//assert type to get something sensible from empty interface
 	response, _ := sigresponse.(map[string]interface{})
 
-	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), `{"algorithm":"PS256"}`)
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), opts)
 	if err != nil || status != 201 {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
@@ -478,14 +483,17 @@ func TestCreateHDWallet(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "vault.HDWalletOptions", "Ethvault.HDWalletOptions", "BIP39", "vault.HDWalletOptions name", "wallet description")
+	key, err := keyFactory(*token, vault.ID.String(), "hdwallet", "EthHdWallet", "BIP39", "hdwallet", "integration test hd wallet")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
 	}
 
+	opts := map[string]interface{}{}
+	json.Unmarshal([]byte(`{"hdwallet":{"coin":"ETH", "index":0}}`), &opts)
+
 	messageToSign := common.RandomString(1000)
-	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, `{"vault.HDWalletOptions":{"coin":"ETH", "index":0}}`)
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
 	if err != nil || status != 201 {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -493,7 +501,7 @@ func TestCreateHDWallet(t *testing.T) {
 	//assert type to get something sensible from empty interface
 	response, _ := sigresponse.(map[string]interface{})
 
-	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), `{"vault.HDWalletOptions":{"coin":"ETH", "index":0}}`)
+	status, _, err = provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), opts)
 	if err != nil || status != 201 {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return

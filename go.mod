@@ -18,9 +18,11 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/provideapp/ident v0.0.0-00010101000000-000000000000
-	github.com/provideservices/provide-go v0.0.0-20200707104606-353123840c98
+	github.com/provideservices/provide-go v0.0.0-20200731170023-6cd648281076
 	github.com/tyler-smith/go-bip39 v1.0.2
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
 
 replace github.com/provideapp/ident => ../ident
+
+//replace github.com/provideservices/provide-go => ../provide-go

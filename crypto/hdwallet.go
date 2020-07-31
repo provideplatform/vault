@@ -30,6 +30,11 @@ const BitcoinCoinCode = uint(0)
 // include private and public key and ETH address
 // which can be used to sign Ethereum transactions
 func (w *HDWallet) CreateKeyFromWallet(coin string, index uint32) (*Secp256k1, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			common.Log.Warningf("recovered from panic during CreateKeyFromWallet(); %s", r)
+		}
+	}()
 
 	var coinPath uint
 	switch coin {

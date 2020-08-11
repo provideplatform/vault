@@ -15,6 +15,7 @@ import (
 	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
+	"github.com/provideapp/vault/crypto"
 	vaultcrypto "github.com/provideapp/vault/crypto"
 	provide "github.com/provideservices/provide-go"
 	"golang.org/x/crypto/chacha20"
@@ -108,6 +109,7 @@ type Key struct {
 	Seed        *[]byte    `sql:"type:bytea" json:"-"`
 	PublicKey   *[]byte    `sql:"type:bytea" json:"-"`
 	PrivateKey  *[]byte    `sql:"type:bytea" json:"-"`
+	Iteration   *uint32    `sql:"type:integer" json:"-"`
 
 	Address             *string `sql:"-" json:"address,omitempty"`
 	Ephemeral           *bool   `sql:"-" json:"ephemeral,omitempty"`
@@ -336,7 +338,7 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 
 	k.PrivateKey = rsaKeyPair.PrivateKey
 	k.PublicKey = rsaKeyPair.PublicKey
-	*k.Type = KeyTypeAsymmetric
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 
 	common.Log.Debugf("created rsa%d key for vault: %s; public key: 0x%s", bitsize, k.VaultID, *k.PublicKey)
 	return nil
@@ -651,6 +653,37 @@ func (k *Key) Delete(db *gorm.DB) bool {
 	}
 	success := len(k.Errors) == 0
 	return success
+}
+
+//update the hd wallet iteration
+func (k *Key) updateIteration(db *gorm.DB) bool {
+	if k.Ephemeral != nil && *k.Ephemeral {
+		common.Log.Debugf("short-circuiting attempt to persist ephemeral key: %s", k.ID)
+		return true
+	}
+
+	// get the hd wallet key record in the db
+	db.First(&k)
+
+	// save the record with the updated iteration
+	result := db.Save(&k)
+
+	rowsAffected := result.RowsAffected
+	errors := result.GetErrors()
+	if len(errors) > 0 {
+		for _, err := range errors {
+			k.Errors = append(k.Errors, &provide.Error{
+				Message: common.StringOrNil(err.Error()),
+			})
+		}
+	}
+	success := rowsAffected > 0
+	if success {
+		common.Log.Debugf("updated hd wallet key to new iteration %d", *k.Iteration)
+		return success
+	}
+
+	return false
 }
 
 // Create and persist a key
@@ -983,6 +1016,43 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
+// validateWalletOptions ensures that the hdwallet signing coin and index options are set correctly
+func (k *Key) validateWalletOptions(opts *SigningOptions) (*HDWalletOptions, error) {
+	var validOptions HDWalletOptions
+	if opts == nil {
+
+		// first check the the wallet has a valid iteration
+		if k.Iteration == nil {
+			return nil, fmt.Errorf("no key iteration available to generate next iteration")
+		}
+
+		// set up the current key iteration
+		currentIteration := int(*k.Iteration)
+
+		switch *k.Usage {
+		case KeyUsageEthereumHDWallet:
+			validOptions.Coin = common.StringOrNil(crypto.EthereumCoin)
+			validOptions.Index = &currentIteration //TODO correct this to uint32 everywhere and maybe get an IntOrNil into common
+		case KeyUsageBitcoinHDWallet:
+			validOptions.Coin = common.StringOrNil(crypto.BitcoinCoin)
+			validOptions.Index = &currentIteration
+		default:
+			return nil, fmt.Errorf("unsupported hd wallet coin")
+		}
+	}
+
+	if opts != nil && (opts.HDWallet.Coin == nil || opts.HDWallet.Index == nil) {
+		return nil, fmt.Errorf("failed to sign payload using hd wallet key: %s;invalid signing options", k.ID)
+	}
+
+	if opts != nil {
+		validOptions.Coin = opts.HDWallet.Coin
+		validOptions.Index = opts.HDWallet.Index
+	}
+
+	return &validOptions, nil
+}
+
 // Sign the input with the private key
 func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39) {
@@ -1006,15 +1076,34 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil seed phrase", len(payload), k.ID)
 		}
-		if opts == nil || opts.HDWallet.Coin == nil || opts.HDWallet.Index == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil or invalid signing options", len(payload), k.ID)
+
+		hdWalletOptions, err := k.validateWalletOptions(opts)
+		if err != nil {
+			return nil, err
 		}
+
 		// derive the secp256k1 key using the keyindex
-		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(*opts.HDWallet.Coin, *opts.HDWallet.Index)
+		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(*hdWalletOptions.Coin, *hdWalletOptions.Index)
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; error generating derived key %s", len(payload), k.ID, err.Error())
 		}
+
+		k.mutex.Lock()
+		defer k.mutex.Unlock()
+
 		sig, sigerr = secp256k1derived.Sign(payload)
+		if sigerr == nil && opts == nil {
+			// update the db with the new iteration if no wallet options were set
+			// TODO better if this looks at HDWallet options in case other signing options are set in future
+			// TODO refactor this - it's hella messy, everything inside the update function would be neater
+			*k.Iteration++
+			db := dbconf.DatabaseConnection()
+			success := k.updateIteration(db)
+			if !success {
+				*k.Iteration--
+				return nil, fmt.Errorf("error updating wallet iteration in database for key ID %s with error(s) %+v", k.ID, k.Errors)
+			}
+		}
 
 	case KeySpecECCEd25519:
 		if k.Seed == nil {
@@ -1108,11 +1197,13 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 		return ec25519Key.Verify(payload, sig)
 
 	case KeySpecECCBIP39:
-		if opts == nil || opts.HDWallet.Coin == nil || opts.HDWallet.Index == nil {
-			return fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil or invalid signing options", len(payload), k.ID)
+		hdWalletOptions, err := k.validateWalletOptions(opts)
+		if err != nil {
+			return err
 		}
+
 		//derive the secp256k1 key for verification
-		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(*opts.HDWallet.Coin, *opts.HDWallet.Index)
+		secp256k1derived, err := k.deriveSecp256k1KeyFromHDWallet(*hdWalletOptions.Coin, *hdWalletOptions.Index)
 		if err != nil {
 			return fmt.Errorf("failed to sign %d-byte payload using key: %s; error generating derived key %s", len(payload), k.ID, err.Error())
 		}

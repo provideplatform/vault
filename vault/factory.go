@@ -223,6 +223,7 @@ func Secp256k1Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string)
 
 // EthHDWalletFactory secp256k1 HD wallet for deriving ETH keys/addresses
 func EthHDWalletFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+	defaultIteration := uint32(10)
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -230,6 +231,7 @@ func EthHDWalletFactory(db *gorm.DB, vaultID *uuid.UUID, name, description strin
 		Spec:        common.StringOrNil(KeySpecECCBIP39),
 		Type:        common.StringOrNil(KeyTypeHDWallet),
 		Usage:       common.StringOrNil(KeyUsageEthereumHDWallet),
+		Iteration:   &defaultIteration,
 	}
 
 	if !key.createPersisted(db) {

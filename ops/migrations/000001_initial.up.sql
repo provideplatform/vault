@@ -224,8 +224,6 @@ ALTER TABLE ONLY public.keys
 ALTER TABLE ONLY public.secrets
     ADD CONSTRAINT secrets_vault_id_vaults_id_foreign FOREIGN KEY (vault_id) REFERENCES public.vaults(id) ON UPDATE CASCADE ON DELETE SET NULL;
 
--- hd wallet column
-ALTER TABLE public.keys ADD COLUMN IF NOT EXISTS iteration INTEGER;
 
 --
 -- PostgreSQL database dump complete

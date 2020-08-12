@@ -54,7 +54,6 @@ func (w *HDWallet) CreateKeyFromWallet(coin string, index uint32) (*Secp256k1, e
 	}
 
 	pathstr := fmt.Sprintf("m/44'/%d'/0'/0/%d", coinPath, index)
-	common.Log.Debugf("path string generated: %s", pathstr)
 
 	path := hdwallet.MustParseDerivationPath(pathstr)
 	account, err := wallet.Derive(path, true)

@@ -316,9 +316,10 @@ func (k *Key) createHDWallet() error {
 	if err != nil {
 		return fmt.Errorf("unable to create Ethereum HD wallet")
 	}
-
+	defaultIteration := uint32(0)
 	k.Seed = hdWallet.Seed
-	*k.Type = KeyTypeHDWallet
+	k.Type = common.StringOrNil(KeyTypeHDWallet)
+	k.Iteration = &defaultIteration
 
 	if k.Description == nil {
 		desc := fmt.Sprint("BIP39 HD Wallet")
@@ -665,6 +666,11 @@ func (k *Key) updateIteration(db *gorm.DB) bool {
 	// get the hd wallet key record in the db
 	db.First(&k)
 
+	// update the iteration (this ensures that only the iteration can be updated)
+	iteration := *k.Iteration
+	iteration++
+	*k.Iteration = iteration
+
 	// save the record with the updated iteration
 	result := db.Save(&k)
 
@@ -677,12 +683,13 @@ func (k *Key) updateIteration(db *gorm.DB) bool {
 			})
 		}
 	}
-	success := rowsAffected > 0
-	if success {
-		common.Log.Debugf("updated hd wallet key to new iteration %d", *k.Iteration)
-		return success
-	}
 
+	if rowsAffected > 0 {
+		return true
+	}
+	// if we're here, then the update has failed, so rollback the iteration to the previous value
+	iteration--
+	*k.Iteration = iteration
 	return false
 }
 
@@ -1032,7 +1039,7 @@ func (k *Key) validateWalletOptions(opts *SigningOptions) (*HDWalletOptions, err
 		switch *k.Usage {
 		case KeyUsageEthereumHDWallet:
 			validOptions.Coin = common.StringOrNil(crypto.EthereumCoin)
-			validOptions.Index = &currentIteration //TODO correct this to uint32 everywhere and maybe get an IntOrNil into common
+			validOptions.Index = &currentIteration //TODO maybe correct this to uint32 everywhere and maybe get an IntOrNil into common
 		case KeyUsageBitcoinHDWallet:
 			validOptions.Coin = common.StringOrNil(crypto.BitcoinCoin)
 			validOptions.Index = &currentIteration
@@ -1095,12 +1102,9 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		if sigerr == nil && opts == nil {
 			// update the db with the new iteration if no wallet options were set
 			// TODO better if this looks at HDWallet options in case other signing options are set in future
-			// TODO refactor this - it's hella messy, everything inside the update function would be neater
-			*k.Iteration++
-			db := dbconf.DatabaseConnection()
-			success := k.updateIteration(db)
+
+			success := k.updateIteration(dbconf.DatabaseConnection())
 			if !success {
-				*k.Iteration--
 				return nil, fmt.Errorf("error updating wallet iteration in database for key ID %s with error(s) %+v", k.ID, k.Errors)
 			}
 		}

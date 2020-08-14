@@ -30,7 +30,7 @@ func CreateSecp256k1KeyPair() (*Secp256k1, error) {
 	secp256k1 := Secp256k1{}
 	secp256k1.PrivateKey = &privateKey
 	secp256k1.PublicKey = &publicKey
-	secp256k1.Address = address
+	secp256k1.Address = address //this is added when the key is enriched
 
 	return &secp256k1, nil
 }

@@ -36,7 +36,9 @@ func TestRSA4096Verify(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 
-	sig, err := key.Sign(msg, "PS256")
+	sig, err := key.Sign(msg, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err != nil {
 		t.Errorf("failed to sign message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -47,7 +49,9 @@ func TestRSA4096Verify(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig, "PS256")
+	err = key.Verify(msg, sig, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err != nil {
 		t.Errorf("failed to verify message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -71,7 +75,9 @@ func TestRSA3072Verify(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 
-	sig, err := key.Sign(msg, "PS256")
+	sig, err := key.Sign(msg, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err != nil {
 		t.Errorf("failed to sign message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -82,7 +88,9 @@ func TestRSA3072Verify(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig, "PS256")
+	err = key.Verify(msg, sig, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err != nil {
 		t.Errorf("failed to verify message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -106,7 +114,9 @@ func TestRSA2048Verify(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 
-	sig, err := key.Sign(msg, "PS256")
+	sig, err := key.Sign(msg, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err != nil {
 		t.Errorf("failed to sign message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -117,7 +127,9 @@ func TestRSA2048Verify(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig, "PS256")
+	err = key.Verify(msg, sig, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err != nil {
 		t.Errorf("failed to verify message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -141,7 +153,9 @@ func TestRSA2048VerifyIncorrectAlgo(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 
-	sig, err := key.Sign(msg, "PS256")
+	sig, err := key.Sign(msg, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err != nil {
 		t.Errorf("failed to sign message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -152,7 +166,9 @@ func TestRSA2048VerifyIncorrectAlgo(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig, "PS512")
+	err = key.Verify(msg, sig, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS512"),
+	})
 	if err == nil {
 		t.Errorf("failed to catch invalid algorithm specified when trying to verify message using rsa keypair for vault: %s", vlt.ID)
 		return
@@ -317,9 +333,11 @@ func TestRSASignVerifyAlgorithms(t *testing.T) {
 			return
 		}
 
-		msg := []byte(common.RandomString(128))
+		msg := []byte(common.RandomString(32))
 
-		sig, err := key.Sign(msg, tc.method)
+		sig, err := key.Sign(msg, &vault.SigningOptions{
+			Algorithm: common.StringOrNil(tc.method),
+		})
 		if err != nil {
 			t.Errorf("failed to sign message using rsa%d keypair (%s algorithm) for vault: %s %s", tc.keystrength, tc.method, vlt.ID, err.Error())
 			return
@@ -330,7 +348,9 @@ func TestRSASignVerifyAlgorithms(t *testing.T) {
 			return
 		}
 
-		err = key.Verify(msg, sig, tc.method)
+		err = key.Verify(msg, sig, &vault.SigningOptions{
+			Algorithm: common.StringOrNil(tc.method),
+		})
 		if err != nil {
 			t.Errorf("failed to verify message using rsa%d keypair (%s algorithm) for vault: %s %s", tc.keystrength, tc.method, vlt.ID, err.Error())
 			return
@@ -373,9 +393,11 @@ func TestRSASignVerifyNegativeTesting(t *testing.T) {
 			return
 		}
 
-		msg := []byte(common.RandomString(128))
+		msg := []byte(common.RandomString(32))
 
-		_, err := key.Sign(msg, tc.method)
+		_, err := key.Sign(msg, &vault.SigningOptions{
+			Algorithm: common.StringOrNil(tc.method),
+		})
 		if err == nil {
 			t.Errorf("failed to catch invalid algorithm used to sign message using rsa%d keypair (%s algorithm) for vault: %s", tc.keystrength, tc.method, vlt.ID)
 			return
@@ -402,7 +424,9 @@ func TestRSA2048NilPrivateKey(t *testing.T) {
 
 	key.PrivateKey = nil
 
-	_, err := key.Sign(msg, "PS256")
+	_, err := key.Sign(msg, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err == nil {
 		t.Errorf("signed message using invalid rsa keypair for vault: %s", vlt.ID)
 		return
@@ -427,7 +451,9 @@ func TestRSA2048NilPublicKey(t *testing.T) {
 	msg := []byte(common.RandomString(10))
 
 	key.PublicKey = nil
-	sig, err := key.Sign(msg, "PS256")
+	sig, err := key.Sign(msg, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err != nil {
 		t.Errorf("failed to sign message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -438,7 +464,9 @@ func TestRSA2048NilPublicKey(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig, "PS256")
+	err = key.Verify(msg, sig, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
 	if err == nil {
 		t.Errorf("verified message using invalid rsa keypair for vault: %s", vlt.ID)
 		return
@@ -606,4 +634,65 @@ func TestRSAOAEPEncryptJustRightPayload(t *testing.T) {
 
 		common.Log.Debugf("correctly encrypted %d-byte message using rsa%d keypair for vault: %s.", len(plaintext), tc.keyStrength, vlt.ID)
 	}
+}
+
+func TestRSA2048SignNilOptions(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for rsa2048 key verify unit test!")
+		return
+	}
+
+	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+
+	_, err := key.Sign(msg, nil)
+	if err == nil {
+		t.Errorf("signed message with nil algorithm using rsa keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	common.Log.Debugf("correctly failed to sign message with nil algorithm using rsa keypair for vault: %s with err %s", vlt.ID, err.Error())
+}
+
+func TestRSA2048VerifyNilOptions(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for rsa2048 key verify unit test!")
+		return
+	}
+
+	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if key == nil {
+		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+
+	sig, err := key.Sign(msg, &vault.SigningOptions{
+		Algorithm: common.StringOrNil("PS256"),
+	})
+	if err != nil {
+		t.Errorf("failed to sign message using rsa keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	if sig == nil {
+		t.Errorf("failed to sign message using rsa keypair for vault: %s nil signature!", vlt.ID)
+		return
+	}
+
+	err = key.Verify(msg, sig, nil)
+	if err == nil {
+		t.Errorf("verified message with nil algorithm using rsa keypair for vault: %s", vlt.ID)
+		return
+	}
+
+	common.Log.Debugf("correctly failed to verify message with nil algorithm using rsa keypair for vault: %s with err %s", vlt.ID, err.Error())
 }

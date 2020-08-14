@@ -22,9 +22,6 @@ func init() {
 var keyDB = dbconf.DatabaseConnection()
 var NonceSizeSymmetric = 12
 
-// used for non-RSA sign and verify tests
-var NoAlgorithmRequired = ""
-
 func TestChaCha20EncryptShortNonce(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {
@@ -798,14 +795,14 @@ func TestECDH(t *testing.T) {
 	peerSigningkey := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
 
 	// sign the peer ecdh key with the peer signing key
-	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey), NoAlgorithmRequired)
+	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey), nil)
 	if err != nil {
 		t.Errorf("got error signing peer c25519 public key. Error: %s", err.Error())
 		return
 	}
 
 	//verify the peer signature worked ok
-	err = peerSigningkey.Verify([]byte(*peerECDHkey.PublicKey), peerSignature, NoAlgorithmRequired)
+	err = peerSigningkey.Verify([]byte(*peerECDHkey.PublicKey), peerSignature, nil)
 	if err != nil {
 		t.Errorf("error validating peer signature %s", err.Error())
 		return
@@ -815,14 +812,14 @@ func TestECDH(t *testing.T) {
 	}
 
 	mySigningKey := vault.Ed25519Factory(keyDB, &vlt.ID, "my ecdh signing key", "test key")
-	mySignature, err := mySigningKey.Sign([]byte(*myECDHkey.PublicKey), NoAlgorithmRequired)
+	mySignature, err := mySigningKey.Sign([]byte(*myECDHkey.PublicKey), nil)
 	if err != nil {
 		t.Errorf("got error signing my c25519 public key. Error: %s", err.Error())
 		return
 	}
 
 	//verify my signature worked ok
-	err = mySigningKey.Verify([]byte(*myECDHkey.PublicKey), mySignature, NoAlgorithmRequired)
+	err = mySigningKey.Verify([]byte(*myECDHkey.PublicKey), mySignature, nil)
 	if err != nil {
 		t.Errorf("error validating my signature %s", err.Error())
 		return
@@ -898,7 +895,7 @@ func TestECDHNilPrivateKey(t *testing.T) {
 	peerSigningkey := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
 
 	// sign the peer ecdh key with the peer signing key
-	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey), NoAlgorithmRequired)
+	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey), nil)
 	if err != nil {
 		t.Errorf("got error signing peer c25519 public key. Error: %s", err.Error())
 		return
@@ -932,7 +929,7 @@ func TestECDHNilPrivateKey(t *testing.T) {
 
 // 	msg := []byte(common.RandomString(10))
 // 	key.Type = nil
-// 	_, err := key.Sign(msg, NoAlgorithmRequired)
+// 	_, err := key.Sign(msg, nil)
 // 	if err == nil {
 // 		t.Errorf("signed message using 256k1 keypair with nil type for vault: %s %s", vlt.ID, err.Error())
 // 		return
@@ -957,7 +954,7 @@ func TestECDHNilPrivateKey(t *testing.T) {
 
 // 	msg := []byte(common.RandomString(10))
 // 	key.Usage = nil
-// 	_, err := key.Sign(msg, NoAlgorithmRequired)
+// 	_, err := key.Sign(msg, nil)
 // 	if err == nil {
 // 		t.Errorf("signed message using 256k1 keypair with nil type for vault: %s %s", vlt.ID, err.Error())
 // 		return
@@ -981,14 +978,14 @@ func TestECDHNilPrivateKey(t *testing.T) {
 // 	}
 
 // 	msg := []byte(common.RandomString(10))
-// 	sig, err := key.Sign(msg, NoAlgorithmRequired)
+// 	sig, err := key.Sign(msg, nil)
 // 	if err != nil {
 // 		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 // 		return
 // 	}
 
 // 	key.Usage = nil
-// 	err = key.Verify(msg, sig, NoAlgorithmRequired)
+// 	err = key.Verify(msg, sig, nil)
 // 	if err == nil {
 // 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 // 		return
@@ -1011,14 +1008,14 @@ func TestECDHNilPrivateKey(t *testing.T) {
 // 	}
 
 // 	msg := []byte(common.RandomString(10))
-// 	sig, err := key.Sign(msg, NoAlgorithmRequired)
+// 	sig, err := key.Sign(msg, nil)
 // 	if err != nil {
 // 		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 // 		return
 // 	}
 
 // 	key.Type = nil
-// 	err = key.Verify(msg, sig, NoAlgorithmRequired)
+// 	err = key.Verify(msg, sig, nil)
 // 	if err == nil {
 // 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
 // 		return

@@ -303,3 +303,23 @@ func TestDeleteVaultNilDB(t *testing.T) {
 		return
 	}
 }
+
+func TestGetVault(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for eth hd wallet create unit test!")
+		return
+	}
+
+	organizationId := vlt.OrganizationID
+
+	dbVault := vault.GetVault(vlt.ID.String(), nil, organizationId, nil)
+	if dbVault == nil {
+		t.Errorf("failed to retrieve created vault from DB, vault ID %s", dbVault.ID)
+		return
+	}
+	if dbVault.ID != vlt.ID {
+		t.Errorf("incorrect vault returned, expected vault ID %s, got vault ID %s", vlt.ID, dbVault.ID)
+		return
+	}
+}

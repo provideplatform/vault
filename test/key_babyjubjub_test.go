@@ -33,7 +33,7 @@ func TestBabyJubJubSign(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg, NoAlgorithmRequired)
+	sig, err := key.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("failed to sign message using babyJubJub keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -66,7 +66,7 @@ func TestBabyJubJubVerify(t *testing.T) {
 	}
 
 	msg := []byte(common.RandomString(10))
-	sig, err := key.Sign(msg, NoAlgorithmRequired)
+	sig, err := key.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("1failed to sign message using babyjubjub keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -82,7 +82,7 @@ func TestBabyJubJubVerify(t *testing.T) {
 		return
 	}
 
-	err = key.Verify(msg, sig, NoAlgorithmRequired)
+	err = key.Verify(msg, sig, nil)
 	if err != nil {
 		t.Errorf("4failed to verify message using babyjubjub keypair for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -106,7 +106,7 @@ func TestSignBabyJubJubNilPrivateKey(t *testing.T) {
 
 	msg := []byte(common.RandomString(10))
 	key.PrivateKey = nil
-	_, err := key.Sign(msg, NoAlgorithmRequired)
+	_, err := key.Sign(msg, nil)
 	if err == nil {
 		t.Errorf("signed message using BabyJubJub keypair with nil private key for vault: %s %s", vlt.ID, err.Error())
 		return

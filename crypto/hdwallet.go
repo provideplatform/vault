@@ -54,8 +54,8 @@ func (w *HDWallet) CreateKeyFromWallet(coin string, index uint32) (*Secp256k1, e
 	}
 
 	pathstr := fmt.Sprintf("m/44'/%d'/0'/0/%d", coinPath, index)
-
 	path := hdwallet.MustParseDerivationPath(pathstr)
+
 	account, err := wallet.Derive(path, true)
 	if err != nil {
 		return nil, fmt.Errorf("error creating account with path %s. Error %s", pathstr, err.Error())
@@ -80,7 +80,7 @@ func (w *HDWallet) CreateKeyFromWallet(coin string, index uint32) (*Secp256k1, e
 	secp256k1.Address = &address
 	secp256k1.PrivateKey = &privatekey
 	secp256k1.PublicKey = &publickey
-	common.Log.Debugf("generated key with public key %s", hex.EncodeToString(publickey))
+	common.Log.Debugf("generated hd wallet %s key with public key %s", coin, hex.EncodeToString(publickey))
 	return &secp256k1, nil
 }
 

@@ -55,7 +55,7 @@ func TestDeriveKeyFromEthHDWallet(t *testing.T) {
 		return
 	}
 
-	idx := 1
+	idx := uint32(1)
 
 	// test a sign with the key
 	payload := []byte(common.RandomString(128))
@@ -98,7 +98,7 @@ func TestDeriveXKeysFromEthHDWallet(t *testing.T) {
 	}
 	log.Printf("HD Wallet creation took %s", time.Since(start))
 
-	var i int
+	var i uint32
 	for i = 0; i < 5; i++ {
 		// test a sign with the key
 		payload := []byte(common.RandomString(128))
@@ -143,7 +143,7 @@ func TestDeriveAutoKeyFromEthHDWallet(t *testing.T) {
 		return
 	}
 
-	iteration := int(*walletKey.Iteration)
+	iteration := *walletKey.Iteration
 
 	// test a sign with the key
 	payload := []byte(common.RandomString(128))
@@ -179,7 +179,7 @@ func TestDeriveAutoKeyFromEthHDWallet_IncorrectVerifyIteration(t *testing.T) {
 		return
 	}
 
-	iteration := int(*walletKey.Iteration)
+	iteration := *walletKey.Iteration
 	// test a sign with the key
 	payload := []byte(common.RandomString(128))
 	sig, err := walletKey.Sign(payload, nil)
@@ -226,37 +226,141 @@ func TestDerivedKeyIteration(t *testing.T) {
 	}
 	iteration := *dbKey.Iteration
 
-	//sign something with the key
+	var keyIteration uint32
+
+	for idx := 0; idx < 5; idx++ {
+		keyIteration = iteration + uint32(idx)
+
+		//sign something with the key
+		t.Logf("loop %d, about to sign", idx)
+		payload := []byte(common.RandomString(128))
+		sig, err := walletKey.Sign(payload, nil)
+		if err != nil {
+			t.Errorf("error signing payload %s", err.Error())
+			return
+		}
+
+		// then make sure the key in the db has been updated with the next iteration
+		dbKey = vault.GetVaultKey(walletKey.ID.String(), vlt.ID.String(), nil, organizationId, nil)
+		if dbKey == nil {
+			t.Errorf("failed to retrieve created key from DB, key ID %s", dbKey.ID)
+			return
+		}
+
+		if *dbKey.Iteration != keyIteration+1 {
+			t.Errorf("error in iteration. expected %d, got %d", keyIteration+1, *dbKey.Iteration)
+			return
+		}
+
+		t.Logf("validating for iteration %d", keyIteration)
+		err = dbKey.Verify(payload, sig, &vault.SigningOptions{
+			HDWallet: &vault.HDWalletOptions{
+				Coin:  common.StringOrNil("ETH"),
+				Index: &keyIteration,
+			},
+		})
+		if err != nil {
+			t.Errorf("error validating signature: Error: %s", err.Error())
+			return
+		}
+
+	}
+
+	t.Logf("iterative signing OK for key id: %s, current iteration: %d", dbKey.ID, *dbKey.Iteration)
+	return
+}
+
+func TestSignWithMaximumKey(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for eth hd wallet create unit test!")
+		return
+	}
+
+	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if walletKey == nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+		return
+	}
+
+	idx := uint32(4294967295)
+
+	// test a sign with the key
 	payload := []byte(common.RandomString(128))
-	sig, err := walletKey.Sign(payload, nil)
+	sig, err := walletKey.Sign(payload, &vault.SigningOptions{
+		HDWallet: &vault.HDWalletOptions{
+			Coin:  common.StringOrNil("ETH"),
+			Index: &idx,
+		},
+	})
 	if err != nil {
 		t.Errorf("error signing payload %s", err.Error())
 	}
-
-	optionIteration := int(iteration)
-	err = dbKey.Verify(payload, sig, &vault.SigningOptions{
+	t.Log("about to verify with wallet key")
+	err = walletKey.Verify(payload, sig, &vault.SigningOptions{
 		HDWallet: &vault.HDWalletOptions{
 			Coin:  common.StringOrNil("ETH"),
-			Index: &optionIteration,
+			Index: &idx,
 		},
 	})
 	if err != nil {
 		t.Errorf("error validating signature: Error: %s", err.Error())
 		return
 	}
+}
 
-	iteration++
-	dbKey = vault.GetVaultKey(walletKey.ID.String(), vlt.ID.String(), nil, organizationId, nil)
-	if dbKey == nil {
-		t.Errorf("failed to retrieve created key from DB, key ID %s", dbKey.ID)
+func TestSignWithInvalidKeyIteration(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for eth hd wallet create unit test!")
 		return
 	}
 
-	if *dbKey.Iteration != iteration {
-		t.Errorf("error in iteration. expected %d, got %d", iteration, *dbKey.Iteration)
+	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if walletKey == nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
 		return
 	}
 
-	t.Logf("iterative signing OK for key id: %s, current iteration: %d", dbKey.ID, *dbKey.Iteration)
-	return
+	idx := uint32(10)
+	// set the key to an invalid iteration
+	walletKey.Iteration = &idx
+
+	// attempt to sign with the invalid key
+	payload := []byte(common.RandomString(128))
+	_, err := walletKey.Sign(payload, nil)
+	if err == nil {
+		t.Errorf("no error signing payload")
+	}
+
+	t.Logf("got expected error generating signing key with invalid iteration %s", err.Error())
+}
+
+func TestDeriveAutoKeyFromEthHDWallet_IncorrectCoin(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for eth hd wallet create unit test!")
+		return
+	}
+
+	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if walletKey == nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+		return
+	}
+
+	iteration := uint32(0)
+	// test a sign with the key
+	payload := []byte(common.RandomString(128))
+	_, err := walletKey.Sign(payload, &vault.SigningOptions{
+		HDWallet: &vault.HDWalletOptions{
+			Coin:  common.StringOrNil("BTC"),
+			Index: &iteration,
+		},
+	})
+	if err == nil {
+		t.Errorf("no error generating key for incorrect coin %s", err.Error())
+	}
+
+	t.Logf("got expected error generating signing key with invalid coin %s", err.Error())
 }

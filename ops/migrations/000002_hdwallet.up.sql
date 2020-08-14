@@ -1,1 +1,1 @@
-ALTER TABLE keys ADD COLUMN iteration INTEGER;
+ALTER TABLE keys ADD COLUMN iteration BIGINT;

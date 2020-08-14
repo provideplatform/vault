@@ -94,7 +94,7 @@ const KeySpecRSA4096 = "RSA-4096"
 // HDWalletOptions struct contains options for the HD wallet operations
 type HDWalletOptions struct {
 	Coin  *string `json:"coin,omitempty"`
-	Index *int    `json:"index,omitempty"`
+	Index *uint32 `json:"index,omitempty"`
 }
 
 // Key represents a symmetric or asymmetric signing key
@@ -657,24 +657,21 @@ func (k *Key) Delete(db *gorm.DB) bool {
 }
 
 //update the hd wallet iteration
-func (k *Key) updateIteration(db *gorm.DB) bool {
+func (k *Key) updateIteration(db *gorm.DB) error {
 	if k.Ephemeral != nil && *k.Ephemeral {
 		common.Log.Debugf("short-circuiting attempt to persist ephemeral key: %s", k.ID)
-		return true
+		return fmt.Errorf("cannot update iteration for ephemeral key")
 	}
 
-	// get the hd wallet key record in the db
-	db.First(&k)
-
-	// update the iteration (this ensures that only the iteration can be updated)
 	iteration := *k.Iteration
-	iteration++
-	*k.Iteration = iteration
+	// if we have reached the uint32 maximum, we cannot generate any more keys
+	if iteration == 4294967295 {
+		return fmt.Errorf("maximum iteration %d reached - no further key generation possible", iteration)
+	}
 
-	// save the record with the updated iteration
-	result := db.Save(&k)
-
-	rowsAffected := result.RowsAffected
+	updatedIteration := iteration + 1
+	// ensure that the db record has the expected iteration and update
+	result := db.Model(&k).Where("iteration = ?", iteration).Update("iteration", updatedIteration)
 	errors := result.GetErrors()
 	if len(errors) > 0 {
 		for _, err := range errors {
@@ -684,13 +681,18 @@ func (k *Key) updateIteration(db *gorm.DB) bool {
 		}
 	}
 
+	rowsAffected := result.RowsAffected
 	if rowsAffected > 0 {
-		return true
+		// increment the key's iteration
+		*k.Iteration = updatedIteration
+		return nil
 	}
-	// if we're here, then the update has failed, so rollback the iteration to the previous value
-	iteration--
-	*k.Iteration = iteration
-	return false
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("invalid key and/or iteration provided - no iteration update possible")
+	}
+
+	return fmt.Errorf("error updating database with next iteration")
 }
 
 // Create and persist a key
@@ -827,7 +829,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 }
 
 // DeriveHDWallet derives a hd wallet from a supported key
-func (k *Key) deriveSecp256k1KeyFromHDWallet(coin string, idx int) (*vaultcrypto.Secp256k1, error) {
+func (k *Key) deriveSecp256k1KeyFromHDWallet(coin string, idx uint32) (*vaultcrypto.Secp256k1, error) {
 	if k.Spec == nil || *k.Spec != KeySpecECCBIP39 {
 		return nil, fmt.Errorf("failed to derive HD wallet from key: %s; nil or invalid key spec", k.ID)
 	}
@@ -848,7 +850,7 @@ func (k *Key) deriveSecp256k1KeyFromHDWallet(coin string, idx int) (*vaultcrypto
 		hdWallet := &vaultcrypto.HDWallet{
 			Seed: k.Seed,
 		}
-		derivedKey, err := hdWallet.CreateKeyFromWallet(vaultcrypto.EthereumCoin, uint32(idx))
+		derivedKey, err := hdWallet.CreateKeyFromWallet(vaultcrypto.EthereumCoin, idx)
 		if err != nil {
 			return nil, fmt.Errorf("could not derive HD Wallet key (index: %s) for Ethereum using HD Wallet Master Key %s", string(idx), k.ID)
 		}
@@ -1034,7 +1036,7 @@ func (k *Key) validateWalletOptions(opts *SigningOptions) (*HDWalletOptions, err
 		}
 
 		// set up the current key iteration
-		currentIteration := int(*k.Iteration)
+		currentIteration := *k.Iteration
 
 		switch *k.Usage {
 		case KeyUsageEthereumHDWallet:
@@ -1103,9 +1105,9 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 			// update the db with the new iteration if no wallet options were set
 			// TODO better if this looks at HDWallet options in case other signing options are set in future
 
-			success := k.updateIteration(dbconf.DatabaseConnection())
-			if !success {
-				return nil, fmt.Errorf("error updating wallet iteration in database for key ID %s with error(s) %+v", k.ID, k.Errors)
+			err := k.updateIteration(dbconf.DatabaseConnection())
+			if err != nil {
+				return nil, fmt.Errorf("error updating wallet iteration in database for key ID %s with error %s, key errors %+v", k.ID, err.Error(), k.Errors)
 			}
 		}
 

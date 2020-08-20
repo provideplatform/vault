@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"encoding/hex"
 	"fmt"
-	"os"
 
 	"github.com/provideapp/vault/common"
 	vaultcrypto "github.com/provideapp/vault/crypto"
@@ -20,6 +19,13 @@ type NewUnsealerKeyResponse struct {
 	UnsealerKey    *string `json:"unsealerkey,omitempty"`
 	ValidationHash *string `json:"validationhash,omitempty"`
 }
+
+// UnsealerKey is the encryption/decryption key for the vault keys
+// which are used to decrypt the private keys/seeds
+var UnsealerKey []byte
+
+// CloakingKey will ensure Infinity Key is encrypted in memory until required
+var CloakingKey []byte
 
 // SetUnsealerKey sets the Unsealer Key
 // This is only possible with a SEALED vault
@@ -43,18 +49,18 @@ func SetUnsealerKey(key *[]byte) error {
 
 	incomingKeyHashHex := hex.EncodeToString(incomingKeyHash.Sum(nil))
 
-	if UskValidationHash == nil {
-		return fmt.Errorf("error unsealing vault (300) validation hash not set")
-	}
+	// if common.UskValidationHash == "" {
+	// 	return fmt.Errorf("error unsealing vault (300) validation hash not set")
+	// }
 
 	// common.Log.Debugf("init: database name %s", os.Getenv("DATABASE_NAME"))
 	// common.Log.Debugf("init: validation hash %s", *UskValidationHash)
 
 	// common.Log.Debugf("incoming key hash hex: %s", incomingKeyHashHex)
 
-	if UskValidationHash != nil {
-		if incomingKeyHashHex != *UskValidationHash {
-			return fmt.Errorf("error unsealing vault (400) got %s, expected %s (hash mem location %p) - TempCounter: %d", incomingKeyHashHex, *UskValidationHash, UskValidationHash, TempCounter)
+	if common.UskValidationHash != "" {
+		if incomingKeyHashHex != common.UskValidationHash {
+			return fmt.Errorf("error unsealing vault (400) got %s, expected '%s' (hash mem location %p)", incomingKeyHashHex, common.UskValidationHash, &common.UskValidationHash)
 		}
 	}
 
@@ -65,7 +71,7 @@ func SetUnsealerKey(key *[]byte) error {
 	}
 
 	// set the cloaking key to this random key
-	CloakingKey = &randomKey
+	CloakingKey = randomKey
 
 	// conver the cloaking key to an AES key to perform encryption
 	cloakingKey := vaultcrypto.AES256GCM{}
@@ -77,7 +83,7 @@ func SetUnsealerKey(key *[]byte) error {
 		return fmt.Errorf("error unsealing vault (300)")
 	}
 
-	UnsealerKey = &unsealerKey
+	UnsealerKey = unsealerKey
 	return nil
 }
 
@@ -88,10 +94,10 @@ func getUnsealerKey() (*[]byte, error) {
 
 	// convert the cloaking key into an AES key
 	cloakingKey := vaultcrypto.AES256GCM{}
-	cloakingKey.PrivateKey = CloakingKey
+	cloakingKey.PrivateKey = &CloakingKey
 
 	// decrypt the unsealer key with the cloaking key
-	encryptedInfinityKey := *UnsealerKey
+	encryptedInfinityKey := UnsealerKey
 
 	unsealerKey, err := cloakingKey.Decrypt(encryptedInfinityKey[NonceSizeSymmetric:], encryptedInfinityKey[0:NonceSizeSymmetric])
 	if err != nil {

@@ -48,7 +48,7 @@ func createUnsealerKeyHandler(c *gin.Context) {
 		return
 	}
 
-	if common.UnsealerKey != nil {
+	if UnsealerKey != nil {
 		provide.RenderError("cannot generate unseal key from unsealed vault", 500, c)
 		return
 	}

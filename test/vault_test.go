@@ -3,6 +3,7 @@
 package test
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 	"time"
@@ -14,18 +15,31 @@ import (
 )
 
 func init() {
-	//vaultpgputil.RequirePGP()
-	if vault.InfinityKey == nil {
+	if vault.UnsealerKey == nil {
 		common.Log.Debug("no unsealing key found, creating one")
-		infinitykey, err := vault.CreateInfinityKey()
+		// seal, err := vault.CreateUnsealerKey()
+		// if err != nil {
+		// 	common.Log.Debugf("error creating unsealing key %s", err.Error())
+		// }
+		// common.Log.Debugf("unsealerkey (hex) :%s", *seal.UnsealerKey)
+		// common.Log.Debugf("validationhash (hex): %s", *seal.ValidationHash)
+
+		// unsealerKey, err := hex.DecodeString(*seal.UnsealerKey)
+		// if err != nil {
+		// 	common.Log.Debug("error decoding unsealer key")
+		// }
+
+		unsealerKey, err := hex.DecodeString("53534144444f374f4c544849564a5146465950434c353645454a344856594134")
+		if err != nil {
+			common.Log.Debug("error decoding unsealer key")
+		}
+
+		err = vault.SetUnsealerKey(&unsealerKey)
 		if err != nil {
 			common.Log.Debugf("error creating unsealing key %s", err.Error())
+		} else {
+			common.Log.Debug("created unsealing key for vault...")
 		}
-		err = vault.SetInfinityKey(&infinitykey)
-		if err != nil {
-			common.Log.Debugf("error creating unsealing key %s", err.Error())
-		}
-		common.Log.Debug("created unsealing key for vault...")
 	}
 }
 

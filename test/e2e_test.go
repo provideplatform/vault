@@ -113,6 +113,18 @@ func TestAPICreateVault(t *testing.T) {
 		return
 	}
 
+	_, sealresp, err := provide.UnsealVault(*token, map[string]interface{}{
+		"unsealerkey": "53534144444f374f4c544849564a5146465950434c353645454a344856594134",
+	})
+
+	//assert type to get something sensible from empty interface
+	response, _ := sealresp.(map[string]interface{})
+	t.Logf("response from unsealer: %+v", response)
+
+	if err != nil {
+		t.Errorf("error unsealing vault %s", err.Error())
+	}
+
 	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
 	if err != nil {
 		t.Errorf("failed to create vault; %s", err.Error())
@@ -127,6 +139,13 @@ func TestAPICreateKey(t *testing.T) {
 		t.Errorf("failed to create token; %s", err.Error())
 		return
 	}
+
+	// _, _, err = provide.UnsealVault(*token, map[string]interface{}{
+	// 	"unsealerkey": "53534144444f374f4c544849564a5146465950434c353645454a344856594134",
+	// })
+	// if err != nil {
+	// 	t.Errorf("error unsealing vault %s", err.Error())
+	// }
 
 	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
 	if err != nil {

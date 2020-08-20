@@ -1,4 +1,4 @@
-// +build integration
+// +build secret
 
 package test
 
@@ -28,9 +28,13 @@ func TestAPIListSecrets(t *testing.T) {
 	description := "secret description"
 	secretType := "secret type"
 
-	status, _, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
+	status, secretresponse, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
+	//assert type to get something sensible from empty interface
+	response, _ := secretresponse.(map[string]interface{})
+	t.Logf("response from handler: %s", response)
+
 	if err != nil || status != 201 {
-		t.Errorf("failed to create secret for vault: %s", err.Error())
+		t.Errorf("failed to create secret for vault")
 		return
 	}
 

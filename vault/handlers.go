@@ -36,12 +36,10 @@ func InstallAPI(r *gin.Engine) {
 	r.DELETE("api/v1/vaults/:id/secrets/:secretId", deleteVaultSecretHandler)
 
 	r.POST("api/v1/unseal", vaultSealHandler)
-	r.GET("api/v1/unseal", vaultNewSealHandler)
+	r.GET("api/v1/unseal", createUnsealerKeyHandler)
 }
 
-func vaultNewSealHandler(c *gin.Context) {
-	// this function creates and returns a new vault master key
-	// this is initially for test/dev purposes
+func createUnsealerKeyHandler(c *gin.Context) {
 	_ = token.InContext(c)
 
 	_, err := c.GetRawData()
@@ -50,12 +48,17 @@ func vaultNewSealHandler(c *gin.Context) {
 		return
 	}
 
-	newInfinityKey, err := CreateInfinityKey()
+	if UnsealerKey != nil {
+		provide.RenderError("cannot generate unseal key from unsealed vault", 500, c)
+		return
+	}
+
+	newUnsealerKey, err := CreateUnsealerKey()
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)
 	}
 
-	provide.Render(hex.EncodeToString(newInfinityKey), 200, c)
+	provide.Render(newUnsealerKey, 200, c)
 	return
 }
 
@@ -77,40 +80,44 @@ func vaultSealHandler(c *gin.Context) {
 		return
 	}
 
-	if params.UnsealKey == nil && params.SealKey == nil {
-		provide.RenderError("seal or unseal data required", 422, c)
+	if params.UnsealerKey == nil {
+		provide.RenderError("unsealer key material required", 422, c)
 		return
 	}
 
-	if params.SealKey != nil {
-		// we will lock the vault so it no longer operates
-		// this is the default starting state of the vault
-		// this doesn't make much sense (unless the locking is in itself
-		// an encryption action, but it will do for the moment)
-		// also better to wipe with random and then nil pointer
-		randomJunk := common.RandomString(32)
-		*InfinityKey = []byte(randomJunk)
-		InfinityKey = nil
-	}
+	// if params.SealKey != nil {
+	// 	// we will lock the vault so it no longer operates
+	// 	// this is the default starting state of the vault
+	// 	// this doesn't make much sense (unless the locking is in itself
+	// 	// an encryption action, but it will do for the moment)
+	// 	// also better to wipe with random and then nil pointer
+	// 	// NOTE - this makes no sense is right
+	// 	// malicious sealing isn't something we want to deal with
+	// 	randomJunk := common.RandomString(32)
+	// 	*UnsealerKey = []byte(randomJunk)
+	// 	UnsealerKey = nil
+	// }
 
-	if params.UnsealKey != nil {
+	if params.UnsealerKey != nil {
 		// we will unlock the vault so it can perform key operations
 		// first take the unlock key from the parameters and hex decode it to []byte
 
 		// we will assume for the moment that the master key (the infinity key! - brand pending)
 		// is an AES-256-GCM key's private key, hex encoded
 
-		infinityKey, err := hex.DecodeString(*params.UnsealKey)
+		unsealerKey, err := hex.DecodeString(*params.UnsealerKey)
 		if err != nil {
 			provide.RenderError("error decoding unsealing key from hex", 500, c)
 			return
 		}
 
-		err = SetInfinityKey(&infinityKey)
+		// NOTE missing key to validate the key (compare it to the stored HASH of the key)
+		err = SetUnsealerKey(&unsealerKey)
 		if err != nil {
-			provide.RenderError("error unsealing vault", 500, c)
+			vaultErr := fmt.Sprintf("error unsealing vault - %s", err.Error())
+			provide.RenderError(vaultErr, 500, c)
+			return
 		}
-		//InfinityKey = &infinityKey
 		provide.Render("vault unsealed", 201, c)
 	}
 }

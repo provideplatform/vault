@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
 	selfsignedcert "github.com/kthomas/go-self-signed-cert"
+	"github.com/provideapp/ident/common"
 )
 
 var (
@@ -27,8 +28,10 @@ var (
 )
 
 func init() {
-	godotenv.Load()
-
+	if err := godotenv.Load(); err != nil {
+		common.Log.Debug(".env file not found")
+	}
+	common.Log.Debugf("here - gotdotenv loaded %s", os.Getenv("USK_VALIDATION_HASH"))
 	requireLogger()
 	requireGin()
 }

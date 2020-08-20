@@ -14,22 +14,6 @@ import (
 	"github.com/provideapp/vault/vault"
 )
 
-func init() {
-	//keyspgputil.RequirePGP()
-	if vault.InfinityKey == nil {
-		common.Log.Debug("no unsealing key found, creating one")
-		infinitykey, err := vault.CreateInfinityKey()
-		if err != nil {
-			common.Log.Debugf("error creating unsealing key %s", err.Error())
-		}
-		err = vault.SetInfinityKey(&infinitykey)
-		if err != nil {
-			common.Log.Debugf("error creating unsealing key %s", err.Error())
-		}
-		common.Log.Debug("created unsealing key for vault...")
-	}
-}
-
 var keyDB = dbconf.DatabaseConnection()
 var NonceSizeSymmetric = 12
 

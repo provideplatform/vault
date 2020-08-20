@@ -43,6 +43,12 @@ if [[ -z "${RACE}" ]]; then
   RACE=true
 fi
 
+if [[ -z "${USK_VALIDATION_HASH}" ]]; then
+  USK_VALIDATION_HASH=aa5ef33a968701d06efa0ef5dafb6ba4789a31a7d1c2c259cc3f7f8dbe05c004174720d1b0aa57681bbb889d5199e51ef6ca4afcf5886682db2dfee713d69a8c
+fi
+
+
+
 PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropdb -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_NAME || true >/dev/null
 PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropuser -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_USER || true >/dev/null
 
@@ -226,6 +232,8 @@ xH2b0OBcVjYsgRnQ9OZpQ+kIPaFhaWChnfEArCmhrOEgOnhfkr6YGDHFenfT3/RA
 PUl1cxrvY7BHh4obNa6Bf8ECAwEAAQ==
 -----END PUBLIC KEY-----'
 
+USK_VALIDATION_HASH='aa5ef33a968701d06efa0ef5dafb6ba4789a31a7d1c2c259cc3f7f8dbe05c004174720d1b0aa57681bbb889d5199e51ef6ca4afcf5886682db2dfee713d69a8c'
+
 pkgs=(test)
 for d in "${pkgs[@]}" ; do
   pkg=$(echo $d | sed 's/\/*$//g')
@@ -246,6 +254,7 @@ for d in "${pkgs[@]}" ; do
     VAULT_API_HOST=localhost:8082 \
     VAULT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
+    USK_VALIDATION_HASH=$USK_VALIDATION_HASH \
     go test ./... -v \
                        -race \
                        -timeout 1800s \
@@ -271,6 +280,7 @@ for d in "${pkgs[@]}" ; do
     VAULT_API_HOST=localhost:8082 \
     VAULT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
+    USK_VALIDATION_HASH=$USK_VALIDATION_HASH \
     go test ./... -v \
                        -timeout 1800s \
                        -cover \

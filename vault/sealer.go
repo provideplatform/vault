@@ -10,18 +10,6 @@ import (
 	vaultcrypto "github.com/provideapp/vault/crypto"
 )
 
-// UnsealerKey is the encryption/decryption key for the vault keys
-// which are used to decrypt the private keys/seeds
-var UnsealerKey *[]byte
-
-// CloakingKey will ensure Infinity Key is encrypted in memory until required
-var CloakingKey *[]byte
-
-// UskValidationHash is the validation hash for the Unsealer Key
-var UskValidationHash *string
-
-var TempCounter int
-
 // SealUnsealRequest provides the unseal information
 type SealUnsealRequest struct {
 	UnsealerKey *string `json:"unsealerkey,omitempty"`
@@ -31,26 +19,6 @@ type SealUnsealRequest struct {
 type NewUnsealerKeyResponse struct {
 	UnsealerKey    *string `json:"unsealerkey,omitempty"`
 	ValidationHash *string `json:"validationhash,omitempty"`
-}
-
-func init() {
-	if UskValidationHash != nil {
-		common.Log.Debugf("validation hash somehow already set value: %s, address %p", *UskValidationHash, UskValidationHash)
-	}
-
-	if UskValidationHash == nil {
-		//ensure the vault unsealer key is nil by default and we have the validation hash
-		//UnsealerKey = nil
-		hash := os.Getenv("USK_VALIDATION_HASH")
-
-		UskValidationHash = &hash
-
-		common.Log.Debugf("here - setting validation hash to %s, address %p", *UskValidationHash, UskValidationHash)
-
-		TempCounter++ //how many times is this being set?
-
-		common.Log.Debugf("here - validation hash set to %s, address %p", *UskValidationHash, UskValidationHash)
-	}
 }
 
 // SetUnsealerKey sets the Unsealer Key

@@ -3,7 +3,6 @@
 package test
 
 import (
-	"encoding/hex"
 	"fmt"
 	"testing"
 	"time"
@@ -29,12 +28,9 @@ func init() {
 		// 	common.Log.Debug("error decoding unsealer key")
 		// }
 
-		unsealerKey, err := hex.DecodeString("53534144444f374f4c544849564a5146465950434c353645454a344856594134")
-		if err != nil {
-			common.Log.Debug("error decoding unsealer key")
-		}
+		unsealerKey := []byte("burst grief crime veteran picnic glance object bridge wagon width extra crew sphere pudding grape common slab sponsor shock into town say onion gossip")
 
-		err = vault.SetUnsealerKey(&unsealerKey)
+		err := vault.SetUnsealerKey(&unsealerKey)
 		if err != nil {
 			common.Log.Debugf("error creating unsealing key %s", err.Error())
 		} else {

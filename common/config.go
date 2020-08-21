@@ -1,8 +1,10 @@
 package common
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
@@ -26,16 +28,12 @@ var (
 	// ServeTLS is true when CertificatePath and PrivateKeyPath are valid
 	ServeTLS bool
 
-	// UskValidationHash is the validation hash for the Unsealer Key
-	UskValidationHash string
+	// UnsealerKeyValidator is the validation hash for the Unsealer Key
+	UnsealerKeyValidator []byte
 )
 
 func init() {
-	if err := godotenv.Load(); err != nil {
-		common.Log.Debug(".env file not found")
-	}
-	common.Log.Debugf("here - gotdotenv loaded %s", os.Getenv("USK_VALIDATION_HASH"))
-	//UskValidationHash := os.Getenv("USK_VALIDATION_HASH")
+	godotenv.Load()
 
 	requireLogger()
 	requireGin()
@@ -71,18 +69,16 @@ func requireLogger() {
 }
 
 func requireSealerValidationHash() {
-	if UskValidationHash != "" {
-		common.Log.Debugf("validation hash somehow already set value: %s, address %p", UskValidationHash, &UskValidationHash)
-	}
 
-	if UskValidationHash == "" {
-		//ensure the vault unsealer key is nil by default and we have the validation hash
-		//UnsealerKey = nil
-		UskValidationHash := os.Getenv("USK_VALIDATION_HASH")
-
-		common.Log.Debugf("here - setting validation hash to %s, address %p", UskValidationHash, &UskValidationHash)
-
-		common.Log.Debugf("here - validation hash set to %s, address %p", UskValidationHash, &UskValidationHash)
+	//ensure the vault unsealer key is nil by default and we have the validation hash
+	//UnsealerKey = nil
+	validator := os.Getenv("USK_VALIDATION_HASH")
+	if validator != "" {
+		UnsealerKeyValidator, err := hex.DecodeString(strings.Replace(validator, "0x", "", -1))
+		if err != nil {
+			// should put a panic here as the application shouldn't be capable of starting without a valid validation hash
+		}
+		common.Log.Debugf("here - validation hash set to %s, address %p", string(UnsealerKeyValidator[:]), &UnsealerKeyValidator)
 	}
 }
 

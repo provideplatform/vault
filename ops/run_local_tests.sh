@@ -4,15 +4,15 @@ set -e
 echo "" > coverage.txt 
 
 if [[ -z "${DATABASE_NAME}" ]]; then
-  DATABASE_NAME=vault_test
+  DATABASE_NAME=vault_dev
 fi
 
 if [[ -z "${DATABASE_USER}" ]]; then
-  DATABASE_USER=vaulttest
+  DATABASE_USER=vault
 fi
 
 if [[ -z "${DATABASE_PASSWORD}" ]]; then
-  DATABASE_PASSWORD=vaulttest
+  DATABASE_PASSWORD=vault
 fi
 
 if [[ -z "${DATABASE_SUPERUSER}" ]]; then
@@ -44,7 +44,7 @@ if [[ -z "${RACE}" ]]; then
 fi
 
 if [[ -z "${USK_VALIDATION_HASH}" ]]; then
-  USK_VALIDATION_HASH=aa5ef33a968701d06efa0ef5dafb6ba4789a31a7d1c2c259cc3f7f8dbe05c004174720d1b0aa57681bbb889d5199e51ef6ca4afcf5886682db2dfee713d69a8c
+  USK_VALIDATION_HASH=0x0f4279a206b0bc6d70b97c654243af9dcaaeb87a8c04359289f8b484591ebe112724001a474a9a21f972e695103a185de3b829015ec337c0c43c5d01de260457
 fi
 
 
@@ -232,7 +232,8 @@ xH2b0OBcVjYsgRnQ9OZpQ+kIPaFhaWChnfEArCmhrOEgOnhfkr6YGDHFenfT3/RA
 PUl1cxrvY7BHh4obNa6Bf8ECAwEAAQ==
 -----END PUBLIC KEY-----'
 
-USK_VALIDATION_HASH='aa5ef33a968701d06efa0ef5dafb6ba4789a31a7d1c2c259cc3f7f8dbe05c004174720d1b0aa57681bbb889d5199e51ef6ca4afcf5886682db2dfee713d69a8c'
+#burst grief crime veteran picnic glance object bridge wagon width extra crew sphere pudding grape common slab sponsor shock into town say onion gossip
+USK_VALIDATION_HASH='0x0f4279a206b0bc6d70b97c654243af9dcaaeb87a8c04359289f8b484591ebe112724001a474a9a21f972e695103a185de3b829015ec337c0c43c5d01de260457'
 
 pkgs=(test)
 for d in "${pkgs[@]}" ; do
@@ -246,7 +247,7 @@ for d in "${pkgs[@]}" ; do
     JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
     GIN_MODE=release \
     DATABASE_HOST=localhost \
-    DATABASE_NAME=vault_test \
+    DATABASE_NAME=vault_dev \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     IDENT_API_HOST=localhost:8081 \
@@ -272,7 +273,7 @@ for d in "${pkgs[@]}" ; do
     JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
     GIN_MODE=release \
     DATABASE_HOST=localhost \
-    DATABASE_NAME=vault_test \
+    DATABASE_NAME=vault_dev \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     IDENT_API_HOST=localhost:8081 \

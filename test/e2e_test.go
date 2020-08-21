@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"testing"
 
 	uuid "github.com/kthomas/go.uuid"
@@ -106,6 +107,30 @@ func userTokenFactory() (*string, error) {
 	return token, nil
 }
 
+func init() {
+	token, err := userTokenFactory()
+	if err != nil {
+		log.Printf("failed to create token; %s", err.Error())
+		return
+	}
+
+	_, createresp, err := provide.GenerateSeal(*token, map[string]interface{}{})
+	//assert type to get something sensible from empty interface
+	response, _ := createresp.(map[string]interface{})
+	log.Printf("response from create sealer: %+v", response)
+
+	if err != nil {
+		log.Printf("error unsealing vault %s", err.Error())
+	}
+
+	_, unsealresp, err := provide.UnsealVault(*token, map[string]interface{}{
+		"unsealerkey": "burst grief crime veteran picnic glance object bridge wagon width extra crew sphere pudding grape common slab sponsor shock into town say onion gossip",
+	})
+	response, _ = unsealresp.(map[string]interface{})
+	log.Printf("response from create sealer: %+v", response)
+
+	log.Printf("vault unsealed")
+}
 func TestAPICreateVault(t *testing.T) {
 	token, err := userTokenFactory()
 	if err != nil {
@@ -113,17 +138,17 @@ func TestAPICreateVault(t *testing.T) {
 		return
 	}
 
-	_, sealresp, err := provide.UnsealVault(*token, map[string]interface{}{
-		"unsealerkey": "53534144444f374f4c544849564a5146465950434c353645454a344856594134",
-	})
+	// _, sealresp, err := provide.UnsealVault(*token, map[string]interface{}{
+	// 	"unsealerkey": "0x53534144444f374f4c544849564a5146465950434c353645454a344856594134",
+	// })
 
-	//assert type to get something sensible from empty interface
-	response, _ := sealresp.(map[string]interface{})
-	t.Logf("response from unsealer: %+v", response)
+	// //assert type to get something sensible from empty interface
+	// response, _ := sealresp.(map[string]interface{})
+	// t.Logf("response from unsealer: %+v", response)
 
-	if err != nil {
-		t.Errorf("error unsealing vault %s", err.Error())
-	}
+	// if err != nil {
+	// 	t.Errorf("error unsealing vault %s", err.Error())
+	// }
 
 	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
 	if err != nil {

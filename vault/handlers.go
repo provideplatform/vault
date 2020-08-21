@@ -64,7 +64,8 @@ func createUnsealerKeyHandler(c *gin.Context) {
 
 // vaultSealHandler enables locking and unlocking the master key for all vaults
 func vaultSealHandler(c *gin.Context) {
-	//q: what elements are required in the token to enable the locking/ unlocking of the vault?
+	// TODO what elements are required in the token to enable the locking/ unlocking of the vault?
+	// currently, it's just a valid token from IDENT and a valid unsealer key
 	_ = token.InContext(c)
 
 	buf, err := c.GetRawData()
@@ -85,39 +86,17 @@ func vaultSealHandler(c *gin.Context) {
 		return
 	}
 
-	// if params.SealKey != nil {
-	// 	// we will lock the vault so it no longer operates
-	// 	// this is the default starting state of the vault
-	// 	// this doesn't make much sense (unless the locking is in itself
-	// 	// an encryption action, but it will do for the moment)
-	// 	// also better to wipe with random and then nil pointer
-	// 	// NOTE - this makes no sense is right
-	// 	// malicious sealing isn't something we want to deal with
-	// 	randomJunk := common.RandomString(32)
-	// 	*UnsealerKey = []byte(randomJunk)
-	// 	UnsealerKey = nil
-	// }
-
 	if params.UnsealerKey != nil {
-		// we will unlock the vault so it can perform key operations
-		// first take the unlock key from the parameters and hex decode it to []byte
+		// we will attempt to unlock the vault so it can perform key operations
+		unsealerKey := []byte(*params.UnsealerKey)
 
-		// we will assume for the moment that the master key (the infinity key! - brand pending)
-		// is an AES-256-GCM key's private key, hex encoded
-
-		unsealerKey, err := hex.DecodeString(*params.UnsealerKey)
-		if err != nil {
-			provide.RenderError("error decoding unsealing key from hex", 500, c)
-			return
-		}
-
-		// NOTE missing key to validate the key (compare it to the stored HASH of the key)
 		err = SetUnsealerKey(&unsealerKey)
 		if err != nil {
 			vaultErr := fmt.Sprintf("error unsealing vault - %s", err.Error())
 			provide.RenderError(vaultErr, 500, c)
 			return
 		}
+
 		provide.Render("vault unsealed", 201, c)
 	}
 }

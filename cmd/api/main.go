@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kthomas/go-pgputil"
 
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
@@ -33,7 +32,7 @@ var (
 
 func init() {
 	common.RequireJWTVerifiers()
-	pgputil.RequirePGP()
+	//pgputil.RequirePGP()  // no longer required with the use of the UnsealerKey
 	// common.RequireAPIAccounting()
 }
 

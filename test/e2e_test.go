@@ -114,19 +114,19 @@ func init() {
 		return
 	}
 
-	_, createresp, err := provide.GenerateSeal(*token, map[string]interface{}{})
-	//assert type to get something sensible from empty interface
-	response, _ := createresp.(map[string]interface{})
-	log.Printf("response from create sealer: %+v", response)
+	// _, createresp, err := provide.GenerateSeal(*token, map[string]interface{}{})
+	// //assert type to get something sensible from empty interface
+	// response, _ := createresp.(map[string]interface{})
+	// log.Printf("response from create sealer: %+v", response)
 
-	if err != nil {
-		log.Printf("error unsealing vault %s", err.Error())
-	}
+	// if err != nil {
+	// 	log.Printf("error unsealing vault %s", err.Error())
+	// }
 
 	_, unsealresp, err := provide.UnsealVault(*token, map[string]interface{}{
 		"unsealerkey": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
-	response, _ = unsealresp.(map[string]interface{})
+	response, _ := unsealresp.(map[string]interface{})
 	log.Printf("response from unseal vault: %+v", response)
 
 	log.Printf("vault unsealed")

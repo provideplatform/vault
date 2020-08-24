@@ -53,13 +53,16 @@ func SetUnsealerKey(passphrase string) error {
 	}
 
 	testy := os.Getenv("USK_VALIDATION_HASH")
-	if common.UnsealerKeyValidator == nil {
+	if common.UnsealerKeyValidator == "" {
 		return fmt.Errorf("here - no validation key available (again!) - should be %s", testy)
 	}
+
+	validator, _ := hex.DecodeString(common.UnsealerKeyValidator)
+
 	// validate the SHA256 hash against the validation hash
-	res := bytes.Compare(incomingKeyHash.Sum(nil), common.UnsealerKeyValidator[:])
+	res := bytes.Compare(incomingKeyHash.Sum(nil), validator[:])
 	if res != 0 {
-		return fmt.Errorf("error unsealing vault (400) expected %s, got %s (validator location %p)", string(common.UnsealerKeyValidator), string(incomingKeyHash.Sum(nil)), &common.UnsealerKeyValidator) //unsealer key provided doesn't match validator hash
+		return fmt.Errorf("error unsealing vault (400) expected %s, got %s (validator location %p)", common.UnsealerKeyValidator, string(incomingKeyHash.Sum(nil)), &common.UnsealerKeyValidator) //unsealer key provided doesn't match validator hash
 	}
 	if res == 0 {
 		common.Log.Debugf("valid vault unsealing key received")

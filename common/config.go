@@ -1,7 +1,6 @@
 package common
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -29,7 +28,7 @@ var (
 	ServeTLS bool
 
 	// UnsealerKeyValidator is the SHA256 validation hash for the Unsealer Key
-	UnsealerKeyValidator []byte
+	UnsealerKeyValidator string
 )
 
 func init() {
@@ -70,14 +69,14 @@ func requireLogger() {
 
 func requireSealerValidationHash() {
 	if os.Getenv("USK_VALIDATION_HASH") != "" {
-		var err error
-		UnsealerKeyValidator, err = hex.DecodeString(strings.Replace(os.Getenv("USK_VALIDATION_HASH"), "0x", "", -1))
-		if err != nil {
-			common.Log.Debugf("error decoding validation hash")
-			panic("error decoding validation hash")
-		}
+		//var err error
+		UnsealerKeyValidator = strings.Replace(os.Getenv("USK_VALIDATION_HASH"), "0x", "", -1)
+		// if err != nil {
+		// 	common.Log.Debugf("error decoding validation hash")
+		// 	panic("error decoding validation hash")
+		// }
+		common.Log.Debugf("vault ready for unsealing: val %s at location: %p", UnsealerKeyValidator, &UnsealerKeyValidator)
 	}
-	common.Log.Debugf("vault ready for unsealing: val %s at location: %p", string(UnsealerKeyValidator), &UnsealerKeyValidator)
 }
 
 func requireTLSConfiguration() {

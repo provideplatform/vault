@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"encoding/hex"
 	"fmt"
+	"os"
 
 	"github.com/provideapp/vault/common"
 	vaultcrypto "github.com/provideapp/vault/crypto"
@@ -28,38 +29,40 @@ var UnsealerKey []byte
 // CloakingKey will ensure Infinity Key is encrypted in memory until required
 var CloakingKey []byte
 
+// UnsealerKeyRequiredBytes is the required length of the UnsealerKey in bytes
+const UnsealerKeyRequiredBytes = 32
+
 // SetUnsealerKey sets the Unsealer Key
 // This is only possible with a SEALED vault
-func SetUnsealerKey(key *[]byte) error {
+func SetUnsealerKey(passphrase string) error {
 
-	if key == nil {
+	if passphrase == "" {
 		return fmt.Errorf("error unsealing vault (100)") //no unsealer key provided
 	}
 
 	// we can't unseal an unsealed application
 	if UnsealerKey != nil {
-		return fmt.Errorf("error unsealing vault (109)") //application already unsealed
+		return fmt.Errorf("error unsealing vault (200)") //application already unsealed
 	}
 
 	// get the SHA512 hash of the generated unsealerkey
-	incomingKeyHash := crypto.SHA512.New()
-	_, err := incomingKeyHash.Write(*key)
+	incomingKeyHash := crypto.SHA256.New()
+	_, err := incomingKeyHash.Write([]byte(passphrase))
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (200)") //error hashing incoming key
+		return fmt.Errorf("error unsealing vault (300)") //error hashing incoming key
 	}
-	//incomingKeyHashHex := hex.EncodeToString(incomingKeyHash.Sum(nil))
 
-	// TODO why is this always tripping...
-	// if common.UnsealerKeyValidator == nil {
-	// 	return fmt.Errorf("error unsealing vault (300)") //no unsealer validator set
-	// }
-
-	//check the unsealer key against the validation hash
-	if common.UnsealerKeyValidator != nil {
-		res := bytes.Compare(incomingKeyHash.Sum(nil), common.UnsealerKeyValidator[:])
-		if res != 0 {
-			return fmt.Errorf("error unsealing vault (400)") //unsealer key provided doesn't match validator hash
-		}
+	testy := os.Getenv("USK_VALIDATION_HASH")
+	if common.UnsealerKeyValidator == nil {
+		return fmt.Errorf("here - no validation key available (again!) - should be %s", testy)
+	}
+	// validate the SHA256 hash against the validation hash
+	res := bytes.Compare(incomingKeyHash.Sum(nil), common.UnsealerKeyValidator[:])
+	if res != 0 {
+		return fmt.Errorf("error unsealing vault (400) expected %s, got %s (validator location %p)", string(common.UnsealerKeyValidator), string(incomingKeyHash.Sum(nil)), &common.UnsealerKeyValidator) //unsealer key provided doesn't match validator hash
+	}
+	if res == 0 {
+		common.Log.Debugf("valid vault unsealing key received")
 	}
 
 	// set up a random cloaking key
@@ -71,25 +74,30 @@ func SetUnsealerKey(key *[]byte) error {
 	// set the cloaking key to this random key
 	CloakingKey = randomKey
 
-	// conver the cloaking key to an AES key to perform encryption
+	// convert the cloaking key to an AES key to perform encryption
 	cloakingKey := vaultcrypto.AES256GCM{}
 	cloakingKey.PrivateKey = &randomKey
 
-	// get the entropy from the seed phrase - we will use this as the AES encryption key for the vaults
-	unsealerKeySeed, err := vaultcrypto.GetEntropyFromMnemonic(string(*key))
+	// get the original 32-byte entropy from the seed phrase - we will use this as the AES encryption key for the vaults
+	unsealerKeySeed, err := vaultcrypto.GetEntropyFromMnemonic(passphrase)
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (550)")
+		return fmt.Errorf("error unsealing vault (600)") //error recovering entropy from BIP39 passphrase
 	}
 
-	common.Log.Debugf("unsealerKeySeed length: %d", len(unsealerKeySeed))
-	common.Log.Debugf("unsealerkeyseed %s", string(unsealerKeySeed))
-	common.Log.Debugf("mnemonic used %s", string(*key))
+	if len(unsealerKeySeed) != UnsealerKeyRequiredBytes {
+		return fmt.Errorf("error unsealing vault (700)") //error with entropy not being 32-bytes (required for AES encryption and required minimum for vault security)
+	}
+
 	// encrypt the unsealer key with the cloaking key
-	unsealerKey, err := cloakingKey.Encrypt(unsealerKeySeed[0:32], nil) //HACK YBACKY
+	unsealerKey, err := cloakingKey.Encrypt(unsealerKeySeed, nil)
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (600)") //error encrypting unsealer key with cloaking key
+		return fmt.Errorf("error unsealing vault (800)") //error encrypting unsealer key with cloaking key
 	}
 
+	// wipe the unsealerkeyseed in memory before garbage collection
+	unsealerKeySeed, _ = common.RandomBytes(32)
+
+	// set the vault unsealer key
 	UnsealerKey = unsealerKey
 	return nil
 }
@@ -130,7 +138,6 @@ func seal(unsealedKey *[]byte) (*[]byte, error) {
 		return nil, fmt.Errorf("error sealing vault %s", err.Error())
 	}
 
-	common.Log.Debugf("here sealing, sealerKey length: %d", len(*sealerKey.PrivateKey))
 	sealedKey, err := sealerKey.Encrypt(*unsealedKey, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error while sealing: %s", err.Error())
@@ -174,24 +181,18 @@ func CreateUnsealerKey() (*NewUnsealerKeyResponse, error) {
 	seedKey := newkey.Seed
 	seedPhrase := string(*seedKey)
 
-	// unsealerKey, err := vaultcrypto.CreateAES256GCMSeed()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// get the SHA512 hash of the generated unsealerkey
-	validationHash := crypto.SHA512.New()
+	// get the SHA256 hash of the generated unsealerkey
+	validationHash := crypto.SHA256.New()
 	_, err = validationHash.Write([]byte(*seedKey))
 	if err != nil {
 		return nil, err
 	}
 
-	response := NewUnsealerKeyResponse{}
-	//key := common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(unsealerKey)))
+	responseHash := common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(validationHash.Sum(nil))))
 
-	hash := common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(validationHash.Sum(nil))))
+	response := NewUnsealerKeyResponse{}
 	response.UnsealerKey = &seedPhrase
-	response.ValidationHash = hash
+	response.ValidationHash = responseHash
 
 	return &response, nil
 }

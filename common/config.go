@@ -28,7 +28,7 @@ var (
 	// ServeTLS is true when CertificatePath and PrivateKeyPath are valid
 	ServeTLS bool
 
-	// UnsealerKeyValidator is the validation hash for the Unsealer Key
+	// UnsealerKeyValidator is the SHA256 validation hash for the Unsealer Key
 	UnsealerKeyValidator []byte
 )
 
@@ -69,17 +69,15 @@ func requireLogger() {
 }
 
 func requireSealerValidationHash() {
-
-	//ensure the vault unsealer key is nil by default and we have the validation hash
-	//UnsealerKey = nil
-	validator := os.Getenv("USK_VALIDATION_HASH")
-	if validator != "" {
-		UnsealerKeyValidator, err := hex.DecodeString(strings.Replace(validator, "0x", "", -1))
+	if os.Getenv("USK_VALIDATION_HASH") != "" {
+		var err error
+		UnsealerKeyValidator, err = hex.DecodeString(strings.Replace(os.Getenv("USK_VALIDATION_HASH"), "0x", "", -1))
 		if err != nil {
-			// should put a panic here as the application shouldn't be capable of starting without a valid validation hash
+			common.Log.Debugf("error decoding validation hash")
+			panic("error decoding validation hash")
 		}
-		common.Log.Debugf("here - validation hash set to %s, address %p", string(UnsealerKeyValidator[:]), &UnsealerKeyValidator)
 	}
+	common.Log.Debugf("vault ready for unsealing: val %s at location: %p", string(UnsealerKeyValidator), &UnsealerKeyValidator)
 }
 
 func requireTLSConfiguration() {

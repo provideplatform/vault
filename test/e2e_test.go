@@ -124,10 +124,10 @@ func init() {
 	}
 
 	_, unsealresp, err := provide.UnsealVault(*token, map[string]interface{}{
-		"unsealerkey": "burst grief crime veteran picnic glance object bridge wagon width extra crew sphere pudding grape common slab sponsor shock into town say onion gossip",
+		"unsealerkey": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	response, _ = unsealresp.(map[string]interface{})
-	log.Printf("response from create sealer: %+v", response)
+	log.Printf("response from unseal vault: %+v", response)
 
 	log.Printf("vault unsealed")
 }

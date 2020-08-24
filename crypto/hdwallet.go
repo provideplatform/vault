@@ -125,7 +125,8 @@ func CreateHDWalletSeedPhrase() (*HDWallet, error) {
 
 // GetEntropyFromMnemonic is used by the mnemonic-based unsealer key
 func GetEntropyFromMnemonic(mnemonic string) ([]byte, error) {
-	entropy, err := hdwallet.NewSeedFromMnemonic(mnemonic)
+
+	entropy, err := bip39.EntropyFromMnemonic(mnemonic)
 	if err != nil {
 		return nil, err
 	}

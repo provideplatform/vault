@@ -87,10 +87,8 @@ func vaultSealHandler(c *gin.Context) {
 	}
 
 	if params.UnsealerKey != nil {
-		// we will attempt to unlock the vault so it can perform key operations
-		unsealerKey := []byte(*params.UnsealerKey)
 
-		err = SetUnsealerKey(&unsealerKey)
+		err = SetUnsealerKey(*params.UnsealerKey)
 		if err != nil {
 			vaultErr := fmt.Sprintf("error unsealing vault - %s", err.Error())
 			provide.RenderError(vaultErr, 500, c)

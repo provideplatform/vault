@@ -26,7 +26,6 @@ func main() {
 
 	common.Log.Warningf("here database name %s, from env %s", cfg.DatabaseName, os.Getenv("DATABASE_NAME"))
 	common.Log.Warningf("here super user: %s", os.Getenv("DATABASE_SUPERUSER"))
-	//common.Log.Warningf("here USK_VALIDATION_HASH: %s", os.Getenv("USK_VALIDATION_HASH"))
 	err := initIfNotExists(
 		cfg,
 		os.Getenv("DATABASE_SUPERUSER"),

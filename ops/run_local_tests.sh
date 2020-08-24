@@ -44,7 +44,7 @@ if [[ -z "${RACE}" ]]; then
 fi
 
 if [[ -z "${USK_VALIDATION_HASH}" ]]; then
-  USK_VALIDATION_HASH=0x0f4279a206b0bc6d70b97c654243af9dcaaeb87a8c04359289f8b484591ebe112724001a474a9a21f972e695103a185de3b829015ec337c0c43c5d01de260457
+  USK_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
 fi
 
 
@@ -232,8 +232,8 @@ xH2b0OBcVjYsgRnQ9OZpQ+kIPaFhaWChnfEArCmhrOEgOnhfkr6YGDHFenfT3/RA
 PUl1cxrvY7BHh4obNa6Bf8ECAwEAAQ==
 -----END PUBLIC KEY-----'
 
-#burst grief crime veteran picnic glance object bridge wagon width extra crew sphere pudding grape common slab sponsor shock into town say onion gossip
-USK_VALIDATION_HASH='0x0f4279a206b0bc6d70b97c654243af9dcaaeb87a8c04359289f8b484591ebe112724001a474a9a21f972e695103a185de3b829015ec337c0c43c5d01de260457'
+#traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
+USK_VALIDATION_HASH='0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309'
 
 pkgs=(test)
 for d in "${pkgs[@]}" ; do

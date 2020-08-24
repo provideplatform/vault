@@ -15,26 +15,15 @@ import (
 
 func init() {
 	if vault.UnsealerKey == nil {
-		common.Log.Debug("no unsealing key found, creating one")
-		// seal, err := vault.CreateUnsealerKey()
-		// if err != nil {
-		// 	common.Log.Debugf("error creating unsealing key %s", err.Error())
-		// }
-		// common.Log.Debugf("unsealerkey (hex) :%s", *seal.UnsealerKey)
-		// common.Log.Debugf("validationhash (hex): %s", *seal.ValidationHash)
+		common.Log.Debug("vault is sealed, unsealing vault")
 
-		// unsealerKey, err := hex.DecodeString(*seal.UnsealerKey)
-		// if err != nil {
-		// 	common.Log.Debug("error decoding unsealer key")
-		// }
+		unsealerKey := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
 
-		unsealerKey := []byte("burst grief crime veteran picnic glance object bridge wagon width extra crew sphere pudding grape common slab sponsor shock into town say onion gossip")
-
-		err := vault.SetUnsealerKey(&unsealerKey)
+		err := vault.SetUnsealerKey(unsealerKey)
 		if err != nil {
-			common.Log.Debugf("error creating unsealing key %s", err.Error())
+			common.Log.Debugf("error unsealing vault %s", err.Error())
 		} else {
-			common.Log.Debug("created unsealing key for vault...")
+			common.Log.Debug("successfully unsealed vault...")
 		}
 	}
 }

@@ -501,8 +501,20 @@ func vaultKeySignHandler(c *gin.Context) {
 	sighex := make([]byte, hex.EncodedLen(len(signature)))
 	hex.Encode(sighex, signature)
 
+	var address string
+	if key.Address != nil {
+		address = *key.Address
+	}
+
+	var path string
+	if key.DerivationPath != nil {
+		path = *key.DerivationPath
+	}
+
 	provide.Render(&KeySignVerifyRequestResponse{
-		Signature: common.StringOrNil(string(sighex)),
+		Signature:      common.StringOrNil(string(sighex)),
+		Address:        common.StringOrNil(address),
+		DerivationPath: common.StringOrNil(path),
 	}, 201, c)
 }
 

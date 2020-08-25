@@ -116,6 +116,7 @@ type Key struct {
 	EphemeralPrivateKey *[]byte `sql:"-" json:"private_key,omitempty"`
 	EphemeralSeed       *[]byte `sql:"-" json:"seed,omitempty"`
 	PublicKeyHex        *string `sql:"-" json:"public_key,omitempty"`
+	DerivationPath      *string `sql:"-" json:"path,omitempty"`
 
 	encrypted *bool      `sql:"-"`
 	mutex     sync.Mutex `sql:"-"`
@@ -146,10 +147,12 @@ type SigningOptions struct {
 // KeySignVerifyRequestResponse represents the API request/response parameters
 // needed to sign or verify an arbitrary message
 type KeySignVerifyRequestResponse struct {
-	Message   *string         `json:"message,omitempty"`
-	Options   *SigningOptions `json:"options,omitempty"`
-	Signature *string         `json:"signature,omitempty"`
-	Verified  *bool           `json:"verified,omitempty"`
+	Message        *string         `json:"message,omitempty"`
+	Options        *SigningOptions `json:"options,omitempty"`
+	Signature      *string         `json:"signature,omitempty"`
+	Verified       *bool           `json:"verified,omitempty"`
+	Address        *string         `json:"address,omitempty"`
+	DerivationPath *string         `json:"path,omitempty"`
 }
 
 // createAES256GCM creates a key using a random seed
@@ -852,7 +855,7 @@ func (k *Key) deriveSecp256k1KeyFromHDWallet(coin string, idx uint32) (*vaultcry
 		}
 		derivedKey, err := hdWallet.CreateKeyFromWallet(vaultcrypto.EthereumCoin, idx)
 		if err != nil {
-			return nil, fmt.Errorf("could not derive HD Wallet key (index: %s) for Ethereum using HD Wallet Master Key %s", string(idx), k.ID)
+			return nil, fmt.Errorf("could not derive HD Wallet key (index: %d) for Ethereum using HD Wallet Master Key %s", idx, k.ID)
 		}
 		return derivedKey, nil
 
@@ -1097,14 +1100,15 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; error generating derived key %s", len(payload), k.ID, err.Error())
 		}
 
+		k.Address = secp256k1derived.Address
+		k.DerivationPath = secp256k1derived.DerivationPath
+
 		k.mutex.Lock()
 		defer k.mutex.Unlock()
 
 		sig, sigerr = secp256k1derived.Sign(payload)
 		if sigerr == nil && opts == nil {
 			// update the db with the new iteration if no wallet options were set
-			// TODO better if this looks at HDWallet options in case other signing options are set in future
-
 			err := k.updateIteration(dbconf.DatabaseConnection())
 			if err != nil {
 				return nil, fmt.Errorf("error updating wallet iteration in database for key ID %s with error %s, key errors %+v", k.ID, err.Error(), k.Errors)

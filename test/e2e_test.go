@@ -134,16 +134,13 @@ func TestAPICreateKey(t *testing.T) {
 		return
 	}
 
-	status, keyresponse, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+	status, _, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
 		"type":        "asymmetric",
 		"usage":       "sign/verify",
 		"spec":        "secp256k1",
 		"name":        "integration test ethereum key",
 		"description": "organization eth/stablecoin wallet",
 	})
-
-	response, _ := keyresponse.(map[string]interface{})
-	t.Logf("got back following response from create 256k1 handler: %s", response)
 
 	if err != nil || status != 201 {
 		t.Errorf("failed to create key error: %s", err.Error())
@@ -197,9 +194,15 @@ func TestAPISign(t *testing.T) {
 		return
 	}
 
-	status, _, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), "hello world", nil)
-	if err != nil || status != 201 {
+	status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), "hello world", nil)
+	if err != nil {
 		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+	if status != 201 {
+		//assert type to get something sensible from empty interface
+		response, _ := sigresponse.(map[string]interface{})
+		t.Errorf("failed to sign message %+v", response)
 		return
 	}
 }
@@ -231,6 +234,20 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 	}
 	//assert type to get something sensible from empty interface
 	response, _ := sigresponse.(map[string]interface{})
+
+	//ensure we haven't returned a derivation path
+	if response["path"] != nil {
+		t.Logf("response: %+v", response)
+		t.Errorf("Derivation path present for non-derived key, path %s", response["path"])
+		return
+	}
+
+	//ensure we haven't returned an address
+	if response["address"] != nil {
+		t.Logf("response: %+v", response)
+		t.Errorf("address present for non-derived key, address %s", response["address"])
+		return
+	}
 
 	status, verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, response["signature"].(string), nil)
 	if err != nil || status != 201 {
@@ -554,16 +571,24 @@ func TestHDWalletAutoSign(t *testing.T) {
 	for iteration := 0; iteration < 10; iteration++ {
 		messageToSign := common.RandomString(1000)
 		status, sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
-		//assert type to get something sensible from empty interface
-		response, _ := sigresponse.(map[string]interface{})
-
 		if err != nil || status != 201 {
-			t.Errorf("got response: %s", response)
 			t.Errorf("failed to sign message %s", err.Error())
 			return
 		}
 		//assert type to get something sensible from empty interface
-		response, _ = sigresponse.(map[string]interface{})
+		response, _ := sigresponse.(map[string]interface{})
+
+		//ensure we have returned a derivation path
+		if response["path"] == nil {
+			t.Errorf("No derivation path returned for derived key sign operation")
+			return
+		}
+
+		//ensure we have returned an address
+		if response["address"] == nil {
+			t.Errorf("no address returned for derived key sign operation")
+			return
+		}
 
 		// set up the verification options
 		opts := map[string]interface{}{}

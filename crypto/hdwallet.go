@@ -80,6 +80,8 @@ func (w *HDWallet) CreateKeyFromWallet(coin string, index uint32) (*Secp256k1, e
 	secp256k1.Address = &address
 	secp256k1.PrivateKey = &privatekey
 	secp256k1.PublicKey = &publickey
+	secp256k1.DerivationPath = &pathstr
+
 	common.Log.Debugf("generated hd wallet %s key with public key %s", coin, hex.EncodeToString(publickey))
 	return &secp256k1, nil
 }

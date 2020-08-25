@@ -12,9 +12,10 @@ import (
 
 // Secp256k1 is the internal struct for an asymmetric keypair
 type Secp256k1 struct {
-	PrivateKey *[]byte
-	PublicKey  *[]byte //TODO: change to []byte for internal consistency
-	Address    *string
+	PrivateKey     *[]byte
+	PublicKey      *[]byte
+	Address        *string
+	DerivationPath *string //used for derived keys
 }
 
 // CreateSecp256k1KeyPair creates an secp256k1 keypair, including eth address

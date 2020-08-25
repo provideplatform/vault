@@ -421,7 +421,7 @@ func (k *Key) decryptFields() error {
 		common.Log.Tracef("decrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			// unseal the data with the infinity key
+			// unseal the data with the unsealer key
 			k.Seed, err = unseal(k.Seed)
 			if err != nil {
 				return err
@@ -429,7 +429,7 @@ func (k *Key) decryptFields() error {
 		}
 
 		if k.PrivateKey != nil {
-			// unseal the data with the infinity key
+			// unseal the data with the unsealer key
 			k.PrivateKey, err = unseal(k.PrivateKey)
 			if err != nil {
 				return err

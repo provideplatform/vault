@@ -14,6 +14,7 @@ import (
 )
 
 func init() {
+
 	if vault.UnsealerKey == nil {
 		common.Log.Debug("vault is sealed, unsealing vault")
 

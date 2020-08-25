@@ -69,13 +69,8 @@ func requireLogger() {
 
 func requireSealerValidationHash() {
 	if os.Getenv("USK_VALIDATION_HASH") != "" {
-		//var err error
 		UnsealerKeyValidator = strings.Replace(os.Getenv("USK_VALIDATION_HASH"), "0x", "", -1)
-		// if err != nil {
-		// 	common.Log.Debugf("error decoding validation hash")
-		// 	panic("error decoding validation hash")
-		// }
-		common.Log.Debugf("vault ready for unsealing: val %s at location: %p", UnsealerKeyValidator, &UnsealerKeyValidator)
+		common.Log.Debugf("vault validation hash set %s", UnsealerKeyValidator)
 	}
 }
 

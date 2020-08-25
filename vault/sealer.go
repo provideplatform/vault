@@ -5,7 +5,6 @@ import (
 	"crypto"
 	"encoding/hex"
 	"fmt"
-	"os"
 
 	"github.com/provideapp/vault/common"
 	vaultcrypto "github.com/provideapp/vault/crypto"
@@ -26,7 +25,7 @@ type NewUnsealerKeyResponse struct {
 // which are used to decrypt the private keys/seeds
 var UnsealerKey []byte
 
-// CloakingKey will ensure Infinity Key is encrypted in memory until required
+// CloakingKey will ensure Unsealer Key is encrypted in memory until required
 var CloakingKey []byte
 
 // UnsealerKeyRequiredBytes is the required length of the UnsealerKey in bytes
@@ -52,9 +51,8 @@ func SetUnsealerKey(passphrase string) error {
 		return fmt.Errorf("error unsealing vault (300)") //error hashing incoming key
 	}
 
-	testy := os.Getenv("USK_VALIDATION_HASH")
 	if common.UnsealerKeyValidator == "" {
-		return fmt.Errorf("here - no validation key available (again!) - should be %s", testy)
+		return fmt.Errorf("here - no validation key available")
 	}
 
 	validator, _ := hex.DecodeString(common.UnsealerKeyValidator)
@@ -115,9 +113,9 @@ func getUnsealerKey() (*[]byte, error) {
 	cloakingKey.PrivateKey = &CloakingKey
 
 	// decrypt the unsealer key with the cloaking key
-	encryptedInfinityKey := UnsealerKey
+	encryptedUnsealerKey := UnsealerKey
 
-	unsealerKey, err := cloakingKey.Decrypt(encryptedInfinityKey[NonceSizeSymmetric:], encryptedInfinityKey[0:NonceSizeSymmetric])
+	unsealerKey, err := cloakingKey.Decrypt(encryptedUnsealerKey[NonceSizeSymmetric:], encryptedUnsealerKey[0:NonceSizeSymmetric])
 	if err != nil {
 		return nil, fmt.Errorf("error unsealing vault (1200)") //could not decrypt unsealer key with cloaking key
 	}
@@ -149,7 +147,7 @@ func seal(unsealedKey *[]byte) (*[]byte, error) {
 	return &sealedKey, nil
 }
 
-// unseal decrypts the sealed material with the infinity key
+// unseal decrypts the sealed material with the unsealer key
 func unseal(sealedKey *[]byte) (*[]byte, error) {
 	if UnsealerKey == nil {
 		return nil, fmt.Errorf("vault is sealed")

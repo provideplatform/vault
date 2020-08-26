@@ -52,7 +52,7 @@ func SetUnsealerKey(passphrase string) error {
 	}
 
 	if common.UnsealerKeyValidator == "" {
-		return fmt.Errorf("here - no validation key available")
+		return fmt.Errorf("error unsealing vault (400)")
 	}
 
 	validator, _ := hex.DecodeString(common.UnsealerKeyValidator)
@@ -60,7 +60,7 @@ func SetUnsealerKey(passphrase string) error {
 	// validate the SHA256 hash against the validation hash
 	res := bytes.Compare(incomingKeyHash.Sum(nil), validator[:])
 	if res != 0 {
-		return fmt.Errorf("error unsealing vault (400) expected %s, got %s (validator location %p)", common.UnsealerKeyValidator, string(incomingKeyHash.Sum(nil)), &common.UnsealerKeyValidator) //unsealer key provided doesn't match validator hash
+		return fmt.Errorf("error unsealing vault (500)") //unsealer key provided doesn't match validator hash
 	}
 	if res == 0 {
 		common.Log.Debugf("valid vault unsealing key received")
@@ -69,7 +69,7 @@ func SetUnsealerKey(passphrase string) error {
 	// set up a random cloaking key
 	randomKey, err := vaultcrypto.CreateAES256GCMSeed()
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (500)") //error setting up cloaking key
+		return fmt.Errorf("error unsealing vault (600)") //error setting up cloaking key
 	}
 
 	// set the cloaking key to this random key
@@ -82,17 +82,17 @@ func SetUnsealerKey(passphrase string) error {
 	// get the original 32-byte entropy from the seed phrase - we will use this as the AES encryption key for the vaults
 	unsealerKeySeed, err := vaultcrypto.GetEntropyFromMnemonic(passphrase)
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (600)") //error recovering entropy from BIP39 passphrase
+		return fmt.Errorf("error unsealing vault (700)") //error recovering entropy from BIP39 passphrase
 	}
 
 	if len(unsealerKeySeed) != UnsealerKeyRequiredBytes {
-		return fmt.Errorf("error unsealing vault (700)") //error with entropy not being 32-bytes (required for AES encryption and required minimum for vault security)
+		return fmt.Errorf("error unsealing vault (800)") //error with entropy not being 32-bytes (required for AES encryption and required minimum for vault security)
 	}
 
 	// encrypt the unsealer key with the cloaking key
 	unsealerKey, err := cloakingKey.Encrypt(unsealerKeySeed, nil)
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (800)") //error encrypting unsealer key with cloaking key
+		return fmt.Errorf("error unsealing vault (900)") //error encrypting unsealer key with cloaking key
 	}
 
 	// wipe the unsealerkeyseed in memory before garbage collection
@@ -117,7 +117,7 @@ func getUnsealerKey() (*[]byte, error) {
 
 	unsealerKey, err := cloakingKey.Decrypt(encryptedUnsealerKey[NonceSizeSymmetric:], encryptedUnsealerKey[0:NonceSizeSymmetric])
 	if err != nil {
-		return nil, fmt.Errorf("error unsealing vault (1200)") //could not decrypt unsealer key with cloaking key
+		return nil, fmt.Errorf("error decrypting unsealer key %s", err.Error())
 	}
 
 	return &unsealerKey, nil

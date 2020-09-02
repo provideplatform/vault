@@ -56,3 +56,9 @@ test_local: build
 integration: build
 	./ops/run_local_dependencies.sh
 	./ops/run_integration_tests.sh
+
+run_debug:
+	./ops/run_debug.sh
+
+stop_debug:
+	./ops/stop_debug.sh

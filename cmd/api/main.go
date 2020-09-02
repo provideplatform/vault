@@ -32,8 +32,6 @@ var (
 
 func init() {
 	common.RequireJWTVerifiers()
-	//pgputil.RequirePGP()  // no longer required with the use of the UnsealerKey
-	// common.RequireAPIAccounting()
 }
 
 func main() {
@@ -90,6 +88,7 @@ func runAPI() {
 	r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
 	r.Use(provide.TrackAPICalls())
+	r.Use(vault.AuditLogMiddleware())
 
 	vault.InstallAPI(r)
 

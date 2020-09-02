@@ -1,4 +1,4 @@
-// +build secret
+// +build integration
 
 package test
 

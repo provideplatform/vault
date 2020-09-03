@@ -608,3 +608,187 @@ func TestHDWalletAutoSign(t *testing.T) {
 		}
 	}
 }
+
+func TestListKeys(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	// set how many keys we're going to generate
+	const numberOfKeys = 24
+	var inputKey [numberOfKeys + 1]map[string]interface{}
+	inputKey[0] = nil //ignoring the vault master key
+
+	for looper := 1; looper <= numberOfKeys; looper++ {
+		keyName := fmt.Sprintf("integration test ethereum key %d", looper)
+		status, response, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+			"type":        "asymmetric",
+			"usage":       "sign/verify",
+			"spec":        "secp256k1",
+			"name":        keyName,
+			"description": "organization eth/stablecoin wallet",
+		})
+
+		if err != nil {
+			t.Errorf("failed to create key. error %s", err.Error())
+		}
+		if status != 201 {
+			t.Errorf("failed to create key. expected 201 http status, got %d", status)
+		}
+		inputKey[looper] = response.(map[string]interface{})
+
+		if len(inputKey[looper]["address"].(string)) != 42 {
+			t.Errorf("invalid address length for key 01. expected 42, got %d", len(inputKey[looper]["address"].(string)))
+		}
+
+		//TODO other checks here
+
+	}
+	// status, response, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+	// 	"type":        "asymmetric",
+	// 	"usage":       "sign/verify",
+	// 	"spec":        "secp256k1",
+	// 	"name":        "integration test ethereum key",
+	// 	"description": "organization eth/stablecoin wallet",
+	// })
+
+	// if err != nil || status != 201 {
+	// 	t.Errorf("failed to create key error: %s", err.Error())
+	// 	return
+	// }
+
+	// key01 := response.(map[string]interface{})
+
+	// status, response, err = provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+	// 	"type":        "asymmetric",
+	// 	"usage":       "sign/verify",
+	// 	"spec":        "secp256k1",
+	// 	"name":        "integration test ethereum key 2",
+	// 	"description": "organization eth/stablecoin wallet",
+	// })
+
+	// if err != nil || status != 201 {
+	// 	t.Errorf("failed to create key error: %s", err.Error())
+	// 	return
+	// }
+
+	// key02 := response.(map[string]interface{})
+
+	status, listVaultKeysResponse, err := provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{})
+	if err != nil || status != 200 {
+		t.Errorf("failed to list keys for vault. Error: %s", err.Error())
+		return
+	}
+
+	t.Logf("status: %d", status)
+	//assert type to get something sensible from empty interface
+	listOfKeys := listVaultKeysResponse.([]interface{})
+
+	if len(listOfKeys) != numberOfKeys+1 {
+		t.Errorf("invalid number of keys returned")
+		return
+	}
+
+	var outputKey [numberOfKeys + 1]map[string]interface{}
+	for looper := 0; looper <= numberOfKeys; looper++ {
+		outputKey[looper] = listOfKeys[looper].(map[string]interface{})
+
+		if looper > 0 {
+			if inputKey[looper]["address"] != outputKey[looper]["address"] {
+				t.Errorf("address mismatch. expected %s, got %s", inputKey[looper]["address"], outputKey[looper]["address"])
+			}
+
+			if inputKey[looper]["description"] != outputKey[looper]["description"] {
+				t.Errorf("description mismatch. expected %s, got %s", inputKey[looper]["description"], outputKey[looper]["description"])
+			}
+
+			if inputKey[looper]["id"] != outputKey[looper]["id"] {
+				t.Errorf("id mismatch. expected %s, got %s", inputKey[looper]["id"], outputKey[looper]["id"])
+			}
+
+			if inputKey[looper]["name"] != outputKey[looper]["name"] {
+				t.Errorf("name mismatch. expected %s, got %s", inputKey[looper]["name"], outputKey[looper]["name"])
+			}
+
+			if inputKey[looper]["spec"] != outputKey[looper]["spec"] {
+				t.Errorf("spec mismatch. expected %s, got %s", inputKey[looper]["spec"], outputKey[looper]["spec"])
+			}
+
+			if inputKey[looper]["type"] != outputKey[looper]["type"] {
+				t.Errorf("type mismatch. expected %s, got %s", inputKey[looper]["type"], outputKey[looper]["type"])
+			}
+
+			if inputKey[looper]["usage"] != outputKey[looper]["usage"] {
+				t.Errorf("usage mismatch. expected %s, got %s", inputKey[looper]["usage"], outputKey[looper]["usage"])
+			}
+
+			if inputKey[looper]["vault_id"] != outputKey[looper]["vault_id"] {
+				t.Errorf("vault_id mismatch. expected %s, got %s", inputKey[looper]["vault_id"], outputKey[looper]["vault_id"])
+			}
+
+			if inputKey[looper]["public_key"] != outputKey[looper]["public_key"] {
+				t.Errorf("public_key mismatch. expected %s, got %s", inputKey[looper]["public_key"], outputKey[looper]["public_key"])
+			}
+
+			t.Logf("key %d of %d validated", looper, numberOfKeys)
+		}
+	}
+
+	// // skip over the vault master key and grab the stored secp256k1 keys
+	// // note: this relies on postgres default ordering of date updated
+	// firstKey := listOfKeys[1].(map[string]interface{})
+	// secondKey := listOfKeys[2].(map[string]interface{})
+
+	// if key01["address"] != firstKey["address"] {
+	// 	t.Errorf("address mismatch, expected %s, got %s", key01["address"], firstKey["address"])
+	// 	return
+	// }
+
+	// if key01["description"] != firstKey["description"] {
+	// 	t.Errorf("description mismatch, expected %s, got %s", key01["description"], firstKey["description"])
+	// 	return
+	// }
+
+	// if key01["id"] != firstKey["id"] {
+	// 	t.Errorf("id mismatch, expected %s, got %s", key01["id"], firstKey["id"])
+	// 	return
+	// }
+
+	// if key01["name"] != firstKey["name"] {
+	// 	t.Errorf("name mismatch, expected %s, got %s", key01["name"], firstKey["name"])
+	// 	return
+	// }
+
+	// if key01["public_key"] != firstKey["public_key"] {
+	// 	t.Errorf("public_key mismatch, expected %s, got %s", key01["public_key"], firstKey["public_key"])
+	// 	return
+	// }
+
+	// if key01["spec"] != firstKey["spec"] {
+	// 	t.Errorf("spec mismatch, expected %s, got %s", key01["spec"], firstKey["spec"])
+	// 	return
+	// }
+
+	// if key01["type"] != firstKey["type"] {
+	// 	t.Errorf("type mismatch, expected %s, got %s", key01["type"], firstKey["type"])
+	// 	return
+	// }
+
+	// if key01["usage"] != firstKey["usage"] {
+	// 	t.Errorf("usage mismatch, expected %s, got %s", key01["usage"], firstKey["usage"])
+	// 	return
+	// }
+
+	// if key01["vault_id"] != firstKey["vault_id"] {
+	// 	t.Errorf("vault_id mismatch, expected %s, got %s", key01["vault_id"], firstKey["vault_id"])
+	// 	return
+	// }
+}

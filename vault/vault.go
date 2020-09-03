@@ -194,11 +194,11 @@ func GetVaults(applicationID, organizationID, userID *uuid.UUID) []*Vault {
 
 	db := dbconf.DatabaseConnection()
 	if applicationID != nil && *applicationID != uuid.Nil {
-		query = db.Where("application_id = ?", applicationID)
+		query = db.Where("vaults.application_id = ?", applicationID)
 	} else if organizationID != nil && *organizationID != uuid.Nil {
-		query = db.Where("organization_id = ?", organizationID)
+		query = db.Where("vaults.organization_id = ?", organizationID)
 	} else if userID != nil && *userID != uuid.Nil {
-		query = db.Where("user_id = ?", userID)
+		query = db.Where("vaults.user_id = ?", userID)
 	}
 	query.Find(&vaults)
 

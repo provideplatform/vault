@@ -196,3 +196,37 @@ func TestSecretDeleteNilSecretID(t *testing.T) {
 		return
 	}
 }
+
+func TestGetVaultSecret(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for secret store unit test!")
+		return
+	}
+
+	secretText := common.RandomString(32)
+	t.Logf("generated secret %s", secretText)
+	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "secret name", "secret type", "secret description 123456")
+	if secret == nil {
+		t.Errorf("failed to create secret for vault: %s", vlt.ID)
+		return
+	}
+
+	storedSecret := vault.GetVaultSecret(secret.ID.String(), vlt.ID.String(), vlt.ApplicationID, vlt.OrganizationID, vlt.UserID)
+	if storedSecret == nil {
+		t.Errorf("error retrieving secret - secret not found")
+	}
+
+	decryptedSecret, err := storedSecret.Retrieve()
+	if err != nil {
+		t.Errorf("error retrieving secret %s", err.Error())
+		return
+	}
+
+	if *decryptedSecret.DecryptedData != secretText {
+		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *storedSecret.DecryptedData)
+		return
+	}
+
+	t.Logf("got expected secret back")
+}

@@ -323,3 +323,48 @@ func TestGetVault(t *testing.T) {
 		return
 	}
 }
+
+//TODO refactor vault factory to accept inputs
+func TestGetAllOrgVaults(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for eth hd wallet create unit test!")
+		return
+	}
+
+	vault01ID := vlt.ID
+	t.Logf("vault 1 id %s", vault01ID)
+
+	// vlt = vaultFactory()
+	// if vlt.ID == uuid.Nil {
+	// 	t.Error("failed! no vault created for eth hd wallet create unit test!")
+	// 	return
+	// }
+
+	// vault02ID := vlt.ID
+	// t.Logf("vault 2 id %s", vault02ID)
+
+	organizationId := vlt.OrganizationID
+
+	orgVaults := vault.GetVaults(nil, organizationId, nil)
+	if orgVaults == nil {
+		t.Error("failed to retrieve organisation vaults")
+		return
+	}
+
+	// t.Logf("number of org vaults returned: %d", len(orgVaults))
+	// t.Logf("vault 1 id returned %s", orgVaults[0].ID)
+	// t.Logf("vault 2 id returned %s", orgVaults[1].ID)
+	retVault01 := orgVaults[0]
+	if retVault01.ID != vault01ID {
+		t.Errorf("incorrect vault 1 returned, expected vault ID %s, got vault ID %s", vault01ID, retVault01.ID)
+		return
+	}
+
+	// retVault02 := orgVaults[1]
+	// if retVault02.ID != vault02ID {
+	// 	t.Errorf("incorrect vault 2 returned, expected vault ID %s, got vault ID %s", vault02ID, retVault02.ID)
+	// 	return
+	// }
+
+}

@@ -695,9 +695,11 @@ func TestListKeys(t *testing.T) {
 	}
 
 	status, listVaultKeysResponse, err := provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{})
-	if err != nil || status != 200 {
-		t.Errorf("failed to list keys for vault. Error: %s", err.Error())
-		return
+	if err != nil {
+		t.Errorf("failed to list keys. error %s", err.Error())
+	}
+	if status != 200 {
+		t.Errorf("failed to list keys. expected 200 http status, got %d", status)
 	}
 
 	//assert type to get something sensible from empty interface

@@ -33,7 +33,7 @@ func TestSecretStore(t *testing.T) {
 	}
 }
 
-func TestSecretStoreAndRetrieve(t *testing.T) {
+func TestSecretStoreAndResponse(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {
 		t.Error("failed! no vault created for secret store unit test!")
@@ -51,13 +51,13 @@ func TestSecretStoreAndRetrieve(t *testing.T) {
 	//next we will list the secrets for the vault, select our secret and retrieve the text
 	storedSecret := &vault.Secret{}
 	vlt.ListSecretsQuery(secretDB).Where("secrets.id=?", secret.ID).Find(&storedSecret)
-	_, err := storedSecret.Retrieve()
+	secretResp, err := storedSecret.AsResponse()
 	if err != nil {
 		t.Errorf("error retrieving secret %s", err.Error())
 	}
 
-	if *storedSecret.DecryptedData != secretText {
-		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *storedSecret.DecryptedData)
+	if *secretResp.Value != secretText {
+		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *storedSecret.Value)
 		return
 	}
 	t.Logf("got expected secret back")
@@ -166,7 +166,7 @@ func TestSecretDelete(t *testing.T) {
 	deletedSecret := &vault.Secret{}
 	vlt.ListSecretsQuery(secretDB).Where("secrets.id=?", secret.ID).Find(&deletedSecret)
 
-	_, err := deletedSecret.Retrieve()
+	_, err := deletedSecret.AsResponse()
 	if err == nil {
 		t.Errorf("no error retrieving deleted secret")
 		return
@@ -217,14 +217,14 @@ func TestGetVaultSecret(t *testing.T) {
 		t.Errorf("error retrieving secret - secret not found")
 	}
 
-	decryptedSecret, err := storedSecret.Retrieve()
+	decryptedSecret, err := storedSecret.AsResponse()
 	if err != nil {
 		t.Errorf("error retrieving secret %s", err.Error())
 		return
 	}
 
-	if *decryptedSecret.DecryptedData != secretText {
-		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *storedSecret.DecryptedData)
+	if *decryptedSecret.Value != secretText {
+		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *storedSecret.Value)
 		return
 	}
 

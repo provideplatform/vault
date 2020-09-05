@@ -73,13 +73,12 @@ func NewEphemeralKey(
 
 // SecretFactory ....
 func SecretFactory(db *gorm.DB, vaultID *uuid.UUID, secretcontents []byte, name, secretType, description string) *Secret {
-
 	secret := &Secret{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
 		Type:        common.StringOrNil(secretType),
-		Data:        &secretcontents,
+		Value:       &secretcontents,
 	}
 
 	err := secret.Store()
@@ -223,7 +222,6 @@ func Secp256k1Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string)
 
 // EthHDWalletFactory secp256k1 HD wallet for deriving ETH keys/addresses
 func EthHDWalletFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
-
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),

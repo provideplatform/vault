@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
@@ -15,23 +16,36 @@ import (
 // Secret represents a secret encrypted by the vault's master key
 type Secret struct {
 	provide.Model
-	VaultID       *uuid.UUID `sql:"not null;type:uuid" json:"vault_id"`
-	Type          *string    `sql:"not null" json:"type"` // arbitrary secret type
-	Name          *string    `sql:"not null" json:"name"`
-	Description   *string    `json:"description"`
-	Data          *[]byte    `sql:"type:bytea" json:"secret,omitempty"`
-	DecryptedData *string    `sql:"-" json:"rawsecret,omitempty"`
-	encrypted     *bool      `sql:"-"`
-	mutex         sync.Mutex `sql:"-"`
-	vault         *Vault     `sql:"-"` // vault cache
+	VaultID        *uuid.UUID `sql:"not null;type:uuid" json:"vault_id"`
+	Type           *string    `sql:"not null" json:"type"` // arbitrary secret type
+	Name           *string    `sql:"not null" json:"name"`
+	Description    *string    `json:"description"`
+	Value          *[]byte    `sql:"type:bytea" json:"value,omitempty"`
+	DecryptedValue *string    `sql:"-" json:"-"`
+	encrypted      *bool      `sql:"-"`
+	mutex          sync.Mutex `sql:"-"`
+	vault          *Vault     `sql:"-"` // vault cache
+}
+
+// SecretResponse represents a secret response which has the decrypted value
+type SecretResponse struct {
+	ID        uuid.UUID        `json:"id"`
+	CreatedAt time.Time        `json:"created_at"`
+	Errors    []*provide.Error `json:"-"`
+
+	VaultID     *uuid.UUID `json:"vault_id"`
+	Type        *string    `json:"type"`
+	Name        *string    `json:"name"`
+	Description *string    `json:"description"`
+	Value       *string    `json:"value"`
 }
 
 // SecretStoreRequest is the struct containing the secret data for storing in the db
 type SecretStoreRequest struct {
-	Data        *string `json:"secret,omitempty"`
-	Name        *string `json:"name,omitempty"`
 	Type        *string `json:"type,omitempty"`
+	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
+	Value       *string `json:"value,omitempty"`
 }
 
 // MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored
@@ -53,13 +67,13 @@ func (s *Secret) Validate() bool {
 		})
 	}
 
-	if s.Data == nil || len(*s.Data) == 0 {
+	if s.Value == nil || len(*s.Value) == 0 {
 		s.Errors = append(s.Errors, &provide.Error{
 			Message: common.StringOrNil("secret data required"),
 		})
 	}
 
-	if len(*s.Data) > MaxSecretLengthInBytes {
+	if len(*s.Value) > MaxSecretLengthInBytes {
 		s.Errors = append(s.Errors, &provide.Error{
 			Message: common.StringOrNil("secret data too long"),
 		})
@@ -70,7 +84,6 @@ func (s *Secret) Validate() bool {
 
 // Store saves a secret encrypted (with the vault master key) in the database
 func (s *Secret) Store() error {
-
 	if !s.Validate() {
 		return fmt.Errorf("invalid secret: name, type and data (<%d-bytes) required", MaxSecretLengthInBytes)
 	}
@@ -87,14 +100,13 @@ func (s *Secret) Store() error {
 	success := s.save(db)
 	if success {
 		common.Log.Debugf("saved secret to db with id: %s", s.ID.String())
-		s.Data = nil
+		s.Value = nil
 	}
 	return nil
 }
 
-// Retrieve saves a secret encrypted (with the vault master key) in the database
-func (s *Secret) Retrieve() (*Secret, error) {
-
+// AsResponse returns a Secret, with its value decrypted using the vault master key
+func (s *Secret) AsResponse() (*SecretResponse, error) {
 	if s.encrypted == nil || *s.encrypted {
 		err := s.decryptFields()
 		if err != nil {
@@ -102,12 +114,19 @@ func (s *Secret) Retrieve() (*Secret, error) {
 		}
 	}
 
-	decryptedSecretData := *s.Data
-	decryptedSecretAsString := string(decryptedSecretData[:])
+	decryptedValue := *s.Value
+	decryptedValueAsString := string(decryptedValue[:])
+	s.Value = nil
 
-	s.DecryptedData = &decryptedSecretAsString
-	s.Data = nil
-	return s, nil
+	return &SecretResponse{
+		ID:          s.ID,
+		CreatedAt:   s.CreatedAt,
+		VaultID:     s.VaultID,
+		Type:        s.Type,
+		Name:        s.Name,
+		Description: s.Description,
+		Value:       &decryptedValueAsString,
+	}, nil
 }
 
 // Delete removes a secret from the database
@@ -242,12 +261,12 @@ func (s *Secret) encryptFields() error {
 		masterKey.decryptFields()
 		defer masterKey.encryptFields()
 
-		if s.Data != nil {
-			encryptedSecret, err := masterKey.Encrypt(*s.Data, nil)
+		if s.Value != nil {
+			encryptedSecret, err := masterKey.Encrypt(*s.Value, nil)
 			if err != nil {
 				return err
 			}
-			s.Data = &encryptedSecret
+			s.Value = &encryptedSecret
 		}
 	}
 
@@ -271,24 +290,24 @@ func (s *Secret) decryptFields() error {
 	if err != nil {
 		common.Log.Tracef("decrypting master key fields for vault: %s", s.VaultID)
 
-		if s.Data != nil {
-			decryptedData, err := pgputil.PGPPubDecrypt([]byte(*s.Data))
+		if s.Value != nil {
+			decryptedData, err := pgputil.PGPPubDecrypt([]byte(*s.Value))
 			if err != nil {
 				return err
 			}
-			s.Data = &decryptedData
+			s.Value = &decryptedData
 		}
 	} else {
 		common.Log.Tracef("decrypting secret fields with master key %s for vault: %s", masterKey.ID, s.VaultID)
 
 		masterKey.decryptFields()
 		defer masterKey.encryptFields()
-		if s.Data != nil {
-			decryptedData, err := masterKey.Decrypt(*s.Data)
+		if s.Value != nil {
+			decryptedData, err := masterKey.Decrypt(*s.Value)
 			if err != nil {
 				return err
 			}
-			s.Data = &decryptedData
+			s.Value = &decryptedData
 		}
 	}
 

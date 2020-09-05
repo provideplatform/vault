@@ -207,7 +207,6 @@ func GetVaults(applicationID, organizationID, userID *uuid.UUID) []*Vault {
 
 // GetVault returns a vault for the specified parameters
 func GetVault(vaultID string, applicationID, organizationID, userID *uuid.UUID) *Vault {
-
 	// Set up the database connection
 	db := dbconf.DatabaseConnection()
 	var query *gorm.DB
@@ -229,7 +228,6 @@ func GetVault(vaultID string, applicationID, organizationID, userID *uuid.UUID) 
 
 // GetVaultKey returns a vault key for the specified parameters
 func GetVaultKey(keyID, vaultID string, applicationID, organizationID, userID *uuid.UUID) *Key {
-
 	// Set up the database connection
 	db := dbconf.DatabaseConnection()
 	var query *gorm.DB
@@ -253,7 +251,6 @@ func GetVaultKey(keyID, vaultID string, applicationID, organizationID, userID *u
 
 // GetVaultSecret returns a vault secret for the specified parameters
 func GetVaultSecret(secretID, vaultID string, applicationID, organizationID, userID *uuid.UUID) *Secret {
-
 	// Set up the database connection
 	db := dbconf.DatabaseConnection()
 	var query *gorm.DB

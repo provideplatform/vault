@@ -1,0 +1,1 @@
+ALTER TABLE ONLY secrets RENAME COLUMN value TO data;

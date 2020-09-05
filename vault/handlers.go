@@ -157,7 +157,7 @@ func vaultSecretRetrieveHandler(c *gin.Context) {
 		return
 	}
 
-	decryptedSecret, err := secret.Retrieve()
+	decryptedSecret, err := secret.AsResponse()
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)
 		return
@@ -188,8 +188,8 @@ func vaultSecretStoreHandler(c *gin.Context) {
 	secret.Name = common.StringOrNil(*params.Name)
 	secret.Description = common.StringOrNil(*params.Description)
 	secret.Type = common.StringOrNil(*params.Type)
-	secretAsBytes := []byte(*params.Data)
-	secret.Data = &secretAsBytes
+	valueAsBytes := []byte(*params.Value)
+	secret.Value = &valueAsBytes
 
 	if !secret.Validate() {
 		provide.RenderError("invalid secret parameters", 422, c)
@@ -387,8 +387,14 @@ func vaultKeysListHandler(c *gin.Context) {
 		return
 	}
 
+	// FIXME-- this is not covered by any test
+	keysQuery := vault.ListKeysQuery(db)
+	if c.Query("type") != "" {
+		keysQuery = keysQuery.Where("keys.type = ?", c.Query("type"))
+	}
+
 	var keys []*Key
-	provide.Paginate(c, vault.ListKeysQuery(db), &Key{}).Find(&keys)
+	provide.Paginate(c, keysQuery, &Key{}).Find(&keys)
 	for _, key := range keys {
 		key.Enrich()
 	}
@@ -578,7 +584,7 @@ func vaultSecretsListHandler(c *gin.Context) {
 	provide.Paginate(c, vault.ListSecretsQuery(db), &Secret{}).Find(&secrets)
 	for _, secret := range secrets {
 		//remove the encrypted secret from the output
-		secret.Data = nil
+		secret.Value = nil
 	}
 	provide.Render(secrets, 200, c)
 }

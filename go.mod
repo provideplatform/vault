@@ -3,7 +3,6 @@ module github.com/provideapp/vault
 go 1.13
 
 require (
-	github.com/OneOfOne/xxhash v1.2.5 // indirect
 	github.com/ethereum/go-ethereum v1.9.19
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang-migrate/migrate v3.5.4+incompatible

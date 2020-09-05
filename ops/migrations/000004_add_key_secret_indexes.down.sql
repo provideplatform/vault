@@ -1,6 +1,5 @@
 DROP INDEX idx_keys_iteration;
 DROP INDEX idx_keys_spec;
-DROP INDEX idx_keys_type;
 DROP INDEX idx_keys_usage;
 DROP INDEX idx_secrets_type;
 

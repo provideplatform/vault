@@ -530,6 +530,11 @@ func createVaultSecretHandler(c *gin.Context) {
 		return
 	}
 
+	if secret.VaultID != nil {
+		provide.RenderError("vault_id cannot be set explicitly", 422, c)
+		return
+	}
+
 	db := dbconf.DatabaseConnection() // FIXME-- pass this in to GetVault
 
 	var vault = &Vault{}

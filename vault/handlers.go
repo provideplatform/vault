@@ -290,6 +290,7 @@ func vaultKeysListHandler(c *gin.Context) {
 	if c.Query("type") != "" {
 		keysQuery = keysQuery.Where("keys.type = ?", c.Query("type"))
 	}
+	keysQuery = keysQuery.Order("keys.created_at ASC")
 
 	var keys []*Key
 	provide.Paginate(c, keysQuery, &Key{}).Find(&keys)
@@ -484,6 +485,7 @@ func vaultSecretsListHandler(c *gin.Context) {
 	if c.Query("type") != "" {
 		secretsQuery = secretsQuery.Where("secrets.type = ?", c.Query("type"))
 	}
+	secretsQuery = secretsQuery.Order("secrets.created_at ASC")
 
 	var secrets []*Secret
 	provide.Paginate(c, secretsQuery, &Secret{}).Find(&secrets)

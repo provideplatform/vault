@@ -81,8 +81,7 @@ func SecretFactory(db *gorm.DB, vaultID *uuid.UUID, secretcontents []byte, name,
 		Value:       &secretcontents,
 	}
 
-	err := secret.Store()
-	if err != nil {
+	if !secret.Create(db) {
 		return nil
 	}
 

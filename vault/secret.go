@@ -13,6 +13,9 @@ import (
 	provide "github.com/provideservices/provide-go"
 )
 
+// MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored
+const MaxSecretLengthInBytes = 4096
+
 // Secret represents a secret encrypted by the vault's master key
 type Secret struct {
 	provide.Model
@@ -20,8 +23,8 @@ type Secret struct {
 	Type           *string    `sql:"not null" json:"type"` // arbitrary secret type
 	Name           *string    `sql:"not null" json:"name"`
 	Description    *string    `json:"description"`
-	Value          *[]byte    `sql:"type:bytea" json:"value,omitempty"`
-	DecryptedValue *string    `sql:"-" json:"-"`
+	Value          *[]byte    `sql:"type:bytea" json:"-"`
+	DecryptedValue *string    `sql:"-" json:"value,omitempty"`
 	encrypted      *bool      `sql:"-"`
 	mutex          sync.Mutex `sql:"-"`
 	vault          *Vault     `sql:"-"` // vault cache
@@ -40,69 +43,79 @@ type SecretResponse struct {
 	Value       *string    `json:"value"`
 }
 
-// SecretStoreRequest is the struct containing the secret data for storing in the db
-type SecretStoreRequest struct {
-	Type        *string `json:"type,omitempty"`
-	Name        *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
-	Value       *string `json:"value,omitempty"`
-}
-
-// MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored
-const MaxSecretLengthInBytes = 4096
-
 // Validate ensures that all required fields are present
-func (s *Secret) Validate() bool {
+func (s *Secret) validate() bool {
 	s.Errors = make([]*provide.Error, 0)
 
 	if s.Name == nil || common.StringOrNil(*s.Name) == nil {
 		s.Errors = append(s.Errors, &provide.Error{
-			Message: common.StringOrNil("secret name required"),
+			Message: common.StringOrNil("name required"),
 		})
 	}
 
 	if s.Type == nil || common.StringOrNil(*s.Type) == nil {
 		s.Errors = append(s.Errors, &provide.Error{
-			Message: common.StringOrNil("secret type required"),
+			Message: common.StringOrNil("type required"),
 		})
 	}
 
-	if s.Value == nil || len(*s.Value) == 0 {
+	if s.DecryptedValue == nil || len(*s.DecryptedValue) == 0 {
 		s.Errors = append(s.Errors, &provide.Error{
-			Message: common.StringOrNil("secret data required"),
+			Message: common.StringOrNil("value required"),
 		})
 	}
 
-	if len(*s.Value) > MaxSecretLengthInBytes {
+	if len(*s.DecryptedValue) > MaxSecretLengthInBytes {
 		s.Errors = append(s.Errors, &provide.Error{
-			Message: common.StringOrNil("secret data too long"),
+			Message: common.StringOrNil("value too long"),
 		})
 	}
 
 	return len(s.Errors) == 0
 }
 
-// Store saves a secret encrypted (with the vault master key) in the database
-func (s *Secret) Store() error {
-	if !s.Validate() {
-		return fmt.Errorf("invalid secret: name, type and data (<%d-bytes) required", MaxSecretLengthInBytes)
+// Create encrypts (i.e., with the vault master key) and stores the secret in the database
+func (s *Secret) Create(db *gorm.DB) bool {
+	if !s.validate() {
+		return false
 	}
 
-	db := dbconf.DatabaseConnection()
+	valueAsBytes := []byte(*s.DecryptedValue)
+	s.Value = &valueAsBytes
+	s.DecryptedValue = nil
 
-	if s.encrypted == nil || !*s.encrypted {
+	if s.encrypted == nil || !(*s.encrypted) {
 		err := s.encryptFields()
 		if err != nil {
-			return fmt.Errorf("failed to encrypt key material; %s", err.Error())
+			s.Errors = append(s.Errors, &provide.Error{
+				Message: common.StringOrNil(fmt.Sprintf("failed to encrypt key material; %s", err.Error())),
+			})
+			return false
 		}
 	}
 
-	success := s.save(db)
-	if success {
-		common.Log.Debugf("saved secret to db with id: %s", s.ID.String())
-		s.Value = nil
+	if db.NewRecord(s) {
+		result := db.Create(&s)
+		rowsAffected := result.RowsAffected
+		errors := result.GetErrors()
+		if len(errors) > 0 {
+			for _, err := range errors {
+				s.Errors = append(s.Errors, &provide.Error{
+					Message: common.StringOrNil(err.Error()),
+				})
+			}
+		}
+		if !db.NewRecord(s) {
+			success := rowsAffected > 0
+			if success {
+				common.Log.Debugf("saved secret to db with id: %s", s.ID.String())
+				s.Value = nil
+			}
+			return success
+		}
 	}
-	return nil
+
+	return false
 }
 
 // AsResponse returns a Secret, with its value decrypted using the vault master key
@@ -139,7 +152,6 @@ func (s *Secret) Delete(db *gorm.DB) bool {
 	result := db.Delete(&s)
 	errors := result.GetErrors()
 	if len(errors) > 0 {
-		common.Log.Debug("got errors...")
 		for _, err := range errors {
 			s.Errors = append(s.Errors, &provide.Error{
 				Message: common.StringOrNil(err.Error()),
@@ -148,32 +160,6 @@ func (s *Secret) Delete(db *gorm.DB) bool {
 	}
 	success := len(s.Errors) == 0
 	return success
-}
-
-// Create and persist a secret
-func (s *Secret) save(db *gorm.DB) bool {
-
-	if db.NewRecord(s) {
-		result := db.Create(&s)
-		rowsAffected := result.RowsAffected
-		errors := result.GetErrors()
-		if len(errors) > 0 {
-			for _, err := range errors {
-				s.Errors = append(s.Errors, &provide.Error{
-					Message: common.StringOrNil(err.Error()),
-				})
-			}
-		}
-		if !db.NewRecord(s) {
-			success := rowsAffected > 0
-			if success {
-				common.Log.Debugf("created secret %s (%s) in vault %s", *s.Name, s.ID.String(), s.VaultID.String())
-				return success
-			}
-		}
-	}
-
-	return false
 }
 
 // TODO refactor this so the code isn't repeated across secrets and keys

@@ -24,28 +24,16 @@ func InstallAPI(r *gin.Engine) {
 
 	r.GET("/api/v1/vaults/:id/keys", vaultKeysListHandler)
 	r.POST("/api/v1/vaults/:id/keys", createVaultKeyHandler)
-	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/sign", vaultKeySignHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/verify", vaultKeyVerifyHandler)
-
-	// encrypts the provided data with the specified key
 	r.POST("/api/v1/vaults/:id/keys/:keyId/encrypt", vaultKeyEncryptHandler)
-
-	// decrypts the provided data with the specified key
 	r.POST("/api/v1/vaults/:id/keys/:keyId/decrypt", vaultKeyDecryptHandler)
+	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
 
-	// lists the secrets stored in the vault
 	r.GET("/api/v1/vaults/:id/secrets", vaultSecretsListHandler)
-
-	// retrieves the decrypted secret from the vault
-	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretRetrieveHandler)
-
-	// stores a secret encrypted in the vault
-	r.POST("api/v1/vaults/:id/secrets", vaultSecretStoreHandler)
-
-	// deletes a secret from the vault
-	r.DELETE("api/v1/vaults/:id/secrets/:secretId", vaultSecretDeleteHandler)
-
+	r.POST("api/v1/vaults/:id/secrets", createVaultSecretHandler)
+	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretDetailsHandler)
+	r.DELETE("api/v1/vaults/:id/secrets/:secretId", deleteVaultSecretHandler)
 }
 
 func vaultKeyEncryptHandler(c *gin.Context) {
@@ -143,99 +131,6 @@ func vaultKeyDecryptHandler(c *gin.Context) {
 	provide.Render(&KeyEncryptDecryptRequestResponse{
 		Data: common.StringOrNil(decryptedDataString),
 	}, 200, c)
-}
-
-// vaultSecretRetrieveHandler handles the retrieval of raw secrets
-func vaultSecretRetrieveHandler(c *gin.Context) {
-	bearer := token.InContext(c)
-
-	var secret = &Secret{}
-	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
-
-	if secret.ID == uuid.Nil {
-		provide.RenderError("secret not found", 404, c)
-		return
-	}
-
-	decryptedSecret, err := secret.AsResponse()
-	if err != nil {
-		provide.RenderError(err.Error(), 500, c)
-		return
-	}
-
-	provide.Render(&decryptedSecret, 200, c)
-	return
-}
-
-// store a secret in a vault
-func vaultSecretStoreHandler(c *gin.Context) {
-	bearer := token.InContext(c)
-
-	buf, err := c.GetRawData()
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-
-	params := &SecretStoreRequest{}
-	err = json.Unmarshal(buf, &params)
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-
-	var secret = &Secret{}
-	secret.Name = common.StringOrNil(*params.Name)
-	secret.Description = common.StringOrNil(*params.Description)
-	secret.Type = common.StringOrNil(*params.Type)
-	valueAsBytes := []byte(*params.Value)
-	secret.Value = &valueAsBytes
-
-	if !secret.Validate() {
-		provide.RenderError("invalid secret parameters", 422, c)
-		return
-	}
-
-	var vault = &Vault{}
-	vault = GetVault(c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
-
-	if vault == nil || vault.ID == uuid.Nil {
-		provide.RenderError("vault not found", 404, c)
-		return
-	}
-
-	secret.VaultID = &vault.ID
-	secret.vault = vault
-
-	err = secret.Store()
-	if err != nil {
-		provide.RenderError(err.Error(), 500, c)
-		return
-	}
-
-	provide.Render(secret, 201, c)
-}
-
-func vaultSecretDeleteHandler(c *gin.Context) {
-	bearer := token.InContext(c)
-
-	var secret = &Secret{}
-	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
-
-	if secret.ID == uuid.Nil {
-		provide.RenderError("secret not found", 404, c)
-		return
-	}
-	common.Log.Debugf("secret id: %s", secret.ID)
-
-	db := dbconf.DatabaseConnection()
-	if !secret.Delete(db) {
-		provide.RenderError("error deleting secret", 500, c)
-		return
-	}
-
-	provide.Render("secret deleted", 204, c)
-	return
 }
 
 func vaultsListHandler(c *gin.Context) {
@@ -580,11 +475,92 @@ func vaultSecretsListHandler(c *gin.Context) {
 	}
 
 	db := dbconf.DatabaseConnection()
+
 	var secrets []*Secret
 	provide.Paginate(c, vault.ListSecretsQuery(db), &Secret{}).Find(&secrets)
 	for _, secret := range secrets {
-		//remove the encrypted secret from the output
 		secret.Value = nil
 	}
 	provide.Render(secrets, 200, c)
+}
+
+func vaultSecretDetailsHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	var secret = &Secret{}
+	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+
+	if secret.ID == uuid.Nil {
+		provide.RenderError("secret not found", 404, c)
+		return
+	}
+
+	decryptedSecret, err := secret.AsResponse()
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	provide.Render(&decryptedSecret, 200, c)
+	return
+}
+
+func createVaultSecretHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	secret := &Secret{}
+	err = json.Unmarshal(buf, &secret)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	db := dbconf.DatabaseConnection() // FIXME-- pass this in to GetVault
+
+	var vault = &Vault{}
+	vault = GetVault(c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+
+	if vault == nil || vault.ID == uuid.Nil {
+		provide.RenderError("vault not found", 404, c)
+		return
+	}
+
+	secret.VaultID = &vault.ID
+	secret.vault = vault
+
+	if secret.Create(db) {
+		provide.Render(secret, 201, c)
+	} else {
+		obj := map[string]interface{}{}
+		obj["errors"] = secret.Errors
+		provide.Render(obj, 422, c)
+	}
+}
+
+func deleteVaultSecretHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	var secret = &Secret{}
+	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+
+	if secret.ID == uuid.Nil {
+		provide.RenderError("secret not found", 404, c)
+		return
+	}
+	common.Log.Debugf("secret id: %s", secret.ID)
+
+	db := dbconf.DatabaseConnection()
+	if !secret.Delete(db) {
+		provide.RenderError("error deleting secret", 500, c)
+		return
+	}
+
+	provide.Render("secret deleted", 204, c)
+	return
 }

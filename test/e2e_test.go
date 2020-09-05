@@ -236,9 +236,9 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 	response, _ := sigresponse.(map[string]interface{})
 
 	//ensure we haven't returned a derivation path
-	if response["path"] != nil {
+	if response["hd_derivation_path"] != nil {
 		t.Logf("response: %+v", response)
-		t.Errorf("Derivation path present for non-derived key, path %s", response["path"])
+		t.Errorf("Derivation path present for non-derived key, path %s", response["hd_derivation_path"])
 		return
 	}
 
@@ -579,7 +579,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 		response, _ := sigresponse.(map[string]interface{})
 
 		//ensure we have returned a derivation path
-		if response["path"] == nil {
+		if response["hd_derivation_path"] == nil {
 			t.Errorf("No derivation path returned for derived key sign operation")
 			return
 		}

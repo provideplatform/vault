@@ -74,11 +74,11 @@ func NewEphemeralKey(
 // SecretFactory ....
 func SecretFactory(db *gorm.DB, vaultID *uuid.UUID, secretcontents []byte, name, secretType, description string) *Secret {
 	secret := &Secret{
-		VaultID:     vaultID,
-		Name:        common.StringOrNil(name),
-		Description: common.StringOrNil(description),
-		Type:        common.StringOrNil(secretType),
-		Value:       &secretcontents,
+		VaultID:        vaultID,
+		Name:           common.StringOrNil(name),
+		Description:    common.StringOrNil(description),
+		Type:           common.StringOrNil(secretType),
+		DecryptedValue: common.StringOrNil(string(secretcontents)),
 	}
 
 	if !secret.Create(db) {

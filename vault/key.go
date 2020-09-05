@@ -22,6 +22,7 @@ import (
 )
 
 const defaultVaultMasterKeyName = "master0"
+const maxHDIteration = 4294967295
 
 // KeyTypeAsymmetric asymmetric key type
 const KeyTypeAsymmetric = "asymmetric"
@@ -116,7 +117,7 @@ type Key struct {
 	EphemeralPrivateKey *[]byte `sql:"-" json:"private_key,omitempty"`
 	EphemeralSeed       *[]byte `sql:"-" json:"seed,omitempty"`
 	PublicKeyHex        *string `sql:"-" json:"public_key,omitempty"`
-	DerivationPath      *string `sql:"-" json:"path,omitempty"`
+	DerivationPath      *string `sql:"-" json:"hd_derivation_path,omitempty"`
 
 	encrypted *bool      `sql:"-"`
 	mutex     sync.Mutex `sql:"-"`
@@ -659,7 +660,7 @@ func (k *Key) Delete(db *gorm.DB) bool {
 	return success
 }
 
-//update the hd wallet iteration
+// update the hd wallet iteration
 func (k *Key) updateIteration(db *gorm.DB) error {
 	if k.Ephemeral != nil && *k.Ephemeral {
 		common.Log.Debugf("short-circuiting attempt to persist ephemeral key: %s", k.ID)
@@ -668,7 +669,7 @@ func (k *Key) updateIteration(db *gorm.DB) error {
 
 	iteration := *k.Iteration
 	// if we have reached the uint32 maximum, we cannot generate any more keys
-	if iteration == 4294967295 {
+	if iteration == maxHDIteration {
 		return fmt.Errorf("maximum iteration %d reached - no further key generation possible", iteration)
 	}
 

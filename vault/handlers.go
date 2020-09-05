@@ -479,8 +479,14 @@ func vaultSecretsListHandler(c *gin.Context) {
 
 	db := dbconf.DatabaseConnection()
 
+	// FIXME-- this is not covered by any test
+	secretsQuery := vault.ListSecretsQuery(db)
+	if c.Query("type") != "" {
+		secretsQuery = secretsQuery.Where("secrets.type = ?", c.Query("type"))
+	}
+
 	var secrets []*Secret
-	provide.Paginate(c, vault.ListSecretsQuery(db), &Secret{}).Find(&secrets)
+	provide.Paginate(c, secretsQuery, &Secret{}).Find(&secrets)
 	for _, secret := range secrets {
 		secret.Value = nil
 	}

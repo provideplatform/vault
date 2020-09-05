@@ -65,7 +65,7 @@ func (s *Secret) validate() bool {
 		})
 	}
 
-	if len(*s.DecryptedValue) > MaxSecretLengthInBytes {
+	if s.DecryptedValue != nil && len(*s.DecryptedValue) > MaxSecretLengthInBytes {
 		s.Errors = append(s.Errors, &provide.Error{
 			Message: common.StringOrNil("value too long"),
 		})

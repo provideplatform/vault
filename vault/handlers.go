@@ -284,6 +284,9 @@ func vaultKeysListHandler(c *gin.Context) {
 
 	// FIXME-- this is not covered by any test
 	keysQuery := vault.ListKeysQuery(db)
+	if c.Query("spec") != "" {
+		keysQuery = keysQuery.Where("keys.spec = ?", c.Query("spec"))
+	}
 	if c.Query("type") != "" {
 		keysQuery = keysQuery.Where("keys.type = ?", c.Query("type"))
 	}

@@ -216,7 +216,7 @@ func TestAPICreateAndRetrieveSecret(t *testing.T) {
 
 	retrievedSecret, _ := retrieveSecretResponse.(map[string]interface{})
 
-	if retrievedSecret["rawsecret"].(string) != secret {
+	if retrievedSecret["value"].(string) != secret {
 		t.Errorf("secret returned mismatch.  Expected %s, got %s", secret, retrievedSecret["secret"].(string))
 		return
 	}

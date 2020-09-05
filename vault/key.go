@@ -153,7 +153,7 @@ type KeySignVerifyRequestResponse struct {
 	Signature      *string         `json:"signature,omitempty"`
 	Verified       *bool           `json:"verified,omitempty"`
 	Address        *string         `json:"address,omitempty"`
-	DerivationPath *string         `json:"path,omitempty"`
+	DerivationPath *string         `json:"hd_derivation_path,omitempty"`
 }
 
 // createAES256GCM creates a key using a random seed

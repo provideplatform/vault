@@ -74,7 +74,7 @@ func vaultSealHandler(c *gin.Context) {
 		return
 	}
 
-	params := &SealUnsealRequest{}
+	params := &SealUnsealRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)

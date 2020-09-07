@@ -11,12 +11,7 @@ import (
 )
 
 // SealUnsealRequest provides the unseal information
-type SealUnsealRequest struct {
-	UnsealerKey *string `json:"unsealerkey,omitempty"`
-}
-
-// NewUnsealerKeyResponse is the struct returned when creating a new UnsealerKey
-type NewUnsealerKeyResponse struct {
+type SealUnsealRequestResponse struct {
 	UnsealerKey    *string `json:"unsealer_key,omitempty"`
 	ValidationHash *string `json:"validation_hash,omitempty"`
 }
@@ -172,7 +167,7 @@ func unseal(sealedKey *[]byte) (*[]byte, error) {
 }
 
 // CreateUnsealerKey creates a fresh unsealer key
-func CreateUnsealerKey() (*NewUnsealerKeyResponse, error) {
+func CreateUnsealerKey() (*SealUnsealRequestResponse, error) {
 
 	newkey, err := vaultcrypto.CreateHDWalletSeedPhrase()
 	if err != nil {
@@ -191,7 +186,7 @@ func CreateUnsealerKey() (*NewUnsealerKeyResponse, error) {
 
 	responseHash := common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(validationHash.Sum(nil))))
 
-	response := NewUnsealerKeyResponse{}
+	response := SealUnsealRequestResponse{}
 	response.UnsealerKey = &seedPhrase
 	response.ValidationHash = responseHash
 

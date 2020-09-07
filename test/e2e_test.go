@@ -12,7 +12,7 @@ import (
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 	cryptovault "github.com/provideapp/vault/vault"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/api/vault"
 )
 
 func keyFactory(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*vault.Key, error) {

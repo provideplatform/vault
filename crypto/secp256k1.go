@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	"github.com/provideservices/provide-go"
+	providecrypto "github.com/provideservices/provide-go/crypto"
 )
 
 // Secp256k1 is the internal struct for an asymmetric keypair
@@ -20,7 +20,7 @@ type Secp256k1 struct {
 
 // CreateSecp256k1KeyPair creates an secp256k1 keypair, including eth address
 func CreateSecp256k1KeyPair() (*Secp256k1, error) {
-	address, privkey, err := provide.EVMGenerateKeyPair()
+	address, privkey, err := providecrypto.EVMGenerateKeyPair()
 	if err != nil {
 		return nil, ErrCannotGenerateSeed
 	}

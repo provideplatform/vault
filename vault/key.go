@@ -17,7 +17,7 @@ import (
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/crypto"
 	vaultcrypto "github.com/provideapp/vault/crypto"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/api"
 	"golang.org/x/crypto/chacha20"
 )
 

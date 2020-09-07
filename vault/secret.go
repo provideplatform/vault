@@ -10,7 +10,7 @@ import (
 	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/api"
 )
 
 // MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/provideapp/vault/common"
-	provide "github.com/provideservices/provide-go"
+	provide "github.com/provideservices/provide-go/api/vault"
 )
 
 func TestAPIListSecrets(t *testing.T) {

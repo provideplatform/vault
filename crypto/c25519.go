@@ -1,7 +1,7 @@
 package crypto
 
 import (
-	"github.com/provideservices/provide-go"
+	providecrypto "github.com/provideservices/provide-go/crypto"
 )
 
 // C25519 is the internal struct for a C25519 keypair
@@ -12,7 +12,7 @@ type C25519 struct {
 
 // CreateC25519KeyPair creates a C25519 keypair
 func CreateC25519KeyPair() (*C25519, error) {
-	publicKey, privateKey, err := provide.C25519GenerateKeyPair()
+	publicKey, privateKey, err := providecrypto.C25519GenerateKeyPair()
 	if err != nil {
 		return nil, ErrCannotGenerateKey
 	}

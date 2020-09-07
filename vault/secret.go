@@ -9,8 +9,8 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
-	provide "github.com/provideservices/provide-go/api"
 	vaultcrypto "github.com/provideapp/vault/crypto"
+	provide "github.com/provideservices/provide-go/api"
 )
 
 // MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored
@@ -276,27 +276,21 @@ func (s *Secret) decryptFields() error {
 	if err != nil {
 		common.Log.Tracef("decrypting master key fields for vault: %s", s.VaultID)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 		if s.Value != nil {
-			decryptedData, err := pgputil.PGPPubDecrypt([]byte(*s.Value))
-=======
-		if s.Data != nil {
 			// xxx sealunsealer key stuff
-			if MasterUnlockKey == nil {
+			if UnsealerKey == nil {
 				return fmt.Errorf("vault is sealed")
 			}
 			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = MasterUnlockKey
-			encryptedData := *s.Data
+			masterVaultKey.PrivateKey = &UnsealerKey
+			encryptedData := *s.Value
 			decryptedData, err := masterVaultKey.Decrypt(encryptedData[NonceSizeSymmetric:], encryptedData[0:NonceSizeSymmetric])
-			//decryptedData, err := pgputil.PGPPubDecrypt([]byte(*s.Data))
->>>>>>> unit tests passing - wubwubwub
 			if err != nil {
 				return err
 			}
 			s.Value = &decryptedData
-=======
+		}
+
 		if masterKey.Seed != nil {
 			// unseal the data with the unsealer key
 			masterKey.Seed, err = unseal(masterKey.Seed)
@@ -311,7 +305,6 @@ func (s *Secret) decryptFields() error {
 			if err != nil {
 				return err
 			}
->>>>>>> refactoring + master key encryption
 		}
 
 	} else {

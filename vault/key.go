@@ -156,15 +156,6 @@ type KeySignVerifyRequestResponse struct {
 	DerivationPath *string         `json:"hd_derivation_path,omitempty"`
 }
 
-// CreateSampleMasterUnlockKey is a WIP method to create a new master unlock key
-func CreateSampleMasterUnlockKey() ([]byte, error) {
-	privatekey, err := vaultcrypto.CreateAES256GCMSeed()
-	if err != nil {
-		return nil, err
-	}
-	return infinitykey, nil
-}
-
 // createAES256GCM creates a key using a random seed
 func (k *Key) createAES256GCM() error {
 	privatekey, err := vaultcrypto.CreateAES256GCMSeed()
@@ -192,7 +183,7 @@ func (k *Key) createBabyJubJubKeypair() error {
 	k.PublicKey = &publicKey
 	*k.Type = KeyTypeAsymmetric
 
-	common.Log.Debugf("created babyJubJub key for vault: %s; public key: 0x%s", k.VaultID, publicKeyHex)
+	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
 	return nil
 }
 
@@ -207,7 +198,7 @@ func (k *Key) createC25519Keypair() error {
 	k.PublicKey = c25519KeyPair.PublicKey
 	*k.Type = KeyTypeAsymmetric
 
-	common.Log.Debugf("created C25519 key for vault: %s; public key: 0x%s", k.VaultID, hex.EncodeToString(*c25519KeyPair.PublicKey))
+	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, hex.EncodeToString(*c25519KeyPair.PublicKey))
 	return nil
 }
 
@@ -300,7 +291,7 @@ func (k *Key) createEd25519Keypair() error {
 	k.PublicKey = &publicKey
 	*k.Type = KeyTypeAsymmetric
 
-	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: 0x%s", len(seed), k.VaultID, hex.EncodeToString(*k.PublicKey))
+	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, *k.PublicKey)
 	return nil
 }
 
@@ -320,7 +311,7 @@ func (k *Key) createSecp256k1Keypair() error {
 		k.Description = common.StringOrNil(desc)
 	}
 
-	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, hex.EncodeToString(*k.PublicKey))
+	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, *k.PublicKey)
 	return nil
 }
 
@@ -354,7 +345,7 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 	k.PublicKey = rsaKeyPair.PublicKey
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 
-	common.Log.Debugf("created rsa%d key for vault: %s; public key: 0x%s", bitsize, k.VaultID, hex.EncodeToString(*k.PublicKey))
+	common.Log.Debugf("created rsa%d key for vault: %s; public key: 0x%s", bitsize, k.VaultID, *k.PublicKey)
 	return nil
 }
 
@@ -421,7 +412,7 @@ func (k *Key) decryptFields() error {
 		common.Log.Tracef("decrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			// unseal the data with the unsealer key
+			// unseal the data with the infinity key
 			k.Seed, err = unseal(k.Seed)
 			if err != nil {
 				return err
@@ -429,7 +420,7 @@ func (k *Key) decryptFields() error {
 		}
 
 		if k.PrivateKey != nil {
-			// unseal the data with the unsealer key
+			// unseal the data with the infinity key
 			k.PrivateKey, err = unseal(k.PrivateKey)
 			if err != nil {
 				return err
@@ -479,7 +470,7 @@ func (k *Key) encryptFields() error {
 		common.Log.Tracef("encrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			// seal the data with the unsealer key
+			// seal the data with the infinity key
 			k.Seed, err = seal(k.Seed)
 			if err != nil {
 				return err
@@ -487,7 +478,7 @@ func (k *Key) encryptFields() error {
 		}
 
 		if k.PrivateKey != nil {
-			// seal the data with the unsealer key
+			// seal the data with the infinity key
 			k.PrivateKey, err = seal(k.PrivateKey)
 			if err != nil {
 				return err
@@ -1043,7 +1034,7 @@ func (k *Key) validateWalletOptions(opts *SigningOptions) (*HDWalletOptions, err
 
 		// first check the the wallet has a valid iteration
 		if k.Iteration == nil {
-			return nil, fmt.Errorf("no key iteration available")
+			return nil, fmt.Errorf("no key iteration available to generate next iteration")
 		}
 
 		// set up the current key iteration
@@ -1052,7 +1043,7 @@ func (k *Key) validateWalletOptions(opts *SigningOptions) (*HDWalletOptions, err
 		switch *k.Usage {
 		case KeyUsageEthereumHDWallet:
 			validOptions.Coin = common.StringOrNil(crypto.EthereumCoin)
-			validOptions.Index = &currentIteration
+			validOptions.Index = &currentIteration //TODO maybe correct this to uint32 everywhere and maybe get an IntOrNil into common
 		case KeyUsageBitcoinHDWallet:
 			validOptions.Coin = common.StringOrNil(crypto.BitcoinCoin)
 			validOptions.Index = &currentIteration
@@ -1297,3 +1288,13 @@ func (k *Key) Validate() bool {
 
 	return len(k.Errors) == 0
 }
+
+// // Validate the signing options
+// func (so *SigningOptions) Validate() error {
+// 	//perform minor validation (no non-zero index without coin)
+// 	validCoin := so.HDWallet != nil && so.HDWallet.Coin != nil && *so.HDWallet.Coin != ""
+// 	validIdx := so.HDWallet != nil && so.HDWallet.Index != nil && *so.HDWallet.Index == 0
+// 	if validCoin && validIdx {
+// 		return nil, fmt.Errorf("invalid signature options, coin is required for non-zero index")
+// 	}
+// }

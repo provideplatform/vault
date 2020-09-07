@@ -17,8 +17,8 @@ type SealUnsealRequest struct {
 
 // NewUnsealerKeyResponse is the struct returned when creating a new UnsealerKey
 type NewUnsealerKeyResponse struct {
-	UnsealerKey    *string `json:"unsealerkey,omitempty"`
-	ValidationHash *string `json:"validationhash,omitempty"`
+	UnsealerKey    *string `json:"unsealer_key,omitempty"`
+	ValidationHash *string `json:"validation_hash,omitempty"`
 }
 
 // UnsealerKey is the encryption/decryption key for the vault keys

@@ -16,7 +16,7 @@ import (
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/vault/vault"
 
-	provide "github.com/provideservices/provide-go/api"
+	provide "github.com/provideservices/provide-go/common"
 )
 
 const runloopSleepInterval = 250 * time.Millisecond

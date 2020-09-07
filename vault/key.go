@@ -18,6 +18,7 @@ import (
 	"github.com/provideapp/vault/crypto"
 	vaultcrypto "github.com/provideapp/vault/crypto"
 	provide "github.com/provideservices/provide-go/api"
+	providecrypto "github.com/provideservices/provide-go/crypto"
 	"golang.org/x/crypto/chacha20"
 )
 
@@ -172,7 +173,7 @@ func (k *Key) createAES256GCM() error {
 
 // createBabyJubJubKeypair creates a keypair on the twisted edwards babyJubJub curve
 func (k *Key) createBabyJubJubKeypair() error {
-	publicKey, privateKey, err := provide.TECGenerateKeyPair()
+	publicKey, privateKey, err := providecrypto.TECGenerateKeyPair()
 	if err != nil {
 		return fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
 	}
@@ -243,7 +244,7 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 		return nil, fmt.Errorf("failed to compute shared secret; failed to verify %d-byte Ed22519 signature using public key: %s; %s", len(peerSignature), string(peerPublicKey), err.Error())
 	}
 
-	sharedSecret := provide.C25519ComputeSecret([]byte(*privkey), peerPublicKey)
+	sharedSecret := providecrypto.C25519ComputeSecret([]byte(*privkey), peerPublicKey)
 
 	ecdhSecret := &Key{
 		VaultID:     k.VaultID,
@@ -1083,7 +1084,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
-		sig, sigerr = provide.TECSign([]byte(*k.PrivateKey), payload)
+		sig, sigerr = providecrypto.TECSign([]byte(*k.PrivateKey), payload)
 
 	case KeySpecECCBIP39:
 		if k.Seed == nil {
@@ -1198,7 +1199,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 	switch *k.Spec {
 	case KeySpecECCBabyJubJub:
 		decodedPubKey := *k.PublicKey
-		return provide.TECVerify(decodedPubKey, payload, sig)
+		return providecrypto.TECVerify(decodedPubKey, payload, sig)
 
 	case KeySpecECCEd25519:
 		ec25519Key, err := vaultcrypto.FromPublicKey(*k.PublicKey)

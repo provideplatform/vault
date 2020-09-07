@@ -10,7 +10,7 @@ import (
 	vaultcrypto "github.com/provideapp/vault/crypto"
 )
 
-// SealUnsealRequest provides the unseal information
+// SealUnsealRequestResponse provides the unseal information
 type SealUnsealRequestResponse struct {
 	UnsealerKey    *string `json:"unsealer_key,omitempty"`
 	ValidationHash *string `json:"validation_hash,omitempty"`

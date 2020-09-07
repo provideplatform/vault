@@ -127,6 +127,10 @@ func init() {
 	unsealresp, err := provide.UnsealVault(*token, map[string]interface{}{
 		"unsealer_key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
+	if err != nil {
+		log.Printf("*************************vault not unsealed****************************************")
+		return
+	}
 	//response, _ := unsealresp.(map[string]interface{})
 	log.Printf("response from unseal vault: %+v", unsealresp)
 
@@ -708,11 +712,11 @@ func TestListKeys(t *testing.T) {
 		outputKey[looper] = listVaultKeysResponse[looper]
 
 		if looper > 0 {
-			if inputKey[looper].Address != outputKey[looper].Address {
+			if *inputKey[looper].Address != *outputKey[looper].Address {
 				t.Errorf("address mismatch. expected %s, got %s", *inputKey[looper].Address, *outputKey[looper].Address)
 			}
 
-			if inputKey[looper].Description != outputKey[looper].Description {
+			if *inputKey[looper].Description != *outputKey[looper].Description {
 				t.Errorf("description mismatch. expected %s, got %s", *inputKey[looper].Description, *outputKey[looper].Description)
 			}
 
@@ -720,19 +724,19 @@ func TestListKeys(t *testing.T) {
 				t.Errorf("id mismatch. expected %s, got %s", inputKey[looper].ID, outputKey[looper].ID)
 			}
 
-			if inputKey[looper].Name != outputKey[looper].Name {
+			if *inputKey[looper].Name != *outputKey[looper].Name {
 				t.Errorf("name mismatch. expected %s, got %s", *inputKey[looper].Name, *outputKey[looper].Name)
 			}
 
-			if inputKey[looper].Spec != outputKey[looper].Spec {
+			if *inputKey[looper].Spec != *outputKey[looper].Spec {
 				t.Errorf("spec mismatch. expected %s, got %s", *inputKey[looper].Spec, *outputKey[looper].Spec)
 			}
 
-			if inputKey[looper].Type != outputKey[looper].Type {
+			if *inputKey[looper].Type != *outputKey[looper].Type {
 				t.Errorf("type mismatch. expected %s, got %s", *inputKey[looper].Type, *outputKey[looper].Type)
 			}
 
-			if inputKey[looper].Usage != outputKey[looper].Usage {
+			if *inputKey[looper].Usage != *outputKey[looper].Usage {
 				t.Errorf("usage mismatch. expected %s, got %s", *inputKey[looper].Usage, *outputKey[looper].Usage)
 			}
 
@@ -740,7 +744,7 @@ func TestListKeys(t *testing.T) {
 				t.Errorf("vault_id mismatch. expected %s, got %s", inputKey[looper].VaultID, outputKey[looper].VaultID)
 			}
 
-			if inputKey[looper].PublicKey != outputKey[looper].PublicKey {
+			if *inputKey[looper].PublicKey != *outputKey[looper].PublicKey {
 				t.Errorf("public_key mismatch. expected %s, got %s", *inputKey[looper].PublicKey, *outputKey[looper].PublicKey)
 			}
 

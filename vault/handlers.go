@@ -18,6 +18,10 @@ import (
 
 // InstallAPI installs the handlers using the given gin Engine
 func InstallAPI(r *gin.Engine) {
+	// FIXME - tweak api...
+	r.GET("/api/v1/unseal", createUnsealerKeyHandler)
+	r.POST("/api/v1/unseal", unsealHandler)
+
 	r.GET("/api/v1/vaults", vaultsListHandler)
 	r.POST("/api/v1/vaults", createVaultHandler)
 	r.DELETE("/api/v1/vaults/:id", deleteVaultHandler)
@@ -34,11 +38,9 @@ func InstallAPI(r *gin.Engine) {
 	r.POST("api/v1/vaults/:id/secrets", createVaultSecretHandler)
 	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretDetailsHandler)
 	r.DELETE("api/v1/vaults/:id/secrets/:secretId", deleteVaultSecretHandler)
-
-	r.POST("api/v1/unseal", vaultSealHandler)
-	r.GET("api/v1/unseal", createUnsealerKeyHandler)
 }
 
+// createUnsealerKeyHandler creates the unsealer key
 func createUnsealerKeyHandler(c *gin.Context) {
 	_ = token.InContext(c)
 
@@ -49,21 +51,22 @@ func createUnsealerKeyHandler(c *gin.Context) {
 	}
 
 	if UnsealerKey != nil {
-		provide.RenderError("cannot generate unseal key from unsealed vault", 500, c)
+		provide.RenderError("cannot generate unseal key from unsealed vault", 422, c)
 		return
 	}
 
-	newUnsealerKey, err := CreateUnsealerKey()
+	key, err := CreateUnsealerKey()
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)
+		return
 	}
 
-	provide.Render(newUnsealerKey, 200, c)
+	provide.Render(key, 200, c)
 	return
 }
 
-// vaultSealHandler enables locking and unlocking the master key for all vaults
-func vaultSealHandler(c *gin.Context) {
+// unsealHandler enables locking and unlocking the master key for all vaults
+func unsealHandler(c *gin.Context) {
 	// TODO what elements are required in the token to enable the locking/ unlocking of the vault?
 	// currently, it's just a valid token from IDENT and a valid unsealer key
 	_ = token.InContext(c)
@@ -86,17 +89,15 @@ func vaultSealHandler(c *gin.Context) {
 		return
 	}
 
-	if params.UnsealerKey != nil {
-
-		err = SetUnsealerKey(*params.UnsealerKey)
-		if err != nil {
-			vaultErr := fmt.Sprintf("error unsealing vault - %s", err.Error())
-			provide.RenderError(vaultErr, 500, c)
-			return
-		}
-
-		provide.Render("vault unsealed", 201, c)
+	err = SetUnsealerKey(*params.UnsealerKey)
+	if err != nil {
+		msg := fmt.Sprintf("error unsealing vault; %s", err.Error())
+		common.Log.Warning(msg)
+		provide.RenderError(msg, 500, c)
+		return
 	}
+
+	provide.Render(nil, 204, c)
 }
 
 func vaultKeyEncryptHandler(c *gin.Context) {

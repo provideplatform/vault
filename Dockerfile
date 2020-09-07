@@ -1,4 +1,4 @@
-FROM golang:1.13 AS builder
+FROM golang:1.15 AS builder
 
 RUN mkdir -p /go/src/github.com/provideapp
 ADD . /go/src/github.com/provideapp/vault
@@ -11,7 +11,7 @@ RUN rm -rf ~/.ssh && rm -rf /go/src/github.com/provideapp/vault/ops/keys && rm -
 WORKDIR /go/src/github.com/provideapp/vault
 RUN make build
 
-FROM golang:1.13
+FROM golang:1.15
 
 RUN mkdir -p /vault
 WORKDIR /vault

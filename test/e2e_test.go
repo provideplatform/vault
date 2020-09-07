@@ -740,7 +740,7 @@ func TestListKeys(t *testing.T) {
 				t.Errorf("usage mismatch. expected %s, got %s", *inputKey[looper].Usage, *outputKey[looper].Usage)
 			}
 
-			if inputKey[looper].VaultID != outputKey[looper].VaultID {
+			if inputKey[looper].VaultID.String() != outputKey[looper].VaultID.String() {
 				t.Errorf("vault_id mismatch. expected %s, got %s", inputKey[looper].VaultID, outputKey[looper].VaultID)
 			}
 

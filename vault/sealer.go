@@ -12,7 +12,7 @@ import (
 
 // SealUnsealRequest provides the unseal information
 type SealUnsealRequest struct {
-	UnsealerKey *string `json:"unsealerkey,omitempty"`
+	UnsealerKey *string `json:"unsealer_key,omitempty"`
 }
 
 // NewUnsealerKeyResponse is the struct returned when creating a new UnsealerKey

@@ -125,7 +125,11 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 				common.Log.Debugf("created vault %s", v.ID.String())
 				err := v.createMasterKey(db)
 				if err != nil {
+					v.Errors = append(v.Errors, &provide.Error{
+						Message: common.StringOrNil(err.Error()),
+					})
 					common.Log.Warningf("failed to create master key for vault: %s; %s", v.ID.String(), err.Error())
+					return false
 				}
 
 				return success

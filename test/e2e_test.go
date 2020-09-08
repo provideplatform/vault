@@ -115,15 +115,6 @@ func init() {
 		return
 	}
 
-	// _, createresp, err := provide.GenerateSeal(*token, map[string]interface{}{})
-	// //assert type to get something sensible from empty interface
-	// response, _ := createresp.(map[string]interface{})
-	// log.Printf("response from create sealer: %+v", response)
-
-	// if err != nil {
-	// 	log.Printf("error unsealing vault %s", err.Error())
-	// }
-
 	unsealresp, err := provide.UnsealVault(*token, map[string]interface{}{
 		"unsealer_key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
@@ -131,7 +122,7 @@ func init() {
 		log.Printf("*************************vault not unsealed****************************************")
 		return
 	}
-	//response, _ := unsealresp.(map[string]interface{})
+
 	log.Printf("response from unseal vault: %+v", unsealresp)
 
 	log.Printf("vault unsealed")
@@ -142,18 +133,6 @@ func TestAPICreateVault(t *testing.T) {
 		t.Errorf("failed to create token; %s", err.Error())
 		return
 	}
-
-	// _, sealresp, err := provide.UnsealVault(*token, map[string]interface{}{
-	// 	"unsealerkey": "0x53534144444f374f4c544849564a5146465950434c353645454a344856594134",
-	// })
-
-	// //assert type to get something sensible from empty interface
-	// response, _ := sealresp.(map[string]interface{})
-	// t.Logf("response from unsealer: %+v", response)
-
-	// if err != nil {
-	// 	t.Errorf("error unsealing vault %s", err.Error())
-	// }
 
 	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
 	if err != nil {
@@ -169,13 +148,6 @@ func TestAPICreateKey(t *testing.T) {
 		t.Errorf("failed to create token; %s", err.Error())
 		return
 	}
-
-	// _, _, err = provide.UnsealVault(*token, map[string]interface{}{
-	// 	"unsealerkey": "53534144444f374f4c544849564a5146465950434c353645454a344856594134",
-	// })
-	// if err != nil {
-	// 	t.Errorf("error unsealing vault %s", err.Error())
-	// }
 
 	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
 	if err != nil {
@@ -275,23 +247,20 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
 	}
-	// TODO fix these so they work with the new data returned
-	// //assert type to get something sensible from empty interface
-	// response, _ := sigresponse.(map[string]interface{})
 
-	// //ensure we haven't returned a derivation path
-	// if response["hd_derivation_path"] != nil {
-	// 	t.Logf("response: %+v", response)
-	// 	t.Errorf("Derivation path present for non-derived key, path %s", response["hd_derivation_path"])
-	// 	return
-	// }
+	t.Logf("******* signresponse: %+v", sigresponse)
 
-	// //ensure we haven't returned an address
-	// if response["address"] != nil {
-	// 	t.Logf("response: %+v", response)
-	// 	t.Errorf("address present for non-derived key, address %s", response["address"])
-	// 	return
-	// }
+	//ensure we haven't returned a derivation path
+	if sigresponse.DerivationPath != "" {
+		t.Errorf("Derivation path present for non-derived key, path %s", sigresponse.DerivationPath)
+		return
+	}
+
+	//ensure we haven't returned an address
+	if sigresponse.Address != "" {
+		t.Errorf("address present for non-derived key, address %s", sigresponse.Address)
+		return
+	}
 
 	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, sigresponse.Signature, nil)
 	if err != nil {
@@ -330,15 +299,13 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
 	}
-	// //assert type to get something sensible from empty interface
-	// response, _ := sigresponse.(map[string]interface{})
 
 	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, sigresponse.Signature, nil)
 	if err != nil {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
 	}
-	// response, _ = verifyresponse.(map[string]interface{})
+
 	if verifyresponse.Verified != true {
 		t.Error("failed to verify signature for vault")
 		return
@@ -375,16 +342,12 @@ func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
 		return
 	}
 
-	//assert type to get something sensible from empty interface
-	//response, _ := sigresponse.(map[string]interface{})
-
 	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, sigresponse.Signature, opts)
 	if err != nil {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
 	}
 
-	//response, _ = verifyresponse.(map[string]interface{})
 	if verifyresponse.Verified != true {
 		t.Error("failed to verify signature for vault")
 		return
@@ -446,8 +409,6 @@ func TestAPIChachaDecrypt(t *testing.T) {
 
 	encryptedDataResponse, err := provide.EncryptWithNonce(*token, vault.ID.String(), key.ID.String(), data, nonce)
 
-	//encryptedData, _ := encryptedDataResponse.(map[string]interface{})
-
 	if err != nil {
 		t.Errorf("failed to encrypt message for vault: %s", vault.ID)
 		return
@@ -456,7 +417,6 @@ func TestAPIChachaDecrypt(t *testing.T) {
 	decryptedDataResponse, err := provide.Decrypt(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"data": encryptedDataResponse.Data,
 	})
-	//decryptedData, _ := decryptedDataResponse.(map[string]interface{})
 
 	if decryptedDataResponse.Data != data {
 		t.Errorf("decrypted data mismatch, expected %s, got %s", data, decryptedDataResponse.Data)
@@ -488,8 +448,6 @@ func TestAPIDecrypt(t *testing.T) {
 
 	encryptedDataResponse, err := provide.EncryptWithNonce(*token, vault.ID.String(), key.ID.String(), data, nonce)
 
-	//encryptedData, _ := encryptedDataResponse.(map[string]interface{})
-
 	if err != nil {
 		t.Errorf("failed to encrypt message for vault: %s", vault.ID)
 		return
@@ -498,8 +456,6 @@ func TestAPIDecrypt(t *testing.T) {
 	decryptedDataResponse, err := provide.Decrypt(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"data": encryptedDataResponse.Data,
 	})
-
-	//decryptedData, _ := decryptedDataResponse.(map[string]interface{})
 
 	if decryptedDataResponse.Data != data {
 		t.Errorf("decrypted data mismatch, expected %s, got %s", data, decryptedDataResponse.Data)
@@ -530,8 +486,6 @@ func TestAPIDecryptNoNonce(t *testing.T) {
 
 	encryptedDataResponse, err := provide.Encrypt(*token, vault.ID.String(), key.ID.String(), data)
 
-	//encryptedData, _ := encryptedDataResponse.(map[string]interface{})
-
 	if err != nil {
 		t.Errorf("failed to encrypt message for vault: %s", vault.ID)
 		return
@@ -540,7 +494,6 @@ func TestAPIDecryptNoNonce(t *testing.T) {
 	decryptedDataResponse, err := provide.Decrypt(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"data": encryptedDataResponse.Data,
 	})
-	//decryptedData, _ := decryptedDataResponse.(map[string]interface{})
 
 	if decryptedDataResponse.Data != data {
 		t.Errorf("decrypted data mismatch, expected %s, got %s", data, decryptedDataResponse.Data)
@@ -576,16 +529,13 @@ func TestCreateHDWallet(t *testing.T) {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
 	}
-	//assert type to get something sensible from empty interface
-	//response, _ := sigresponse.(map[string]interface{})
 
 	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, sigresponse.Signature, opts)
 	if err != nil {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
 	}
-	//assert type to get something sensible from empty interface
-	//response, _ = verifyresponse.(map[string]interface{})
+
 	if verifyresponse.Verified != true {
 		t.Errorf("failed to verify signature for vault")
 		return
@@ -618,22 +568,18 @@ func TestHDWalletAutoSign(t *testing.T) {
 			t.Errorf("failed to sign message %s", err.Error())
 			return
 		}
-		//assert type to get something sensible from empty interface
-		//response, _ := sigresponse.(map[string]interface{})
 
 		//ensure we have returned a derivation path
-		//TODO get the derivation path from the response
-		// if sigresponse.opts["hd-derivation-path"] == nil {
-		// 	t.Errorf("No derivation path returned for derived key sign operation")
-		// 	return
-		// }
+		if sigresponse.DerivationPath == "" {
+			t.Errorf("No derivation path returned for derived key sign operation")
+			return
+		}
 
 		//ensure we have returned an address
-		//TODO get the address from the sig response
-		// if sigresponse.address == nil {
-		// 	t.Errorf("no address returned for derived key sign operation")
-		// 	return
-		// }
+		if sigresponse.Address == "" {
+			t.Errorf("no address returned for derived key sign operation")
+			return
+		}
 
 		// set up the verification options
 		opts := map[string]interface{}{}
@@ -645,8 +591,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 			t.Errorf("failed to verify signature for vault: %s", err.Error())
 			return
 		}
-		//assert type to get something sensible from empty interface and check the verified value
-		//response, _ = verifyresponse.(map[string]interface{})
+
 		if verifyresponse.Verified != true {
 			t.Errorf("failed to verify signature for vault!")
 			return
@@ -688,19 +633,16 @@ func TestListKeys(t *testing.T) {
 
 		inputKey[looper] = key
 
-		//TODO check Address is returned in object
-		// if len(response[looper].Address) != 42 {
-		// 	t.Errorf("invalid address length for key 01. expected 42, got %d", len(inputKey[looper]["address"].(string)))
-		// }
+		if len(*inputKey[looper].Address) != 42 {
+			t.Errorf("invalid address length for key 01. expected 42, got %d", len(*inputKey[looper].Address))
+			return
+		}
 	}
 
 	listVaultKeysResponse, err := provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("failed to list keys. error %s", err.Error())
 	}
-
-	//assert type to get something sensible from empty interface
-	//listOfKeys := listVaultKeysResponse.([]interface{})
 
 	if len(listVaultKeysResponse) != numberOfKeys+1 {
 		t.Errorf("invalid number of keys returned")

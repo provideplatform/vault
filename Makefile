@@ -57,7 +57,7 @@ integration: build
 	./ops/run_local_dependencies.sh
 	./ops/run_integration_tests.sh
 
-run_debug:
+debug:
 	./ops/run_debug.sh
 
 stop_debug:

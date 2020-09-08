@@ -91,7 +91,7 @@ func unsealHandler(c *gin.Context) {
 
 	err = SetUnsealerKey(*params.UnsealerKey)
 	if err != nil {
-		msg := fmt.Sprintf("error unsealing vault; %s", err.Error())
+		msg := fmt.Sprintf("Error: %s", err.Error())
 		common.Log.Warning(msg)
 		provide.RenderError(msg, 500, c)
 		return

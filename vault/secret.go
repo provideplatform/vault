@@ -216,6 +216,10 @@ func (s *Secret) encryptFields() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	if UnsealerKey == nil {
+		return fmt.Errorf("vault is sealed")
+	}
+
 	if s.encrypted == nil {
 		s.setEncrypted(s.ID != uuid.Nil)
 	}
@@ -264,6 +268,10 @@ func (s *Secret) decryptFields() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	if UnsealerKey == nil {
+		return fmt.Errorf("vault is sealed")
+	}
+
 	if s.encrypted == nil {
 		s.setEncrypted(s.ID != uuid.Nil)
 	}
@@ -277,10 +285,6 @@ func (s *Secret) decryptFields() error {
 		common.Log.Tracef("decrypting master key fields for vault: %s", s.VaultID)
 
 		if s.Value != nil {
-			// xxx sealunsealer key stuff
-			if UnsealerKey == nil {
-				return fmt.Errorf("vault is sealed")
-			}
 			masterVaultKey := vaultcrypto.AES256GCM{}
 			masterVaultKey.PrivateKey = &UnsealerKey
 			encryptedData := *s.Value

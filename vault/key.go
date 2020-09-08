@@ -399,6 +399,10 @@ func (k *Key) decryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
+	if UnsealerKey == nil {
+		return fmt.Errorf("vault is sealed")
+	}
+
 	if k.encrypted == nil {
 		k.setEncrypted(k.ID != uuid.Nil)
 	}
@@ -412,7 +416,7 @@ func (k *Key) decryptFields() error {
 		common.Log.Tracef("decrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			// unseal the data with the infinity key
+			// unseal the data with the unsealer key
 			k.Seed, err = unseal(k.Seed)
 			if err != nil {
 				return err
@@ -420,7 +424,7 @@ func (k *Key) decryptFields() error {
 		}
 
 		if k.PrivateKey != nil {
-			// unseal the data with the infinity key
+			// unseal the data with the unsealer key
 			k.PrivateKey, err = unseal(k.PrivateKey)
 			if err != nil {
 				return err
@@ -457,6 +461,10 @@ func (k *Key) encryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
+	if UnsealerKey == nil {
+		return fmt.Errorf("vault is sealed")
+	}
+
 	if k.encrypted == nil {
 		k.setEncrypted(k.ID != uuid.Nil)
 	}
@@ -470,7 +478,7 @@ func (k *Key) encryptFields() error {
 		common.Log.Tracef("encrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			// seal the data with the infinity key
+			// seal the data with the unsealer key
 			k.Seed, err = seal(k.Seed)
 			if err != nil {
 				return err
@@ -478,7 +486,7 @@ func (k *Key) encryptFields() error {
 		}
 
 		if k.PrivateKey != nil {
-			// seal the data with the infinity key
+			// seal the data with the unsealer key
 			k.PrivateKey, err = seal(k.PrivateKey)
 			if err != nil {
 				return err

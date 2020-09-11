@@ -192,3 +192,11 @@ func CreateUnsealerKey() (*SealUnsealRequestResponse, error) {
 
 	return &response, nil
 }
+
+// IsSealed returns true if the vault is sealed
+func vaultIsSealed() bool {
+	if UnsealerKey == nil {
+		return true
+	}
+	return false
+}

@@ -44,14 +44,14 @@ func InstallAPI(r *gin.Engine) {
 func createUnsealerKeyHandler(c *gin.Context) {
 	_ = token.InContext(c)
 
-	_, err := c.GetRawData()
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
 
-	if UnsealerKey != nil {
-		provide.RenderError("cannot generate unseal key from unsealed vault", 422, c)
+	_, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
 		return
 	}
 
@@ -103,6 +103,11 @@ func unsealHandler(c *gin.Context) {
 func vaultKeyEncryptHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -153,6 +158,11 @@ func vaultKeyEncryptHandler(c *gin.Context) {
 func vaultKeyDecryptHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -200,6 +210,11 @@ func vaultKeyDecryptHandler(c *gin.Context) {
 func vaultsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
 	var vaults []*Vault
 	//vaults = GetVaults(bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
@@ -217,7 +232,10 @@ func vaultsListHandler(c *gin.Context) {
 
 	provide.Paginate(c, query, &Vault{}).Find(&vaults)
 	for _, vault := range vaults {
-		vault.resolveMasterKey(db)
+		_, err := vault.resolveMasterKey(db)
+		if err != nil {
+			provide.RenderError(err.Error(), 500, c)
+		}
 	}
 
 	provide.Render(vaults, 200, c)
@@ -229,6 +247,11 @@ func createVaultHandler(c *gin.Context) {
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
 
@@ -279,6 +302,12 @@ func createVaultHandler(c *gin.Context) {
 
 func deleteVaultHandler(c *gin.Context) {
 	bearer := token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
 	orgID := bearer.OrganizationID
@@ -326,6 +355,11 @@ func deleteVaultHandler(c *gin.Context) {
 func vaultKeysListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
 	var vault = &Vault{}
 
 	db := dbconf.DatabaseConnection()
@@ -367,6 +401,11 @@ func vaultKeysListHandler(c *gin.Context) {
 // Creates a key and stores it in vault
 func createVaultKeyHandler(c *gin.Context) {
 	bearer := token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
 
 	buf, err := c.GetRawData()
 	if err != nil {
@@ -415,6 +454,11 @@ func createVaultKeyHandler(c *gin.Context) {
 func deleteVaultKeyHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
 	var key = &Key{}
 	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
@@ -434,6 +478,11 @@ func deleteVaultKeyHandler(c *gin.Context) {
 
 func vaultKeySignHandler(c *gin.Context) {
 	bearer := token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
 
 	buf, err := c.GetRawData()
 	if err != nil {
@@ -490,6 +539,11 @@ func vaultKeySignHandler(c *gin.Context) {
 func vaultKeyVerifyHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
 	buf, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -534,6 +588,11 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 func vaultSecretsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
 	var vault = &Vault{}
 	vault = GetVault(c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
@@ -562,6 +621,11 @@ func vaultSecretsListHandler(c *gin.Context) {
 func vaultSecretDetailsHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
 	var secret = &Secret{}
 	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
@@ -582,6 +646,11 @@ func vaultSecretDetailsHandler(c *gin.Context) {
 
 func createVaultSecretHandler(c *gin.Context) {
 	bearer := token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
 
 	buf, err := c.GetRawData()
 	if err != nil {
@@ -625,6 +694,11 @@ func createVaultSecretHandler(c *gin.Context) {
 
 func deleteVaultSecretHandler(c *gin.Context) {
 	bearer := token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
 
 	var secret = &Secret{}
 	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)

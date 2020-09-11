@@ -119,13 +119,11 @@ func init() {
 		"unsealer_key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
-		log.Printf("*************************vault not unsealed****************************************")
+		log.Printf("**vault not unsealed**. error: %s", err.Error())
 		return
 	}
 
 	log.Printf("response from unseal vault: %+v", unsealresp)
-
-	log.Printf("vault unsealed")
 }
 func TestAPICreateVault(t *testing.T) {
 	token, err := userTokenFactory()
@@ -220,6 +218,8 @@ func TestAPISign(t *testing.T) {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
 	}
+
+	// TODO check for signature in response, not sure if the errors are actually tripping
 }
 
 func TestAPIVerifySecp256k1Signature(t *testing.T) {
@@ -251,18 +251,18 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 	t.Logf("******* signresponse: %+v", sigresponse)
 
 	//ensure we haven't returned a derivation path
-	if sigresponse.DerivationPath != "" {
-		t.Errorf("Derivation path present for non-derived key, path %s", sigresponse.DerivationPath)
+	if sigresponse.DerivationPath != nil {
+		t.Errorf("Derivation path present for non-derived key, path %s", *sigresponse.DerivationPath)
 		return
 	}
 
 	//ensure we haven't returned an address
-	if sigresponse.Address != "" {
-		t.Errorf("address present for non-derived key, address %s", sigresponse.Address)
+	if sigresponse.Address != nil {
+		t.Errorf("address present for non-derived key, address %s", *sigresponse.Address)
 		return
 	}
 
-	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, sigresponse.Signature, nil)
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, nil)
 	if err != nil {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
@@ -300,7 +300,7 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 		return
 	}
 
-	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, sigresponse.Signature, nil)
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, nil)
 	if err != nil {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
@@ -342,7 +342,7 @@ func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
 		return
 	}
 
-	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, sigresponse.Signature, opts)
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
 	if err != nil {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
@@ -530,7 +530,7 @@ func TestCreateHDWallet(t *testing.T) {
 		return
 	}
 
-	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, sigresponse.Signature, opts)
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
 	if err != nil {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return
@@ -570,13 +570,13 @@ func TestHDWalletAutoSign(t *testing.T) {
 		}
 
 		//ensure we have returned a derivation path
-		if sigresponse.DerivationPath == "" {
+		if sigresponse.DerivationPath == nil {
 			t.Errorf("No derivation path returned for derived key sign operation")
 			return
 		}
 
 		//ensure we have returned an address
-		if sigresponse.Address == "" {
+		if sigresponse.Address == nil {
 			t.Errorf("no address returned for derived key sign operation")
 			return
 		}
@@ -586,7 +586,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 		options := fmt.Sprintf(`{"hdwallet":{"coin":"ETH", "index":%d}}`, iteration)
 		json.Unmarshal([]byte(options), &opts)
 
-		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, sigresponse.Signature, opts)
+		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
 		if err != nil {
 			t.Errorf("failed to verify signature for vault: %s", err.Error())
 			return

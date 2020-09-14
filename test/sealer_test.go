@@ -180,9 +180,9 @@ func TestCreateUnsealerAndSignVerify(t *testing.T) {
 		return
 	}
 
-	key := vault.Secp256k1Factory(sealerDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+	key, err := vault.Secp256k1Factory(sealerDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 

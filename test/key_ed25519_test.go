@@ -21,9 +21,9 @@ func TestCreateKeyEd25519(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -50,9 +50,9 @@ func TestVerifyEd25519NilPublicKey(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -80,9 +80,9 @@ func TestVerifyEd25519InvalidSpec(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -111,9 +111,9 @@ func TestVerifyEd25519NilSpec(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -141,15 +141,15 @@ func TestSignEd25519NilSeed(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
 	msg := []byte(common.RandomString(10))
 	key.Seed = nil
-	_, err := key.Sign(msg, nil)
+	_, err = key.Sign(msg, nil)
 	if err == nil {
 		t.Errorf("signed message using Ed25519 keypair with nil seed for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -166,9 +166,9 @@ func TestEd25519Sign(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -199,9 +199,9 @@ func TestEd25519Verify(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 

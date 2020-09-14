@@ -375,7 +375,6 @@ func vaultKeysListHandler(c *gin.Context) {
 		return
 	}
 
-	// FIXME-- this is not covered by any test
 	keysQuery := vault.ListKeysQuery(db)
 	if c.Query("spec") != "" {
 		keysQuery = keysQuery.Where("keys.spec = ?", c.Query("spec"))
@@ -425,8 +424,9 @@ func createVaultKeyHandler(c *gin.Context) {
 		return
 	}
 
+	db := dbconf.DatabaseConnection()
 	vault := &Vault{}
-	vault = GetVault(c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	vault = GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if vault == nil || vault.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
@@ -436,7 +436,6 @@ func createVaultKeyHandler(c *gin.Context) {
 	key.VaultID = &vault.ID
 	key.vault = vault
 
-	db := dbconf.DatabaseConnection()
 	if key.createPersisted(db) {
 		provide.Render(key, 201, c)
 	} else {
@@ -588,17 +587,15 @@ func vaultSecretsListHandler(c *gin.Context) {
 		return
 	}
 
+	db := dbconf.DatabaseConnection()
 	var vault = &Vault{}
-	vault = GetVault(c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	vault = GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if vault.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
 		return
 	}
 
-	db := dbconf.DatabaseConnection()
-
-	// FIXME-- this is not covered by any test
 	secretsQuery := vault.ListSecretsQuery(db)
 	if c.Query("type") != "" {
 		secretsQuery = secretsQuery.Where("secrets.type = ?", c.Query("type"))
@@ -665,10 +662,10 @@ func createVaultSecretHandler(c *gin.Context) {
 		return
 	}
 
-	db := dbconf.DatabaseConnection() // FIXME-- pass this in to GetVault
+	db := dbconf.DatabaseConnection()
 
 	var vault = &Vault{}
-	vault = GetVault(c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	vault = GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if vault == nil || vault.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)

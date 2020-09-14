@@ -115,16 +115,23 @@ func init() {
 		return
 	}
 
-	unsealresp, err := provide.UnsealVault(*token, map[string]interface{}{
+	//test getting a new unsealer key
+	newkeyresp, err := provide.GenerateSeal(*token, map[string]interface{}{})
+	if err != nil {
+		log.Printf("error generating new unsealer key %s", err.Error())
+	}
+
+	log.Printf("newly generated unsealer key %s", *newkeyresp.UnsealerKey)
+	log.Printf("newly generated unsealer key hash %s", *newkeyresp.ValidationHash)
+	_, err = provide.UnsealVault(*token, map[string]interface{}{
 		"unsealer_key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
 		log.Printf("**vault not unsealed**. error: %s", err.Error())
 		return
 	}
-
-	log.Printf("response from unseal vault: %+v", unsealresp)
 }
+
 func TestAPICreateVault(t *testing.T) {
 	token, err := userTokenFactory()
 	if err != nil {
@@ -692,5 +699,179 @@ func TestListKeys(t *testing.T) {
 
 			t.Logf("key %d of %d validated", looper, numberOfKeys)
 		}
+	}
+}
+
+func TestListKeys_Filtered(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	// generate a key that will be filtered out
+	_, err = provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+		"type":        "asymmetric",
+		"usage":       "sign/verify",
+		"spec":        "babyJubJub",
+		"name":        "babyjubjub key to be filtered out",
+		"description": "baseline babyjubjub key",
+	})
+
+	if err != nil {
+		t.Errorf("failed to create key. error %s", err.Error())
+	}
+
+	// set how many keys we're going to generate for the filter
+	const numberOfKeys = 2
+	var inputKey [numberOfKeys + 1]*provide.Key
+	//inputKey[0] = nil //ignoring the vault master key
+
+	for looper := 0; looper < numberOfKeys; looper++ {
+		keyName := fmt.Sprintf("integration test ethereum key %d", looper)
+		key, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+			"type":        "asymmetric",
+			"usage":       "sign/verify",
+			"spec":        "secp256k1",
+			"name":        keyName,
+			"description": "organization eth/stablecoin wallet",
+		})
+
+		if err != nil {
+			t.Errorf("failed to create key. error %s", err.Error())
+		}
+
+		inputKey[looper] = key
+
+		if len(*inputKey[looper].Address) != 42 {
+			t.Errorf("invalid address length for key 01. expected 42, got %d", len(*inputKey[looper].Address))
+			return
+		}
+	}
+
+	// first run without filter
+	listVaultKeysResponse, err := provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{})
+	if err != nil {
+		t.Errorf("failed to list keys. error %s", err.Error())
+	}
+
+	if len(listVaultKeysResponse) != numberOfKeys+2 {
+		t.Errorf("invalid number of keys returned")
+		return
+	}
+
+	// now filter to just secp256k1
+	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+		"spec": "secp256k1",
+	})
+	if err != nil {
+		t.Errorf("failed to list keys. error %s", err.Error())
+	}
+
+	if len(listVaultKeysResponse) != numberOfKeys {
+		t.Errorf("invalid number of secp256k1 keys returned")
+		return
+	}
+
+	// now filter to babyjubjub
+	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+		"spec": "babyJubJub",
+	})
+	if err != nil {
+		t.Errorf("failed to list keys. error %s", err.Error())
+	}
+
+	if len(listVaultKeysResponse) != 1 {
+		t.Errorf("invalid number of baby jub jub keys returned")
+		return
+	}
+
+	// now filter to symmetric (should be just the master key)
+	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+		"type": "symmetric",
+	})
+	if err != nil {
+		t.Errorf("failed to list keys. error %s", err.Error())
+	}
+
+	if len(listVaultKeysResponse) != 1 {
+		t.Errorf("invalid number of symmetric keys returned")
+		return
+	}
+
+	// now filter to asymmetric (should be babyjubjub + numberOfKeys secp256k1 keys)
+	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+		"type": "asymmetric",
+	})
+	if err != nil {
+		t.Errorf("failed to list keys. error %s", err.Error())
+	}
+
+	if len(listVaultKeysResponse) != (numberOfKeys + 1) {
+		t.Errorf("invalid number of asymmetric keys returned")
+		return
+	}
+
+	//now check the value of all the secp256k1 keys added
+	// now filter to babyjubjub
+	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+		"spec": "secp256k1",
+	})
+	if err != nil {
+		t.Errorf("failed to list keys. error %s", err.Error())
+	}
+
+	if len(listVaultKeysResponse) != numberOfKeys {
+		t.Errorf("invalid number of secp256k1 keys returned")
+		return
+	}
+
+	var outputKey [numberOfKeys + 1]*provide.Key
+	for looper := 0; looper < numberOfKeys; looper++ {
+		outputKey[looper] = listVaultKeysResponse[looper]
+
+		if *inputKey[looper].Address != *outputKey[looper].Address {
+			t.Errorf("address mismatch. expected %s, got %s", *inputKey[looper].Address, *outputKey[looper].Address)
+		}
+
+		if *inputKey[looper].Description != *outputKey[looper].Description {
+			t.Errorf("description mismatch. expected %s, got %s", *inputKey[looper].Description, *outputKey[looper].Description)
+		}
+
+		if inputKey[looper].ID != outputKey[looper].ID {
+			t.Errorf("id mismatch. expected %s, got %s", inputKey[looper].ID, outputKey[looper].ID)
+		}
+
+		if *inputKey[looper].Name != *outputKey[looper].Name {
+			t.Errorf("name mismatch. expected %s, got %s", *inputKey[looper].Name, *outputKey[looper].Name)
+		}
+
+		if *inputKey[looper].Spec != *outputKey[looper].Spec {
+			t.Errorf("spec mismatch. expected %s, got %s", *inputKey[looper].Spec, *outputKey[looper].Spec)
+		}
+
+		if *inputKey[looper].Type != *outputKey[looper].Type {
+			t.Errorf("type mismatch. expected %s, got %s", *inputKey[looper].Type, *outputKey[looper].Type)
+		}
+
+		if *inputKey[looper].Usage != *outputKey[looper].Usage {
+			t.Errorf("usage mismatch. expected %s, got %s", *inputKey[looper].Usage, *outputKey[looper].Usage)
+		}
+
+		if inputKey[looper].VaultID.String() != outputKey[looper].VaultID.String() {
+			t.Errorf("vault_id mismatch. expected %s, got %s", inputKey[looper].VaultID, outputKey[looper].VaultID)
+		}
+
+		if *inputKey[looper].PublicKey != *outputKey[looper].PublicKey {
+			t.Errorf("public_key mismatch. expected %s, got %s", *inputKey[looper].PublicKey, *outputKey[looper].PublicKey)
+		}
+
+		t.Logf("key %d of %d validated", looper+1, numberOfKeys)
 	}
 }

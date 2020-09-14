@@ -150,7 +150,7 @@ services:
       - LOG_LEVEL=DEBUG
       - PORT=8080
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://ident:8080/status"] # FIXME
+      test: ["CMD", "curl", "-f", "http://ident:8080/status"]
       interval: 1m
       timeout: 1s
       retries: 2

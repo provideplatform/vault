@@ -210,9 +210,8 @@ func GetVaults(applicationID, organizationID, userID *uuid.UUID) []*Vault {
 }
 
 // GetVault returns a vault for the specified parameters
-func GetVault(vaultID string, applicationID, organizationID, userID *uuid.UUID) *Vault {
-	// Set up the database connection
-	db := dbconf.DatabaseConnection()
+func GetVault(db *gorm.DB, vaultID string, applicationID, organizationID, userID *uuid.UUID) *Vault {
+
 	var query *gorm.DB
 
 	var vault = &Vault{}

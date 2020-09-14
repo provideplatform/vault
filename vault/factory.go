@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"fmt"
+
 	"github.com/jinzhu/gorm"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
@@ -53,7 +55,7 @@ func NewKey(
 func NewEphemeralKey(
 	vaultID *uuid.UUID,
 	name, description, keyType, keyUsage, keySpec string,
-) *Key {
+) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -65,14 +67,13 @@ func NewEphemeralKey(
 
 	err := key.create()
 	if err != nil {
-		common.Log.Warningf("failed to create ephemeral %s key; %s", keySpec, err.Error())
-		return nil
+		return nil, fmt.Errorf("Error creating new ephemeral %s key: %s", keySpec, err.Error())
 	}
-	return key
+	return key, nil
 }
 
 // SecretFactory ....
-func SecretFactory(db *gorm.DB, vaultID *uuid.UUID, secretcontents []byte, name, secretType, description string) *Secret {
+func SecretFactory(db *gorm.DB, vaultID *uuid.UUID, secretcontents []byte, name, secretType, description string) (*Secret, error) {
 	secret := &Secret{
 		VaultID:        vaultID,
 		Name:           common.StringOrNil(name),
@@ -82,14 +83,14 @@ func SecretFactory(db *gorm.DB, vaultID *uuid.UUID, secretcontents []byte, name,
 	}
 
 	if !secret.Create(db) {
-		return nil
+		return nil, fmt.Errorf("Error(s) creating/persisting secret: %v", *secret.Errors[0].Message)
 	}
 
-	return secret
+	return secret, nil
 }
 
 // AES256GCMFactory AES-256-GCM
-func AES256GCMFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func AES256GCMFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -100,14 +101,14 @@ func AES256GCMFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string)
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecAES256GCM, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }
 
 // AES256GCMEphemeralFactory ephemeral AES-256-GCM
-func AES256GCMEphemeralFactory(vaultID *uuid.UUID, name, description string) *Key {
+func AES256GCMEphemeralFactory(vaultID *uuid.UUID, name, description string) (*Key, error) {
 	ephemeral := true
 
 	key := &Key{
@@ -122,15 +123,14 @@ func AES256GCMEphemeralFactory(vaultID *uuid.UUID, name, description string) *Ke
 
 	err := key.create()
 	if err != nil {
-		common.Log.Warningf("failed to create ephemeral AES-256-GCM key; %s", err.Error())
-		return nil
+		return nil, fmt.Errorf("error creating ephemeral %skey: %s", KeySpecAES256GCM, err.Error())
 	}
 
-	return key
+	return key, nil
 }
 
 // BabyJubJubFactory babyJubJub curve
-func BabyJubJubFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func BabyJubJubFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -141,14 +141,14 @@ func BabyJubJubFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCBabyJubJub, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }
 
 // C25519Factory C25519
-func C25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func C25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -159,14 +159,14 @@ func C25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *K
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCC25519, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }
 
 // Chacha20Factory ChaCha-20
-func Chacha20Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func Chacha20Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -177,14 +177,14 @@ func Chacha20Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) 
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecChaCha20, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }
 
 // Ed25519Factory Ed25519
-func Ed25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func Ed25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -195,14 +195,14 @@ func Ed25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCEd25519, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }
 
 // Secp256k1Factory secp256k1
-func Secp256k1Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func Secp256k1Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -213,14 +213,14 @@ func Secp256k1Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string)
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCSecp256k1, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }
 
 // EthHDWalletFactory secp256k1 HD wallet for deriving ETH keys/addresses
-func EthHDWalletFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func EthHDWalletFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -231,14 +231,14 @@ func EthHDWalletFactory(db *gorm.DB, vaultID *uuid.UUID, name, description strin
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCBIP39, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }
 
 // RSA4096Factory RSA 4096-bit
-func RSA4096Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func RSA4096Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -249,14 +249,14 @@ func RSA4096Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecRSA4096, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }
 
 // RSA3072Factory RSA 3072-bit
-func RSA3072Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func RSA3072Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -267,14 +267,14 @@ func RSA3072Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecRSA3072, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }
 
 // RSA2048Factory RSA 2048-bit
-func RSA2048Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *Key {
+func RSA2048Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -285,8 +285,8 @@ func RSA2048Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) *
 	}
 
 	if !key.createPersisted(db) {
-		return nil
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecRSA2048, *key.Errors[0].Message)
 	}
 
-	return key
+	return key, nil
 }

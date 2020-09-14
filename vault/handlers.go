@@ -18,8 +18,8 @@ import (
 
 // InstallAPI installs the handlers using the given gin Engine
 func InstallAPI(r *gin.Engine) {
-	// FIXME - tweak api...
-	r.GET("/api/v1/unseal", createUnsealerKeyHandler)
+
+	r.POST("/api/v1/unsealerkey", createUnsealerKeyHandler)
 	r.POST("/api/v1/unseal", unsealHandler)
 
 	r.GET("/api/v1/vaults", vaultsListHandler)
@@ -44,11 +44,6 @@ func InstallAPI(r *gin.Engine) {
 func createUnsealerKeyHandler(c *gin.Context) {
 	_ = token.InContext(c)
 
-	if vaultIsSealed() {
-		provide.RenderError("vault is sealed", 403, c)
-		return
-	}
-
 	_, err := c.GetRawData()
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -61,7 +56,7 @@ func createUnsealerKeyHandler(c *gin.Context) {
 		return
 	}
 
-	provide.Render(key, 200, c)
+	provide.Render(key, 201, c)
 	return
 }
 

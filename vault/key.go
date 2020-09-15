@@ -135,6 +135,15 @@ type KeyEncryptDecryptRequestResponse struct {
 	Nonce *string `json:"nonce,omitempty"` //optional nonce parameter
 }
 
+// KeyDeriveRequest contains the details for the derivation of a
+// new chacha20 key from the provided chacha20 key
+type KeyDeriveRequest struct {
+	Nonce       *int    `json:"nonce,omitempty"`
+	Context     *string `json:"context,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
 // SigningOptions contains the options for the signing algorithm
 // such as rsa algorithm (RS256, RS384, RS512, PS256, PS384, PS512)
 // hd wallet coin type (BTC, ETH)

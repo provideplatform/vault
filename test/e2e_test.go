@@ -875,3 +875,170 @@ func TestListKeys_Filtered(t *testing.T) {
 		t.Logf("key %d of %d validated", looper+1, numberOfKeys)
 	}
 }
+
+func TestAPIDerivedChachaDecrypt(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "ChaCha20", "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	nonce := 1
+	context := common.RandomString(32)
+	name := "derived key 01"
+	description := "derived key 01 description"
+
+	derivedKey, err := provide.DeriveVaultKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
+		"nonce":       nonce,
+		"context":     context,
+		"name":        name,
+		"description": description,
+	})
+
+	if err != nil {
+		t.Errorf("failed to derive key for vault: %s", vault.ID)
+		return
+	}
+
+	if *derivedKey.Name != name {
+		t.Errorf("name field incorrect. expected %s, got %s", name, *derivedKey.Name)
+		return
+	}
+
+	if *derivedKey.Description != description {
+		t.Errorf("description field incorrect. expected %s, got %s", description, *derivedKey.Description)
+		return
+	}
+
+	data := common.RandomString(128)
+
+	encryptedDataResponse, err := provide.Encrypt(*token, derivedKey.VaultID.String(), derivedKey.ID.String(), data)
+
+	if err != nil {
+		t.Errorf("failed to encrypt message for vault: %s", vault.ID)
+		return
+	}
+
+	decryptedDataResponse, err := provide.Decrypt(*token, derivedKey.VaultID.String(), derivedKey.ID.String(), map[string]interface{}{
+		"data": encryptedDataResponse.Data,
+	})
+
+	if decryptedDataResponse.Data != data {
+		t.Errorf("decrypted data mismatch, expected %s, got %s", data, decryptedDataResponse.Data)
+		return
+	}
+}
+
+func TestAPIDerivedChachaDecryptNoNonce(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "ChaCha20", "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	context := common.RandomString(32)
+	name := "derived key 01"
+	description := "derived key 01 description"
+
+	derivedKey, err := provide.DeriveVaultKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
+		"context":     context,
+		"name":        name,
+		"description": description,
+	})
+
+	if err != nil {
+		t.Errorf("failed to derive key for vault: %s", vault.ID)
+		return
+	}
+
+	if *derivedKey.Name != name {
+		t.Errorf("name field incorrect. expected %s, got %s", name, *derivedKey.Name)
+		return
+	}
+
+	if *derivedKey.Description != description {
+		t.Errorf("description field incorrect. expected %s, got %s", description, *derivedKey.Description)
+		return
+	}
+
+	data := common.RandomString(128)
+
+	encryptedDataResponse, err := provide.Encrypt(*token, derivedKey.VaultID.String(), derivedKey.ID.String(), data)
+
+	if err != nil {
+		t.Errorf("failed to encrypt message for vault: %s", vault.ID)
+		return
+	}
+
+	decryptedDataResponse, err := provide.Decrypt(*token, derivedKey.VaultID.String(), derivedKey.ID.String(), map[string]interface{}{
+		"data": encryptedDataResponse.Data,
+	})
+
+	if decryptedDataResponse.Data != data {
+		t.Errorf("decrypted data mismatch, expected %s, got %s", data, decryptedDataResponse.Data)
+		return
+	}
+}
+
+func TestAPIDerivedNonChachaDecryptNoNonce(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "AES-256-GCM", "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	context := common.RandomString(32)
+	name := "derived key 01"
+	description := "derived key 01 description"
+
+	_, err = provide.DeriveVaultKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
+		"context":     context,
+		"name":        name,
+		"description": description,
+	})
+
+	if err == nil {
+		t.Errorf("incorrectly derived non-chacha20 key for vault: %s", vault.ID)
+		return
+	}
+
+	if err != nil {
+		t.Logf("correctly returned error deriving non-chacha20 key. Error: %s", err.Error())
+	}
+}

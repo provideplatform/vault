@@ -1,10 +1,12 @@
 package vault
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -38,6 +40,62 @@ func InstallAPI(r *gin.Engine) {
 	r.POST("api/v1/vaults/:id/secrets", createVaultSecretHandler)
 	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretDetailsHandler)
 	r.DELETE("api/v1/vaults/:id/secrets/:secretId", deleteVaultSecretHandler)
+
+	r.POST("api/v1/vaults/:id/keys/:keyId/derive", vaultKeyDeriveHandler)
+}
+
+// vaultKeyDeriveHandler derives a new symmetric key from a chacha20 key
+func vaultKeyDeriveHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &KeyDeriveRequest{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	var key = &Key{}
+	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+
+	if key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	// TODO break this out into a function if we allow derivation from more than ChaCha20
+	if *key.Spec != KeySpecChaCha20 {
+		provide.RenderError("key does not support derivation", 400, c)
+		return
+	}
+
+	// handle empty nonces - replace with random 32-bit integer
+	// and convert to bigendian 16-byte array
+	nonceAsBytes := make([]byte, 16)
+	if params.Nonce != nil {
+		binary.BigEndian.PutUint32(nonceAsBytes, uint32(*params.Nonce))
+	} else {
+		binary.BigEndian.PutUint32(nonceAsBytes, uint32(rand.Int31()))
+	}
+
+	derivedKey, err := key.DeriveSymmetric(nonceAsBytes, []byte(*params.Context), *params.Name, *params.Description)
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	provide.Render(derivedKey, 201, c)
 }
 
 // createUnsealerKeyHandler creates the unsealer key

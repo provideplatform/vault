@@ -13,18 +13,18 @@ import (
 
 // AuditLogEvent is the struct containing the audit log fields
 type AuditLogEvent struct {
-	AuditMessage   *string    `json:"LogType"`
-	Timestamp      *time.Time `json:"Timestamp"`
-	RequestID      *string    `json:"RequestID"`
-	UserID         *string    `json:"UserID"`
-	AppID          *string    `json:"AppID"`
-	OrgID          *string    `json:"OrgID"`
-	RemoteAddress  *string    `json:"RemoteAddress"`
-	RequestPath    *string    `json:"Path"`
-	RequestMethod  *string    `json:"Method"`
-	Host           *string    `json:"Host"`
-	ResponseStatus *int       `json:"Status,omitempty"`
-	Latency        *string    `json:"Latency,omitempty"`
+	AuditMessage   *string    `json:"log_type"`
+	Timestamp      *time.Time `json:"timestamp"`
+	RequestID      *string    `json:"request_id"`
+	UserID         *string    `json:"user_id"`
+	AppID          *string    `json:"app_id"`
+	OrgID          *string    `json:"org_id"`
+	RemoteAddress  *string    `json:"remote_address"`
+	RequestPath    *string    `json:"path"`
+	RequestMethod  *string    `json:"method"`
+	Host           *string    `json:"host"`
+	ResponseStatus *int       `json:"status,omitempty"`
+	Latency        *int64     `json:"latency,omitempty"`
 }
 
 // AuditRequest logs data from the http request for audit purposes
@@ -84,7 +84,7 @@ func AuditResponse(c *gin.Context, msg string, start int64) {
 	requestPath := c.Request.URL.RequestURI()
 	requestMethod := c.Request.Method
 	host := c.Request.Host
-	latency := fmt.Sprintf("%dms", (time.Now().UnixNano()-start)/1000000)
+	latency := (time.Now().UnixNano() - start) / 1000000 // latency in milliseconds
 
 	// create the audit event
 	auditEvent := &AuditLogEvent{
@@ -99,7 +99,7 @@ func AuditResponse(c *gin.Context, msg string, start int64) {
 		RequestMethod:  common.StringOrNil(requestMethod),
 		Host:           common.StringOrNil(host),
 		ResponseStatus: &statusCode,
-		Latency:        common.StringOrNil(latency),
+		Latency:        &latency,
 	}
 
 	writeAuditLogEvent(auditEvent)

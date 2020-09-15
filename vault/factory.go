@@ -56,6 +56,9 @@ func NewEphemeralKey(
 	vaultID *uuid.UUID,
 	name, description, keyType, keyUsage, keySpec string,
 ) (*Key, error) {
+
+	boolTrue := true
+
 	key := &Key{
 		VaultID:     vaultID,
 		Name:        common.StringOrNil(name),
@@ -63,6 +66,7 @@ func NewEphemeralKey(
 		Spec:        common.StringOrNil(keySpec),
 		Type:        common.StringOrNil(keyType),
 		Usage:       common.StringOrNil(keyUsage),
+		Ephemeral:   &boolTrue,
 	}
 
 	err := key.create()

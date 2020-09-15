@@ -43,17 +43,13 @@ func TestSecretStoreAndResponse(t *testing.T) {
 		return
 	}
 
-	//next we will list the secrets for the vault, select our secret and retrieve the text
-	storedSecret := &vault.Secret{}
-	//FIXME is this in a method somewhere - this is too much code
-	vlt.ListSecretsQuery(secretDB).Where("secrets.id=?", secret.ID).Find(&storedSecret)
-	secretResp, err := storedSecret.AsResponse()
-	if err != nil {
-		t.Errorf("error retrieving secret %s", err.Error())
-	}
+	t.Logf("secret returned %+v", *secret)
+	storedSecret := vault.GetVaultSecret(secret.ID.String(), vlt.ID.String(), vlt.ApplicationID, vlt.OrganizationID, vlt.UserID)
 
-	if *secretResp.Value != secretText {
-		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *storedSecret.Value)
+	decryptedSecret, _ := storedSecret.AsResponse()
+
+	if *decryptedSecret.Value != secretText {
+		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *decryptedSecret.Value)
 		return
 	}
 	t.Logf("got expected secret back")
@@ -153,18 +149,13 @@ func TestSecretDelete(t *testing.T) {
 		return
 	}
 
-	//next we will list the secrets for the vault, select our secret and retrieve the text
-	deletedSecret := &vault.Secret{}
-	//FIXME this should be a method call
-	vlt.ListSecretsQuery(secretDB).Where("secrets.id=?", secret.ID).Find(&deletedSecret)
+	t.Logf("secret returned %+v", *secret)
+	deletedSecret := vault.GetVaultSecret(secret.ID.String(), vlt.ID.String(), vlt.ApplicationID, vlt.OrganizationID, vlt.UserID)
 
-	_, err = deletedSecret.AsResponse()
-	if err == nil {
-		t.Errorf("no error retrieving deleted secret")
+	if deletedSecret.ID != uuid.Nil {
+		t.Errorf("retrieved deleted secret")
 		return
 	}
-
-	t.Logf("secret deleted as expected %s", err.Error())
 }
 
 func TestSecretDeleteNilSecretID(t *testing.T) {

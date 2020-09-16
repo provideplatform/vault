@@ -114,8 +114,8 @@ type Key struct {
 
 	Address             *string `sql:"-" json:"address,omitempty"`
 	Ephemeral           *bool   `sql:"-" json:"ephemeral,omitempty"`
-	EphemeralPrivateKey *[]byte `sql:"-" json:"private_key,omitempty"`
-	EphemeralSeed       *[]byte `sql:"-" json:"seed,omitempty"`
+	EphemeralPrivateKey *string `sql:"-" json:"private_key,omitempty"`
+	EphemeralSeed       *string `sql:"-" json:"seed,omitempty"`
 	PublicKeyHex        *string `sql:"-" json:"public_key,omitempty"`
 	DerivationPath      *string `sql:"-" json:"hd_derivation_path,omitempty"`
 
@@ -637,11 +637,20 @@ func (k *Key) create() error {
 
 	if isEphemeral {
 		if k.Seed != nil {
-			ephemeralSeed := *k.Seed
+			ephemeralSeed := string(*k.Seed)
+
+			//hex encode the seed if it's not a BIP39 seed
+			if *k.Spec != KeySpecECCBIP39 {
+				SeedHex := hex.EncodeToString(*k.Seed)
+				ephemeralSeed = fmt.Sprintf("0x%s", SeedHex)
+			}
+
 			k.EphemeralSeed = &ephemeralSeed
 		}
+
 		if k.PrivateKey != nil {
-			ephemeralPrivateKey := *k.PrivateKey
+			privateKeyHex := hex.EncodeToString(*k.PrivateKey)
+			ephemeralPrivateKey := fmt.Sprintf("0x%s", privateKeyHex)
 			k.EphemeralPrivateKey = &ephemeralPrivateKey
 		}
 	}

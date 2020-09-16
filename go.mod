@@ -2,6 +2,8 @@ module github.com/provideapp/vault
 
 go 1.13
 
+replace github.com/provideapp/ident => ../ident
+
 require (
 	github.com/ethereum/go-ethereum v1.9.19
 	github.com/gin-gonic/gin v1.6.3
@@ -16,9 +18,7 @@ require (
 	github.com/onsi/ginkgo v1.12.3
 	github.com/onsi/gomega v1.10.1
 	github.com/provideapp/ident v0.0.0-00010101000000-000000000000
-	github.com/provideservices/provide-go v0.0.0-20200915113207-ad5f54f8d488
+	github.com/provideservices/provide-go v0.0.0-20200916165423-8f55ada967c8
 	github.com/tyler-smith/go-bip39 v1.0.2
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
-
-replace github.com/provideapp/ident => ../ident

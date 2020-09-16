@@ -71,76 +71,69 @@ func TestEphemeralCreation(t *testing.T) {
 
 		switch tc.Spec {
 		case "C25519":
-			if key.PrivateKey == nil {
+			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 		case "Ed25519":
-			if key.Seed == nil {
+			if key.EphemeralSeed == nil {
 				t.Errorf("no seed returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 		case "secp256k1":
-			if key.PrivateKey == nil {
+			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 		case "babyJubJub":
-			if key.PrivateKey == nil {
+			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 		case "BIP39":
-			if key.Seed == nil {
+			if key.EphemeralSeed == nil {
 				t.Errorf("no seed returned for ephemeral %s key", tc.Spec)
 			}
-			t.Logf("bip39 seed: %s", string(*key.EphemeralSeed))
 		case "RSA-2048":
-			if key.PrivateKey == nil {
+			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 		case "RSA-3072":
-			if key.PrivateKey == nil {
+			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 		case "RSA-4096":
-			if key.PrivateKey == nil {
+			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 		case "AES-256-GCM":
-			if key.PrivateKey == nil {
+			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 		case "ChaCha20":
-			if key.Seed == nil {
+			if key.EphemeralSeed == nil {
 				t.Errorf("no seed returned for ephemeral %s key", tc.Spec)
 			}
 		default:
 			t.Errorf("unknown key spec generated: %s", tc.Spec)
 			return
 		}
-
-		// t.Logf("key generated %+v", *key)
-		// t.Logf("ephemeral flag: %t", *key.Ephemeral)
-		// if key.Seed != nil {
-		// 	t.Logf("key seed %s", string(*key.Seed))
-		// }
 	}
 }

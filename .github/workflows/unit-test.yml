@@ -2,7 +2,7 @@ name: unit-test
 on:
   push:
     branches:
-      - audit-rebased
+      - no_no_branch
 jobs:
   build:
     runs-on: ubuntu-latest

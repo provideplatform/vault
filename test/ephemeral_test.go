@@ -75,28 +75,28 @@ func TestEphemeralCreation(t *testing.T) {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
-				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
+				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
 		case "Ed25519":
 			if key.EphemeralSeed == nil {
 				t.Errorf("no seed returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
-				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
+				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
 		case "secp256k1":
 			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
-				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
+				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
 		case "babyJubJub":
 			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
-				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
+				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
 		case "BIP39":
 			if key.EphemeralSeed == nil {
@@ -107,21 +107,21 @@ func TestEphemeralCreation(t *testing.T) {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
-				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
+				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
 		case "RSA-3072":
 			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
-				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
+				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
 		case "RSA-4096":
 			if key.EphemeralPrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
-				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
+				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
 		case "AES-256-GCM":
 			if key.EphemeralPrivateKey == nil {

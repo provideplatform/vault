@@ -43,8 +43,8 @@ if [[ -z "${RACE}" ]]; then
   RACE=true
 fi
 
-if [[ -z "${USK_VALIDATION_HASH}" ]]; then
-  USK_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
+if [[ -z "${VAULT_USK_VALIDATION_HASH}" ]]; then
+  VAULT_USK_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
 fi
 
 
@@ -233,7 +233,7 @@ PUl1cxrvY7BHh4obNa6Bf8ECAwEAAQ==
 -----END PUBLIC KEY-----'
 
 #traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
-USK_VALIDATION_HASH='0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309'
+VAULT_USK_VALIDATION_HASH='0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309'
 
 pkgs=(test)
 for d in "${pkgs[@]}" ; do
@@ -255,7 +255,7 @@ for d in "${pkgs[@]}" ; do
     VAULT_API_HOST=localhost:8082 \
     VAULT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
-    USK_VALIDATION_HASH=$USK_VALIDATION_HASH \
+    VAULT_USK_VALIDATION_HASH=$VAULT_USK_VALIDATION_HASH \
     go test ./... -v \
                        -race \
                        -timeout 1800s \
@@ -281,7 +281,7 @@ for d in "${pkgs[@]}" ; do
     VAULT_API_HOST=localhost:8082 \
     VAULT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
-    USK_VALIDATION_HASH=$USK_VALIDATION_HASH \
+    VAULT_USK_VALIDATION_HASH=$VAULT_USK_VALIDATION_HASH \
     go test ./... -v \
                        -timeout 1800s \
                        -cover \

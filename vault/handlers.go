@@ -20,7 +20,6 @@ import (
 
 // InstallAPI installs the handlers using the given gin Engine
 func InstallAPI(r *gin.Engine) {
-
 	r.POST("/api/v1/unsealerkey", createUnsealerKeyHandler)
 	r.POST("/api/v1/unseal", unsealHandler)
 
@@ -30,72 +29,17 @@ func InstallAPI(r *gin.Engine) {
 
 	r.GET("/api/v1/vaults/:id/keys", vaultKeysListHandler)
 	r.POST("/api/v1/vaults/:id/keys", createVaultKeyHandler)
-	r.POST("/api/v1/vaults/:id/keys/:keyId/sign", vaultKeySignHandler)
-	r.POST("/api/v1/vaults/:id/keys/:keyId/verify", vaultKeyVerifyHandler)
+	r.POST("api/v1/vaults/:id/keys/:keyId/derive", vaultKeyDeriveHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/encrypt", vaultKeyEncryptHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/decrypt", vaultKeyDecryptHandler)
+	r.POST("/api/v1/vaults/:id/keys/:keyId/sign", vaultKeySignHandler)
+	r.POST("/api/v1/vaults/:id/keys/:keyId/verify", vaultKeyVerifyHandler)
 	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
 
 	r.GET("/api/v1/vaults/:id/secrets", vaultSecretsListHandler)
 	r.POST("api/v1/vaults/:id/secrets", createVaultSecretHandler)
 	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretDetailsHandler)
 	r.DELETE("api/v1/vaults/:id/secrets/:secretId", deleteVaultSecretHandler)
-
-	r.POST("api/v1/vaults/:id/keys/:keyId/derive", vaultKeyDeriveHandler)
-}
-
-// vaultKeyDeriveHandler derives a new symmetric key from a chacha20 key
-func vaultKeyDeriveHandler(c *gin.Context) {
-	bearer := token.InContext(c)
-
-	if vaultIsSealed() {
-		provide.RenderError("vault is sealed", 403, c)
-		return
-	}
-
-	buf, err := c.GetRawData()
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-
-	params := &KeyDeriveRequest{}
-	err = json.Unmarshal(buf, &params)
-	if err != nil {
-		provide.RenderError(err.Error(), 400, c)
-		return
-	}
-
-	var key = &Key{}
-	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
-
-	if key.ID == uuid.Nil {
-		provide.RenderError("key not found", 404, c)
-		return
-	}
-
-	// TODO break this out into a function if we allow derivation from more than ChaCha20
-	if *key.Spec != KeySpecChaCha20 {
-		provide.RenderError("key does not support derivation", 400, c)
-		return
-	}
-
-	// handle empty nonces - replace with random 32-bit integer
-	// and convert to bigendian 16-byte array
-	nonceAsBytes := make([]byte, 16)
-	if params.Nonce != nil {
-		binary.BigEndian.PutUint32(nonceAsBytes, uint32(*params.Nonce))
-	} else {
-		binary.BigEndian.PutUint32(nonceAsBytes, uint32(rand.Int31()))
-	}
-
-	derivedKey, err := key.DeriveSymmetric(nonceAsBytes, []byte(*params.Context), *params.Name, *params.Description)
-	if err != nil {
-		provide.RenderError(err.Error(), 500, c)
-		return
-	}
-
-	provide.Render(derivedKey, 201, c)
 }
 
 // createUnsealerKeyHandler creates the unsealer key
@@ -115,7 +59,6 @@ func createUnsealerKeyHandler(c *gin.Context) {
 	}
 
 	provide.Render(key, 201, c)
-	return
 }
 
 // unsealHandler enables locking and unlocking the master key for all vaults
@@ -144,7 +87,7 @@ func unsealHandler(c *gin.Context) {
 
 	err = SetUnsealerKey(*params.UnsealerKey)
 	if err != nil {
-		msg := fmt.Sprintf("Error: %s", err.Error())
+		msg := fmt.Sprintf("failed to unseal vault; %s", err.Error())
 		common.Log.Warning(msg)
 		provide.RenderError(msg, 500, c)
 		return
@@ -526,6 +469,59 @@ func deleteVaultKeyHandler(c *gin.Context) {
 	}
 
 	provide.Render(nil, 204, c)
+}
+
+// vaultKeyDeriveHandler derives a new symmetric key from a chacha20 key
+func vaultKeyDeriveHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &KeyDeriveRequest{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	key := GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+
+	if key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	// TODO break this out into a function if we allow derivation from more than ChaCha20
+	if *key.Spec != KeySpecChaCha20 {
+		provide.RenderError("key does not support derivation", 400, c)
+		return
+	}
+
+	// handle empty nonces - replace with random 32-bit integer
+	// and convert to bigendian 16-byte array
+	nonceAsBytes := make([]byte, 16)
+	if params.Nonce != nil {
+		binary.BigEndian.PutUint32(nonceAsBytes, uint32(*params.Nonce))
+	} else {
+		binary.BigEndian.PutUint32(nonceAsBytes, uint32(rand.Int31()))
+	}
+
+	derivedKey, err := key.DeriveSymmetric(nonceAsBytes, []byte(*params.Context), *params.Name, *params.Description)
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	provide.Render(derivedKey, 201, c)
 }
 
 func vaultKeySignHandler(c *gin.Context) {

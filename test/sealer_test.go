@@ -24,7 +24,7 @@ func unsealVault() {
 }
 
 func setValidationHash(hash string) {
-	common.UnsealerKeyValidator = hash
+	common.UnsealerKeyValidationHash = hash
 }
 
 func TestVaultUnseal(t *testing.T) {
@@ -62,7 +62,7 @@ func TestUnsealVaultNoValidationHash(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
 	vault.UnsealerKey = nil
-	hash := common.UnsealerKeyValidator
+	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
 	setValidationHash("")
@@ -91,14 +91,14 @@ func TestUnsealVaultInvalidBIP39Phrase(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
 	vault.UnsealerKey = nil
-	hash := common.UnsealerKeyValidator
+	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
 	// set up bad data that will pass the validation, but fail to recover BIP39 entropy
 	badKey, _ := common.RandomBytes(32)
 	badHash := crypto.SHA256.New()
 	_, _ = badHash.Write(badKey)
-	common.UnsealerKeyValidator = hex.EncodeToString(badHash.Sum(nil))
+	common.UnsealerKeyValidationHash = hex.EncodeToString(badHash.Sum(nil))
 
 	err := vault.SetUnsealerKey(string(badKey))
 	if err == nil {
@@ -112,14 +112,14 @@ func TestUnsealVaultLowEntropyBIP39Phrase(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
 	vault.UnsealerKey = nil
-	hash := common.UnsealerKeyValidator
+	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
 	badEntropy, _ := bip39.NewEntropy(128)
 	badMnemonic, _ := bip39.NewMnemonic(badEntropy)
 	badHash := crypto.SHA256.New()
 	_, _ = badHash.Write([]byte(badMnemonic))
-	common.UnsealerKeyValidator = hex.EncodeToString(badHash.Sum(nil))
+	common.UnsealerKeyValidationHash = hex.EncodeToString(badHash.Sum(nil))
 
 	err := vault.SetUnsealerKey(badMnemonic)
 	if err == nil {
@@ -133,7 +133,7 @@ func TestCreateUnsealer(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
 	vault.UnsealerKey = nil
-	hash := common.UnsealerKeyValidator
+	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
 	// first we will create a new unsealer key & hash
@@ -156,7 +156,7 @@ func TestCreateUnsealerAndSignVerify(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
 	vault.UnsealerKey = nil
-	hash := common.UnsealerKeyValidator
+	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
 	// first we will create a new unsealer key & hash

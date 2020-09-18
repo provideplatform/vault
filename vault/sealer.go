@@ -15,36 +15,36 @@ var (
 	// which are used to decrypt the private keys/seeds
 	unsealerKey []byte
 
-	// unsealerCloakingKey will ensure Unsealer Key is encrypted in memory until required
+	// unsealerCloakingKey will ensure unsealer key is encrypted in memory until required
 	unsealerCloakingKey []byte
 )
 
 // SealUnsealRequestResponse provides the unseal information
 type SealUnsealRequestResponse struct {
-	UnsealerKey    *string `json:"unsealer_key,omitempty"`
+	UnsealerKey    *string `json:"key,omitempty"` // renamed this JSON to key as it feels like a "sealing key" one direction and "unsealing key" from the other...
 	ValidationHash *string `json:"validation_hash,omitempty"`
 }
 
 // SetUnsealerKey sets the unsealer key; this only possible with a SEALED vault
 func SetUnsealerKey(passphrase string) error {
 	if passphrase == "" {
-		return fmt.Errorf("error unsealing vault (100)") // no unsealer key provided
+		return fmt.Errorf("error unsealing vault; no unsealer key provided")
 	}
 
 	// we can't unseal an unsealed vault
 	if unsealerKey != nil {
-		return fmt.Errorf("error unsealing vault (200)") // application already unsealed
+		return fmt.Errorf("error unsealing vault; already unsealed")
 	}
 
 	// get the SHA512 hash of the generated unsealerkey
 	incomingKeyHash := crypto.SHA256.New()
 	_, err := incomingKeyHash.Write([]byte(passphrase))
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (300)") // error hashing incoming key
+		return fmt.Errorf("error unsealing vault; error hashing incoming key")
 	}
 
 	if common.UnsealerKeyValidationHash == "" {
-		return fmt.Errorf("error unsealing vault (400)")
+		return fmt.Errorf("error unsealing vault; empty validation hash")
 	}
 
 	validator, _ := hex.DecodeString(common.UnsealerKeyValidationHash)
@@ -52,14 +52,14 @@ func SetUnsealerKey(passphrase string) error {
 	// validate the SHA256 hash against the validation hash
 	res := bytes.Compare(incomingKeyHash.Sum(nil), validator[:])
 	if res != 0 {
-		return fmt.Errorf("error unsealing vault (500)") // unsealer key provided doesn't match validator hash
+		return fmt.Errorf("error unsealing vault; unsealer key provided doesn't match validator hash")
 	}
 	common.Log.Debugf("valid vault unsealing key received")
 
 	// set up a random cloaking key
 	randomKey, err := vaultcrypto.CreateAES256GCMSeed()
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (600)") // error setting up cloaking key
+		return fmt.Errorf("error unsealing vault; failed to generate cloaking key")
 	}
 
 	// set the cloaking key to this random key
@@ -73,17 +73,17 @@ func SetUnsealerKey(passphrase string) error {
 	// get the original 32-byte entropy from the seed phrase - we will use this as the AES encryption key for the vaults
 	unsealerKeySeed, err := vaultcrypto.GetEntropyFromMnemonic(passphrase)
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (700)") // error recovering entropy from BIP39 passphrase
+		return fmt.Errorf("error unsealing vault; recovering entropy from BIP39 passphrase failed") // error
 	}
 
 	if len(unsealerKeySeed) != common.UnsealerKeyRequiredBytes {
-		return fmt.Errorf("error unsealing vault (800)") // error with entropy not being 32-bytes (required for AES encryption and required minimum for vault security)
+		return fmt.Errorf("error unsealing vault; entropy not 32-bytes (required for AES encryption and required minimum for vault security)")
 	}
 
 	// encrypt the unsealer key with the cloaking key
 	cloakedUnsealerKey, err := cloakingKey.Encrypt(unsealerKeySeed, nil)
 	if err != nil {
-		return fmt.Errorf("error unsealing vault (900)") // error encrypting unsealer key with cloaking key
+		return fmt.Errorf("error unsealing vault; failed to encrypt unsealer with cloaking key")
 	}
 
 	// wipe the unsealer key seed in memory before garbage collection
@@ -96,7 +96,7 @@ func SetUnsealerKey(passphrase string) error {
 
 func getUnsealerKey() (*[]byte, error) {
 	if unsealerCloakingKey == nil {
-		return nil, fmt.Errorf("error unsealing vault (1100)") //no cloaking key available
+		return nil, fmt.Errorf("error unsealing vault; no cloaking key available")
 	}
 
 	// convert the cloaking key into an AES key

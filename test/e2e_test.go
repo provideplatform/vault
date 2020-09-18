@@ -130,7 +130,7 @@ func init() {
 	log.Printf("newly generated unsealer key %s", *newkeyresp.UnsealerKey)
 	log.Printf("newly generated unsealer key hash %s", *newkeyresp.ValidationHash)
 	_, err = provide.UnsealVault(*token, map[string]interface{}{
-		"unsealer_key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
+		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
 		log.Printf("**vault not unsealed**. error: %s", err.Error())

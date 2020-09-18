@@ -408,7 +408,7 @@ func (k *Key) decryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	if UnsealerKey == nil {
+	if unsealerKey == nil {
 		return fmt.Errorf("vault is sealed")
 	}
 
@@ -470,7 +470,7 @@ func (k *Key) encryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	if UnsealerKey == nil {
+	if unsealerKey == nil {
 		return fmt.Errorf("vault is sealed")
 	}
 

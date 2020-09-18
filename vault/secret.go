@@ -216,7 +216,7 @@ func (s *Secret) encryptFields() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if UnsealerKey == nil {
+	if unsealerKey == nil {
 		return fmt.Errorf("vault is sealed")
 	}
 
@@ -268,7 +268,7 @@ func (s *Secret) decryptFields() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if UnsealerKey == nil {
+	if unsealerKey == nil {
 		return fmt.Errorf("vault is sealed")
 	}
 
@@ -286,7 +286,7 @@ func (s *Secret) decryptFields() error {
 
 		if s.Value != nil {
 			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = &UnsealerKey
+			masterVaultKey.PrivateKey = &unsealerKey
 			encryptedData := *s.Value
 			decryptedData, err := masterVaultKey.Decrypt(encryptedData[NonceSizeSymmetric:], encryptedData[0:NonceSizeSymmetric])
 			if err != nil {

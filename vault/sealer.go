@@ -21,7 +21,7 @@ var (
 
 // SealUnsealRequestResponse provides the unseal information
 type SealUnsealRequestResponse struct {
-	UnsealerKey    *string `json:"unsealer_key,omitempty"`
+	unsealerKey    *string `json:"unsealer_key,omitempty"`
 	ValidationHash *string `json:"validation_hash,omitempty"`
 }
 
@@ -189,7 +189,7 @@ func CreateUnsealerKey() (*SealUnsealRequestResponse, error) {
 	responseHash := common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(validationHash.Sum(nil))))
 
 	response := SealUnsealRequestResponse{
-		UnsealerKey:    &seedPhrase,
+		unsealerKey:    &seedPhrase,
 		ValidationHash: responseHash,
 	}
 

@@ -2,8 +2,6 @@ package vault
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"

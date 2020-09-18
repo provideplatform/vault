@@ -80,12 +80,12 @@ func unsealHandler(c *gin.Context) {
 		return
 	}
 
-	if params.unsealerKey == nil {
+	if params.UnsealerKey == nil {
 		provide.RenderError("unsealer key material required", 422, c)
 		return
 	}
 
-	err = SetUnsealerKey(*params.unsealerKey)
+	err = SetUnsealerKey(*params.UnsealerKey)
 	if err != nil {
 		msg := fmt.Sprintf("failed to unseal vault; %s", err.Error())
 		common.Log.Warning(msg)

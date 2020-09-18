@@ -67,7 +67,7 @@ func IsSealed() bool {
 // SetUnsealerKey sets the unsealer key; this only possible with a SEALED vault
 func SetUnsealerKey(passphrase string) error {
 	if passphrase == "" {
-		return fmt.Errorf("error unsealing vault (100)") // no unsealer key provided
+		return fmt.Errorf("error unsealing vault; no unsealer key provided")
 	}
 
 	// we can't unseal an unsealed vault

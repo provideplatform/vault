@@ -71,10 +71,10 @@ func requireLogger() {
 }
 
 func requireSealerValidationHash() {
-	if os.Getenv("VAULT_USK_VALIDATION_HASH") == "" {
+	if os.Getenv("SEAL_UNSEAL_VALIDATION_HASH") == "" {
 		common.Log.Warning("vault unsealer key validation hash not provided")
 	} else {
-		UnsealerKeyValidationHash = strings.Replace(os.Getenv("VAULT_USK_VALIDATION_HASH"), "0x", "", -1)
+		UnsealerKeyValidationHash = strings.Replace(os.Getenv("SEAL_UNSEAL_VALIDATION_HASH"), "0x", "", -1)
 		common.Log.Debugf("vault validation hash set %s", UnsealerKeyValidationHash)
 	}
 }

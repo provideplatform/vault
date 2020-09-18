@@ -174,7 +174,7 @@ services:
       - DATABASE_SUPERUSER_PASSWORD=prvdp455
       - LOG_LEVEL=DEBUG
       - PORT=8080
-      - VAULT_USK_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
+      - SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
     healthcheck:
       test: ["CMD", "curl", "-f", "http://vault:8080/status"]
       interval: 1m

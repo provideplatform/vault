@@ -9,15 +9,10 @@ import (
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
-	keyspgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 )
-
-func init() {
-	keyspgputil.RequirePGP()
-}
 
 var rsaKeyDB = dbconf.DatabaseConnection()
 
@@ -28,9 +23,9 @@ func TestRSA4096Verify(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+	key, err := vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -67,9 +62,9 @@ func TestRSA3072Verify(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+	key, err := vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -106,9 +101,9 @@ func TestRSA2048Verify(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+	key, err := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -145,9 +140,9 @@ func TestRSA2048VerifyIncorrectAlgo(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+	key, err := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -184,7 +179,11 @@ func TestEncryptAndDecryptRSA4096(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
@@ -220,7 +219,11 @@ func TestEncryptAndDecryptRSA3072(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
@@ -256,7 +259,11 @@ func TestEncryptAndDecryptRSA2048(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
@@ -319,17 +326,18 @@ func TestRSASignVerifyAlgorithms(t *testing.T) {
 	for _, tc := range tt {
 
 		var key *vault.Key
+		var err error
 		switch tc.keystrength {
 		case 2048:
-			key = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
+			key, err = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
 		case 3072:
-			key = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
+			key, err = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
 		case 4096:
-			key = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
+			key, err = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
 		}
 
-		if key == nil {
-			t.Errorf("failed to create rsa%d keypair for vault: %s", tc.keystrength, vlt.ID)
+		if err != nil {
+			t.Errorf("failed to create rsa%d keypair for vault: %s; Error: %s", tc.keystrength, vlt.ID, err.Error())
 			return
 		}
 
@@ -379,23 +387,24 @@ func TestRSASignVerifyNegativeTesting(t *testing.T) {
 	for _, tc := range tt {
 
 		var key *vault.Key
+		var err error
 		switch tc.keystrength {
 		case 2048:
-			key = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
+			key, err = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
 		case 3072:
-			key = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
+			key, err = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
 		case 4096:
-			key = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
+			key, err = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
 		}
 
-		if key == nil {
-			t.Errorf("failed to create rsa%d keypair for vault: %s", tc.keystrength, vlt.ID)
+		if err != nil {
+			t.Errorf("failed to create rsa%d keypair for vault: %s; Error: %s", tc.keystrength, vlt.ID, err.Error())
 			return
 		}
 
 		msg := []byte(common.RandomString(32))
 
-		_, err := key.Sign(msg, &vault.SigningOptions{
+		_, err = key.Sign(msg, &vault.SigningOptions{
 			Algorithm: common.StringOrNil(tc.method),
 		})
 		if err == nil {
@@ -414,9 +423,9 @@ func TestRSA2048NilPrivateKey(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+	key, err := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -424,7 +433,7 @@ func TestRSA2048NilPrivateKey(t *testing.T) {
 
 	key.PrivateKey = nil
 
-	_, err := key.Sign(msg, &vault.SigningOptions{
+	_, err = key.Sign(msg, &vault.SigningOptions{
 		Algorithm: common.StringOrNil("PS256"),
 	})
 	if err == nil {
@@ -442,9 +451,9 @@ func TestRSA2048NilPublicKey(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+	key, err := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -482,7 +491,11 @@ func TestEncryptRSA2048NilPublicKey(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
@@ -493,7 +506,7 @@ func TestEncryptRSA2048NilPublicKey(t *testing.T) {
 	}
 
 	key.PublicKey = nil
-	_, err := key.Encrypt(plaintext, nonce)
+	_, err = key.Encrypt(plaintext, nonce)
 	if err == nil {
 		t.Errorf("encrypted plaintext without public key")
 		return
@@ -509,7 +522,11 @@ func TestEncryptAndDecryptRSA2048NilPrivateKey(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
@@ -554,17 +571,18 @@ func TestRSAEncryptTooLongPayloadNegativeTesting(t *testing.T) {
 	for _, tc := range tt {
 
 		var key *vault.Key
+		var err error
 		switch tc.keyStrength {
 		case 2048:
-			key = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
+			key, err = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
 		case 3072:
-			key = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
+			key, err = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
 		case 4096:
-			key = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
+			key, err = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
 		}
 
-		if key == nil {
-			t.Errorf("failed to create rsa%d keypair for vault: %s", tc.keyStrength, vlt.ID)
+		if err != nil {
+			t.Errorf("failed to create rsa%d keypair for vault: %s; Error: %s", tc.keyStrength, vlt.ID, err.Error())
 			return
 		}
 
@@ -576,7 +594,7 @@ func TestRSAEncryptTooLongPayloadNegativeTesting(t *testing.T) {
 			return
 		}
 
-		_, err := key.Encrypt(plaintext, nonce)
+		_, err = key.Encrypt(plaintext, nonce)
 		if err == nil {
 			t.Errorf("encrypted too large plaintext")
 			return
@@ -605,17 +623,18 @@ func TestRSAOAEPEncryptJustRightPayload(t *testing.T) {
 	for _, tc := range tt {
 
 		var key *vault.Key
+		var err error
 		switch tc.keyStrength {
 		case 2048:
-			key = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
+			key, err = vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test RSA2048 key", "unit test key")
 		case 3072:
-			key = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
+			key, err = vault.RSA3072Factory(rsaKeyDB, &vlt.ID, "test RSA3072 key", "unit test key")
 		case 4096:
-			key = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
+			key, err = vault.RSA4096Factory(rsaKeyDB, &vlt.ID, "test RSA4096 key", "unit test key")
 		}
 
-		if key == nil {
-			t.Errorf("failed to create rsa%d keypair for vault: %s", tc.keyStrength, vlt.ID)
+		if err != nil {
+			t.Errorf("failed to create rsa%d keypair for vault: %s; Error: %s", tc.keyStrength, vlt.ID, err.Error())
 			return
 		}
 
@@ -627,7 +646,7 @@ func TestRSAOAEPEncryptJustRightPayload(t *testing.T) {
 			return
 		}
 
-		_, err := key.Encrypt(plaintext, nonce)
+		_, err = key.Encrypt(plaintext, nonce)
 		if err != nil {
 			t.Errorf("error encrypting maximum-allowed plaintext (%d-bytes for RSA%d keypair. err: %s", len(plaintext), tc.keyStrength, err.Error())
 		}
@@ -643,15 +662,15 @@ func TestRSA2048SignNilOptions(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+	key, err := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
 	msg := []byte(common.RandomString(10))
 
-	_, err := key.Sign(msg, nil)
+	_, err = key.Sign(msg, nil)
 	if err == nil {
 		t.Errorf("signed message with nil algorithm using rsa keypair for vault: %s", vlt.ID)
 		return
@@ -667,9 +686,9 @@ func TestRSA2048VerifyNilOptions(t *testing.T) {
 		return
 	}
 
-	key := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create rsa keypair for vault: %s", vlt.ID)
+	key, err := vault.RSA2048Factory(rsaKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create rsa keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 

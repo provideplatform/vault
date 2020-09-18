@@ -7,15 +7,10 @@ import (
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
-	keyspgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 )
-
-func init() {
-	keyspgputil.RequirePGP()
-}
 
 var secpKeyDB = dbconf.DatabaseConnection()
 
@@ -26,9 +21,9 @@ func TestCreateKeySecp256k1(t *testing.T) {
 		return
 	}
 
-	key := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+	key, err := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -61,9 +56,9 @@ func TestSecp256k1Sign(t *testing.T) {
 		return
 	}
 
-	key := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+	key, err := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -89,9 +84,9 @@ func TestSecp256k1Verify(t *testing.T) {
 		return
 	}
 
-	key := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+	key, err := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -123,9 +118,9 @@ func TestSecp256k1NoVerifyInvalidMessage(t *testing.T) {
 		return
 	}
 
-	key := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+	key, err := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -158,15 +153,15 @@ func TestSecp256k1NoVerifyInvalidSigningKey(t *testing.T) {
 		return
 	}
 
-	key1 := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key1", "test signing key")
-	if key1 == nil {
-		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+	key1, err := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key1", "test signing key")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 keypair1 for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
-	key2 := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key2", "test invalid verifying key")
-	if key2 == nil {
-		t.Errorf("failed to create secp256k1 keypair for vault: %s", vlt.ID)
+	key2, err := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key2", "test invalid verifying key")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 keypair2 for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -199,9 +194,10 @@ func TestCreateSECP256k1KeyWithNilDescription(t *testing.T) {
 		return
 	}
 
-	testKey := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "secp256k1 public key", "")
-	if testKey == nil {
-		t.Error("failed to create secp256k1 with nil description")
+	_, err := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "secp256k1 public key", "")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
 	}
 }
 
@@ -212,15 +208,15 @@ func TestSign256k1NilPrivateKey(t *testing.T) {
 		return
 	}
 
-	key := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create 256k1 keypair for vault: %s", vlt.ID)
+	key, err := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
 	msg := []byte(common.RandomString(10))
 	key.PrivateKey = nil
-	_, err := key.Sign(msg, nil)
+	_, err = key.Sign(msg, nil)
 	if err == nil {
 		t.Errorf("signed message using 256k1 keypair with nil private key for vault: %s %s", vlt.ID, err.Error())
 		return
@@ -237,15 +233,15 @@ func TestSign256k1NilSpec(t *testing.T) {
 		return
 	}
 
-	key := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create 256k1 keypair for vault: %s", vlt.ID)
+	key, err := vault.Secp256k1Factory(secpKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create secp256k1 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
 	msg := []byte(common.RandomString(10))
 	key.Spec = nil
-	_, err := key.Sign(msg, nil)
+	_, err = key.Sign(msg, nil)
 	if err == nil {
 		t.Errorf("signed message using 256k1 keypair with nil spec for vault: %s %s", vlt.ID, err.Error())
 		return

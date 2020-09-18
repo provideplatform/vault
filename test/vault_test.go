@@ -8,14 +8,24 @@ import (
 	"time"
 
 	dbconf "github.com/kthomas/go-db-config"
-	vaultpgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 )
 
 func init() {
-	vaultpgputil.RequirePGP()
+	if vault.UnsealerKey == nil {
+		common.Log.Debug("vault is sealed, unsealing vault")
+
+		unsealerKey := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+
+		err := vault.SetUnsealerKey(unsealerKey)
+		if err != nil {
+			common.Log.Debugf("error unsealing vault %s", err.Error())
+		} else {
+			common.Log.Debug("successfully unsealed vault...")
+		}
+	}
 }
 
 var vaultDB = dbconf.DatabaseConnection()
@@ -148,9 +158,9 @@ func TestDeleteVaultWithKeys(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(vaultDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -164,16 +174,11 @@ func TestDeleteVaultWithKeys(t *testing.T) {
 
 	t.Logf("deleted vault with ID %s", vlt.ID)
 
-	newKey := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-	if newKey != nil {
-		t.Errorf("created Ed25519 keypair for deleted vault: %s %s", vlt.ID, *newKey.Errors[0].Message)
+	_, err = vault.Ed25519Factory(vaultDB, &vlt.ID, "test key", "just some key :D")
+	if err == nil {
+		t.Errorf("created Ed25519 keypair for deleted vault: %s", vlt.ID)
 		return
 	}
-	if newKey == nil {
-		t.Logf("couldn't create key for deleted vault %s", vlt.ID)
-	}
-
-	//is the key still present?
 }
 
 func TestGetVaults(t *testing.T) {
@@ -313,7 +318,7 @@ func TestGetVault(t *testing.T) {
 
 	organizationId := vlt.OrganizationID
 
-	dbVault := vault.GetVault(vlt.ID.String(), nil, organizationId, nil)
+	dbVault := vault.GetVault(vaultDB, vlt.ID.String(), nil, organizationId, nil)
 	if dbVault == nil {
 		t.Errorf("failed to retrieve created vault from DB, vault ID %s", dbVault.ID)
 		return
@@ -335,15 +340,6 @@ func TestGetAllOrgVaults(t *testing.T) {
 	vault01ID := vlt.ID
 	t.Logf("vault 1 id %s", vault01ID)
 
-	// vlt = vaultFactory()
-	// if vlt.ID == uuid.Nil {
-	// 	t.Error("failed! no vault created for eth hd wallet create unit test!")
-	// 	return
-	// }
-
-	// vault02ID := vlt.ID
-	// t.Logf("vault 2 id %s", vault02ID)
-
 	organizationId := vlt.OrganizationID
 
 	orgVaults := vault.GetVaults(nil, organizationId, nil)
@@ -352,19 +348,10 @@ func TestGetAllOrgVaults(t *testing.T) {
 		return
 	}
 
-	// t.Logf("number of org vaults returned: %d", len(orgVaults))
-	// t.Logf("vault 1 id returned %s", orgVaults[0].ID)
-	// t.Logf("vault 2 id returned %s", orgVaults[1].ID)
 	retVault01 := orgVaults[0]
 	if retVault01.ID != vault01ID {
 		t.Errorf("incorrect vault 1 returned, expected vault ID %s, got vault ID %s", vault01ID, retVault01.ID)
 		return
 	}
-
-	// retVault02 := orgVaults[1]
-	// if retVault02.ID != vault02ID {
-	// 	t.Errorf("incorrect vault 2 returned, expected vault ID %s, got vault ID %s", vault02ID, retVault02.ID)
-	// 	return
-	// }
 
 }

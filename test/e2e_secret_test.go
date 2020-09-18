@@ -10,6 +10,148 @@ import (
 	provide "github.com/provideservices/provide-go/api/vault"
 )
 
+func TestAPILIstSecretTypeFilter(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	secret := fmt.Sprintf("secret-%s", common.RandomString(128))
+	name := fmt.Sprintf("secretname-%s", common.RandomString(12))
+	description := "secret description"
+	secretType := "filtered"
+	var secretError error
+	_, secretError = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
+
+	if secretError != nil {
+		t.Errorf("failed to create secret for vault")
+		return
+	}
+
+	name2 := fmt.Sprintf("secretname2-%s", common.RandomString(12))
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name2, description, secretType)
+	if err != nil {
+		t.Errorf("failed to create secret for vault: %s", err.Error())
+		return
+	}
+
+	name3 := fmt.Sprintf("secretname3-%s", common.RandomString(12))
+	secret3Type := "should_not_appear"
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name3, description, secret3Type)
+	if err != nil {
+		t.Errorf("failed to create secret for vault: %s", err.Error())
+		return
+	}
+
+	listVaultSecretsResponse, err := provide.ListVaultSecrets(*token, vault.ID.String(), map[string]interface{}{"type": secretType})
+	if err != nil {
+		t.Errorf("failed to list secrets for vault: %s", err.Error())
+		return
+	}
+
+	firstSecret := listVaultSecretsResponse[0]
+	secondSecret := listVaultSecretsResponse[1]
+
+	if *firstSecret.Name != name {
+		t.Errorf("Error retrieving first secret, expected %s, got %s", name, *firstSecret.Name)
+		return
+	}
+
+	if *secondSecret.Name != name2 {
+		t.Errorf("Error retrieving second secret, expected %s, got %s", name, *secondSecret.Name)
+		return
+	}
+
+	if len(listVaultSecretsResponse) > 2 {
+		t.Errorf("secrets not filtered - expected 2 secrets, got %d", len(listVaultSecretsResponse))
+		return
+	}
+
+	if *firstSecret.Type != secretType || *secondSecret.Type != secretType {
+		t.Error("unfiltered response returned")
+		return
+	}
+}
+
+func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
+	// add the secrets out of order, and expect to get thte same out of order secrets returned, unfiltered
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	secret := fmt.Sprintf("secret-%s", common.RandomString(128))
+	name := fmt.Sprintf("secretname-%s", common.RandomString(12))
+	description := "secret description"
+	secretType := "filtered"
+	var secretError error
+	_, secretError = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
+
+	if secretError != nil {
+		t.Errorf("failed to create secret for vault")
+		return
+	}
+
+	name3 := fmt.Sprintf("secretname3-%s", common.RandomString(12))
+	secret3Type := "should_not_appear"
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name3, description, secret3Type)
+	if err != nil {
+		t.Errorf("failed to create secret for vault: %s", err.Error())
+		return
+	}
+
+	name2 := fmt.Sprintf("secretname2-%s", common.RandomString(12))
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name2, description, secretType)
+	if err != nil {
+		t.Errorf("failed to create secret for vault: %s", err.Error())
+		return
+	}
+
+	listVaultSecretsResponse, err := provide.ListVaultSecrets(*token, vault.ID.String(), map[string]interface{}{})
+	if err != nil {
+		t.Errorf("failed to list secrets for vault: %s", err.Error())
+		return
+	}
+
+	firstSecret := listVaultSecretsResponse[0]
+	secondSecret := listVaultSecretsResponse[1]
+	thirdSecret := listVaultSecretsResponse[2]
+
+	if *firstSecret.Name != name {
+		t.Errorf("Error retrieving first secret, expected %s, got %s", name, *firstSecret.Name)
+		return
+	}
+
+	if *secondSecret.Name != name3 {
+		t.Errorf("Error retrieving second secret added, expected %s, got %s", name, *secondSecret.Name)
+		return
+	}
+
+	if *thirdSecret.Name != name2 {
+		t.Errorf("Error retrieving third secret added, expected %s, got %s", name, *secondSecret.Name)
+		return
+	}
+
+	if len(listVaultSecretsResponse) != 3 {
+		t.Errorf("unfiltered secrets - expected 3 secrets, got %d", len(listVaultSecretsResponse))
+		return
+	}
+}
+
 func TestAPIListSecrets(t *testing.T) {
 	token, err := userTokenFactory()
 	if err != nil {
@@ -27,37 +169,37 @@ func TestAPIListSecrets(t *testing.T) {
 	name := fmt.Sprintf("secretname-%s", common.RandomString(12))
 	description := "secret description"
 	secretType := "secret type"
+	var secretError error
+	_, secretError = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
 
-	status, _, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
-	if err != nil || status != 201 {
-		t.Errorf("failed to create secret for vault: %s", err.Error())
+	if secretError != nil {
+		t.Errorf("failed to create secret for vault")
 		return
 	}
 
 	name2 := fmt.Sprintf("secretname2-%s", common.RandomString(12))
-	status, _, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name2, description, secretType)
-	if err != nil || status != 201 {
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name2, description, secretType)
+	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
 		return
 	}
 
-	status, listVaultSecretsResponse, err := provide.ListVaultSecrets(*token, vault.ID.String(), map[string]interface{}{})
-	if err != nil || status != 200 {
+	listVaultSecretsResponse, err := provide.ListVaultSecrets(*token, vault.ID.String(), map[string]interface{}{})
+	if err != nil {
 		t.Errorf("failed to list secrets for vault: %s", err.Error())
 		return
 	}
+	t.Logf("list secrets returned %+v", listVaultSecretsResponse)
+	firstSecret := listVaultSecretsResponse[0]
+	secondSecret := listVaultSecretsResponse[1]
 
-	listOfSecrets := listVaultSecretsResponse.([]interface{})
-	firstSecret := listOfSecrets[0].(map[string]interface{})
-	secondSecret := listOfSecrets[1].(map[string]interface{})
-
-	if firstSecret["name"] != name {
-		t.Errorf("Error retrieving first secret, expected %s, got %s", name, firstSecret["name"])
+	if *firstSecret.Name != name {
+		t.Errorf("Error retrieving first secret, expected %s, got %s", name, *firstSecret.Name)
 		return
 	}
 
-	if secondSecret["name"] != name2 {
-		t.Errorf("Error retrieving second secret, expected %s, got %s", name, secondSecret["name"])
+	if *secondSecret.Name != name2 {
+		t.Errorf("Error retrieving second secret, expected %s, got %s", name, *secondSecret.Name)
 		return
 	}
 }
@@ -79,8 +221,8 @@ func TestAPICreateSecret(t *testing.T) {
 	name := "secret name"
 	description := "secret description"
 	secretType := "secret type"
-	status, _, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
-	if err != nil || status != 201 {
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
+	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
 		return
 	}
@@ -103,12 +245,7 @@ func TestAPICreateSecretTooLong(t *testing.T) {
 	name := "secret name"
 	description := "secret description"
 	secretType := "secret type"
-	status, _, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
-
-	if status == 201 {
-		t.Errorf("created secret that was %d-bytes-long!", len(secret))
-		return
-	}
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
 }
 
 func TestAPICreateSecretNoName(t *testing.T) {
@@ -128,12 +265,8 @@ func TestAPICreateSecretNoName(t *testing.T) {
 	name := ""
 	description := "secret description"
 	secretType := "secret type"
-	status, _, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
 
-	if status == 201 {
-		t.Errorf("created secret with no name!")
-		return
-	}
 }
 
 func TestAPICreateSecretNoType(t *testing.T) {
@@ -153,12 +286,8 @@ func TestAPICreateSecretNoType(t *testing.T) {
 	name := "secret name"
 	description := "secret description"
 	secretType := ""
-	status, _, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
 
-	if status == 201 {
-		t.Error("created secret with no type!")
-		return
-	}
 }
 
 func TestAPICreateSecretNoData(t *testing.T) {
@@ -178,12 +307,8 @@ func TestAPICreateSecretNoData(t *testing.T) {
 	name := "secret name"
 	description := "secret description"
 	secretType := "secret type"
-	status, _, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
+	_, err = provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
 
-	if status == 201 {
-		t.Error("created secret with no data!")
-		return
-	}
 }
 
 func TestAPICreateAndRetrieveSecret(t *testing.T) {
@@ -204,20 +329,16 @@ func TestAPICreateAndRetrieveSecret(t *testing.T) {
 	description := "secret description"
 	secretType := "secret type"
 
-	status, createSecretResponse, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
-	if err != nil || status != 201 {
+	createSecretResponse, err := provide.CreateVaultSecret(*token, vault.ID.String(), secret, name, description, secretType)
+	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
 		return
 	}
 
-	response, _ := createSecretResponse.(map[string]interface{})
+	retrieveSecretResponse, err := provide.RetrieveVaultSecret(*token, vault.ID.String(), createSecretResponse.ID.String(), map[string]interface{}{})
 
-	status, retrieveSecretResponse, err := provide.RetrieveVaultSecret(*token, vault.ID.String(), response["id"].(string), map[string]interface{}{})
-
-	retrievedSecret, _ := retrieveSecretResponse.(map[string]interface{})
-
-	if retrievedSecret["value"].(string) != secret {
-		t.Errorf("secret returned mismatch.  Expected %s, got %s", secret, retrievedSecret["secret"].(string))
+	if *retrieveSecretResponse.Value != secret {
+		t.Errorf("secret returned mismatch.  Expected %s, got %s", secret, *retrieveSecretResponse.Value)
 		return
 	}
 }
@@ -235,30 +356,26 @@ func TestAPIDeleteSecret(t *testing.T) {
 		return
 	}
 
-	status, secretResponse, err := provide.CreateVaultSecret(*token, vault.ID.String(), "secret to delete", "deleted secret", "secret to be deleted", "test_secret")
-	if err != nil || status != 201 {
+	secretResponse, err := provide.CreateVaultSecret(*token, vault.ID.String(), "secret to delete", "deleted secret", "secret to be deleted", "test_secret")
+	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
 		return
 	}
 
-	response, _ := secretResponse.(map[string]interface{})
-
-	status, _, err = provide.DeleteVaultSecret(*token, vault.ID.String(), response["id"].(string))
-	if err != nil || status != 204 {
+	err = provide.DeleteVaultSecret(*token, vault.ID.String(), secretResponse.ID.String())
+	if err != nil {
 		t.Errorf("failed to delete secret for vault: %s", err.Error())
 		return
 	}
 
-	status, listVaultSecretsResponse, err := provide.ListVaultSecrets(*token, vault.ID.String(), map[string]interface{}{})
-	if err != nil || status != 200 {
+	listVaultSecretsResponse, err := provide.ListVaultSecrets(*token, vault.ID.String(), map[string]interface{}{})
+	if err != nil {
 		t.Errorf("failed to list secrets for vault: %s", err.Error())
 		return
 	}
 
-	listOfSecrets := listVaultSecretsResponse.([]interface{})
-
-	if len(listOfSecrets) != 0 {
-		t.Errorf("expceted no secrets stored in vault, instead returned %d", len(listOfSecrets))
+	if len(listVaultSecretsResponse) != 0 {
+		t.Errorf("expceted no secrets stored in vault, instead returned %d", len(listVaultSecretsResponse))
 		return
 	}
 }

@@ -4,15 +4,15 @@ set -e
 echo "" > coverage.txt 
 
 if [[ -z "${DATABASE_NAME}" ]]; then
-  DATABASE_NAME=vault_test
+  DATABASE_NAME=vault_dev
 fi
 
 if [[ -z "${DATABASE_USER}" ]]; then
-  DATABASE_USER=vaulttest
+  DATABASE_USER=vault
 fi
 
 if [[ -z "${DATABASE_PASSWORD}" ]]; then
-  DATABASE_PASSWORD=vaulttest
+  DATABASE_PASSWORD=vault
 fi
 
 if [[ -z "${DATABASE_SUPERUSER}" ]]; then
@@ -42,6 +42,12 @@ fi
 if [[ -z "${RACE}" ]]; then
   RACE=true
 fi
+
+if [[ -z "${VAULT_USK_VALIDATION_HASH}" ]]; then
+  VAULT_USK_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
+fi
+
+
 
 PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropdb -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_NAME || true >/dev/null
 PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropuser -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_USER || true >/dev/null
@@ -226,6 +232,9 @@ xH2b0OBcVjYsgRnQ9OZpQ+kIPaFhaWChnfEArCmhrOEgOnhfkr6YGDHFenfT3/RA
 PUl1cxrvY7BHh4obNa6Bf8ECAwEAAQ==
 -----END PUBLIC KEY-----'
 
+#traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
+VAULT_USK_VALIDATION_HASH='0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309'
+
 pkgs=(test)
 for d in "${pkgs[@]}" ; do
   pkg=$(echo $d | sed 's/\/*$//g')
@@ -238,7 +247,7 @@ for d in "${pkgs[@]}" ; do
     JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
     GIN_MODE=release \
     DATABASE_HOST=localhost \
-    DATABASE_NAME=vault_test \
+    DATABASE_NAME=vault_dev \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     IDENT_API_HOST=localhost:8081 \
@@ -246,6 +255,7 @@ for d in "${pkgs[@]}" ; do
     VAULT_API_HOST=localhost:8082 \
     VAULT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
+    VAULT_USK_VALIDATION_HASH=$VAULT_USK_VALIDATION_HASH \
     go test ./... -v \
                        -race \
                        -timeout 1800s \
@@ -263,7 +273,7 @@ for d in "${pkgs[@]}" ; do
     JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
     GIN_MODE=release \
     DATABASE_HOST=localhost \
-    DATABASE_NAME=vault_test \
+    DATABASE_NAME=vault_dev \
     DATABASE_USER=${DATABASE_USER} \
     DATABASE_PASSWORD=${DATABASE_PASSWORD} \
     IDENT_API_HOST=localhost:8081 \
@@ -271,6 +281,7 @@ for d in "${pkgs[@]}" ; do
     VAULT_API_HOST=localhost:8082 \
     VAULT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
+    VAULT_USK_VALIDATION_HASH=$VAULT_USK_VALIDATION_HASH \
     go test ./... -v \
                        -timeout 1800s \
                        -cover \

@@ -7,9 +7,9 @@ import (
 
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
-	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
+	vaultcrypto "github.com/provideapp/vault/crypto"
 	provide "github.com/provideservices/provide-go/api"
 )
 
@@ -216,6 +216,10 @@ func (s *Secret) encryptFields() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	if unsealerKey == nil {
+		return fmt.Errorf("vault is sealed")
+	}
+
 	if s.encrypted == nil {
 		s.setEncrypted(s.ID != uuid.Nil)
 	}
@@ -229,19 +233,19 @@ func (s *Secret) encryptFields() error {
 		common.Log.Tracef("encrypting master key fields for vault: %s", s.VaultID)
 
 		if masterKey.Seed != nil {
-			seed, err := pgputil.PGPPubEncrypt(*masterKey.Seed)
+			// seal the data with the unsealer key
+			masterKey.Seed, err = seal(masterKey.Seed)
 			if err != nil {
 				return err
 			}
-			masterKey.Seed = &seed
 		}
 
 		if masterKey.PrivateKey != nil {
-			privateKey, err := pgputil.PGPPubEncrypt(*masterKey.PrivateKey)
+			// seal the data with the unsealer key
+			masterKey.PrivateKey, err = seal(masterKey.PrivateKey)
 			if err != nil {
 				return err
 			}
-			masterKey.PrivateKey = &privateKey
 		}
 	} else {
 		masterKey.decryptFields()
@@ -264,6 +268,10 @@ func (s *Secret) decryptFields() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	if unsealerKey == nil {
+		return fmt.Errorf("vault is sealed")
+	}
+
 	if s.encrypted == nil {
 		s.setEncrypted(s.ID != uuid.Nil)
 	}
@@ -277,12 +285,32 @@ func (s *Secret) decryptFields() error {
 		common.Log.Tracef("decrypting master key fields for vault: %s", s.VaultID)
 
 		if s.Value != nil {
-			decryptedData, err := pgputil.PGPPubDecrypt([]byte(*s.Value))
+			masterVaultKey := vaultcrypto.AES256GCM{}
+			masterVaultKey.PrivateKey = &unsealerKey
+			encryptedData := *s.Value
+			decryptedData, err := masterVaultKey.Decrypt(encryptedData[NonceSizeSymmetric:], encryptedData[0:NonceSizeSymmetric])
 			if err != nil {
 				return err
 			}
 			s.Value = &decryptedData
 		}
+
+		if masterKey.Seed != nil {
+			// unseal the data with the unsealer key
+			masterKey.Seed, err = unseal(masterKey.Seed)
+			if err != nil {
+				return err
+			}
+		}
+
+		if masterKey.PrivateKey != nil {
+			// unseal the data with the unsealer key
+			masterKey.PrivateKey, err = unseal(masterKey.PrivateKey)
+			if err != nil {
+				return err
+			}
+		}
+
 	} else {
 		common.Log.Tracef("decrypting secret fields with master key %s for vault: %s", masterKey.ID, s.VaultID)
 

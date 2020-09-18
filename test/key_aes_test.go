@@ -9,15 +9,10 @@ import (
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
-	keyspgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 )
-
-func init() {
-	keyspgputil.RequirePGP()
-}
 
 var aesKeyDB = dbconf.DatabaseConnection()
 
@@ -28,9 +23,9 @@ func TestAES256GCMEncrypt(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create AES-256-GCM key for vault: %s", vlt.ID)
+	key, err := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -53,15 +48,15 @@ func TestAES256GCMEncryptNonceTooLong(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create AES-256-GCM key for vault: %s", vlt.ID)
+	key, err := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
 	msg := []byte(common.RandomString(10))
 	nonce := []byte(common.RandomString(13))
-	_, err := key.Encrypt(msg, nonce)
+	_, err = key.Encrypt(msg, nonce)
 
 	if err != nil {
 		t.Logf("got error %s", err.Error())
@@ -82,15 +77,15 @@ func TestAES256GCMEncryptShortNonce(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create AES-256-GCM key for vault: %s", vlt.ID)
+	key, err := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
 	msg := []byte(common.RandomString(10))
 	nonce := []byte(common.RandomString(2))
-	_, err := key.Encrypt(msg, nonce)
+	_, err = key.Encrypt(msg, nonce)
 
 	if err != nil {
 		t.Errorf("failed! symmetric encryption failed using AES-256-GCM key %s; %s", key.ID, err.Error())
@@ -105,9 +100,9 @@ func TestCreateKeyAES256GCM(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create AES-256-GCM key for vault: %s", vlt.ID)
+	key, err := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -128,11 +123,9 @@ func TestCreateEphemeralKeyAES256GCM_privatekey(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMEphemeralFactory(&vlt.ID, "test key", "just some key :D")
-
-	//common.Log.Debugf("error returned %s", err.Error())
-	if key == nil { // FIXME -- return (key, err) from all factories
-		t.Errorf("failed to create ephemeral AES-256-GCM key for vault: %s", vlt.ID) //, *key.Errors[0].Message)
+	key, err := vault.AES256GCMEphemeralFactory(&vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create ephemeral AES-256-GCM key; Error: %s", err.Error())
 		return
 	}
 
@@ -158,9 +151,14 @@ func TestCreateAes256GCMInvalidVaultID(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMEphemeralFactory(nil, "test key", "just some key :D")
-	if key != nil {
+	_, err := vault.AES256GCMEphemeralFactory(nil, "test key", "just some key :D")
+	if err == nil {
 		t.Errorf("failed to invalidate key with invalid vault id: %s", vlt.ID)
+		return
+	}
+
+	if err != nil {
+		t.Logf("failed to invalidate key with invalid vault id: %s; Error: %v", vlt.ID, err.Error())
 		return
 	}
 
@@ -174,12 +172,16 @@ func TestEncryptAESNilPrivateKey(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
 	key.PrivateKey = nil
-	_, err := key.Encrypt(plaintext, nil)
+	_, err = key.Encrypt(plaintext, nil)
 	if err == nil {
 		t.Error("failed to trap nil private key on key")
 		return
@@ -193,7 +195,11 @@ func TestEncryptAndDecryptSymmetricAESErrors(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.AES256GCMFactory(aesKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
@@ -228,7 +234,11 @@ func TestEncryptAndDecryptSymmetricAESNoErrorsOptionalNonce(t *testing.T) {
 		return
 	}
 
-	key := vault.AES256GCMFactory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.AES256GCMFactory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create AES-256-GCM key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 

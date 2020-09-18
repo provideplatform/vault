@@ -9,15 +9,10 @@ import (
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
-	keyspgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 )
-
-func init() {
-	keyspgputil.RequirePGP()
-}
 
 var keyDB = dbconf.DatabaseConnection()
 var NonceSizeSymmetric = 12
@@ -29,15 +24,15 @@ func TestChaCha20EncryptShortNonce(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create chacha20 key for vault: %s", vlt.ID)
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
 	msg := []byte(common.RandomString(10))
 	nonce := []byte(common.RandomString(2))
-	_, err := key.Encrypt(msg, nonce)
+	_, err = key.Encrypt(msg, nonce)
 
 	if err != nil {
 		t.Errorf("failed! symmetric encryption failed using chacha20 key %s; %s", key.ID, err.Error())
@@ -52,9 +47,9 @@ func TestCreateKeyBabyJubJub(t *testing.T) {
 		return
 	}
 
-	key := vault.BabyJubJubFactory(keyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create babyJubJub keypair for vault: %s", vlt.ID)
+	key, err := vault.BabyJubJubFactory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create babyJubJub keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -81,9 +76,9 @@ func TestCreateKeyC25519(t *testing.T) {
 		return
 	}
 
-	key := vault.C25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create C25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.C25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create C25519 key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -110,9 +105,9 @@ func TestCreateKeyChaCha20(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create ChaCha20 key for vault: %s", vlt.ID)
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -133,9 +128,9 @@ func TestValidateNoVault(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -163,9 +158,9 @@ func TestValidateNoName(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -193,9 +188,9 @@ func TestValidateNoSpec(t *testing.T) {
 		return
 	}
 
-	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create Ed25519 keypair for vault: %s", vlt.ID)
+	key, err := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 key for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -465,7 +460,12 @@ func TestDeriveSymmetricKeyInvalidType(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
+
 	key.Type = nil
 
 	nonce := []byte("number only used once")
@@ -473,13 +473,10 @@ func TestDeriveSymmetricKeyInvalidType(t *testing.T) {
 	name := "derived key"
 	description := "derived key description"
 
-	key, err := key.DeriveSymmetric(nonce, context, name, description)
-
-	if err != nil {
-		common.Log.Debug("correctly failed to derive symmetric key")
-	}
+	key, err = key.DeriveSymmetric(nonce, context, name, description)
 	if err == nil {
-		t.Errorf("incorrectly derived symmetric key without type")
+		t.Errorf("incorrectly derived symmetric key eithout type")
+		return
 	}
 }
 
@@ -490,7 +487,12 @@ func TestDeriveSymmetricKeyIncorrectSpec(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
+
 	*key.Spec = vault.KeySpecAES256GCM
 
 	nonce := []byte("number only used once")
@@ -498,7 +500,7 @@ func TestDeriveSymmetricKeyIncorrectSpec(t *testing.T) {
 	name := "derived key"
 	description := "derived key description"
 
-	key, err := key.DeriveSymmetric(nonce, context, name, description)
+	key, err = key.DeriveSymmetric(nonce, context, name, description)
 
 	if err != nil {
 		common.Log.Debug("correctly failed to derive symmetric key")
@@ -515,7 +517,12 @@ func TestDeriveSymmetricKeyIncorrectType(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
+
 	*key.Type = vault.KeyTypeAsymmetric
 
 	nonce := []byte("number only used once")
@@ -523,11 +530,11 @@ func TestDeriveSymmetricKeyIncorrectType(t *testing.T) {
 	name := "derived key"
 	description := "derived key description"
 
-	key, err := key.DeriveSymmetric(nonce, context, name, description)
-
+	key, err = key.DeriveSymmetric(nonce, context, name, description)
 	if err != nil {
 		common.Log.Debug("correctly failed to derive symmetric key")
 	}
+
 	if err == nil {
 		t.Errorf("incorrectly derived symmetric key with incorrect type")
 	}
@@ -540,7 +547,12 @@ func TestDeriveSymmetricKeyIncorrectUsage(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
+
 	*key.Usage = vault.KeyUsageSignVerify
 
 	nonce := []byte("number only used once")
@@ -548,7 +560,7 @@ func TestDeriveSymmetricKeyIncorrectUsage(t *testing.T) {
 	name := "derived key"
 	description := "derived key description"
 
-	key, err := key.DeriveSymmetric(nonce, context, name, description)
+	key, err = key.DeriveSymmetric(nonce, context, name, description)
 
 	if err != nil {
 		common.Log.Debug("correctly failed to derive symmetric key")
@@ -565,7 +577,11 @@ func TestDeriveSymmetricKeyNilSeed(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	nonce := []byte("number only used once")
 	context := []byte("stuff and stuff")
@@ -573,7 +589,7 @@ func TestDeriveSymmetricKeyNilSeed(t *testing.T) {
 	description := "derived key description"
 	key.Seed = nil
 
-	key, err := key.DeriveSymmetric(nonce, context, name, description)
+	key, err = key.DeriveSymmetric(nonce, context, name, description)
 
 	if err != nil {
 		common.Log.Debugf("correctly failed to derive symmetric with nil seed key. error %s", err.Error())
@@ -590,7 +606,11 @@ func TestDeriveSymmetricKey(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	// nonce is 16 bytes for derivation function
 	nonce := []byte(common.RandomString(16))
@@ -598,7 +618,7 @@ func TestDeriveSymmetricKey(t *testing.T) {
 	name := "derived key"
 	description := "derived key description"
 
-	key, err := key.DeriveSymmetric(nonce, context, name, description)
+	key, err = key.DeriveSymmetric(nonce, context, name, description)
 
 	if err != nil {
 		common.Log.Warningf("key derivation failed; %s", err.Error())
@@ -617,7 +637,11 @@ func TestEncryptChaChaNoErrors(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
@@ -639,44 +663,6 @@ func TestEncryptChaChaNoErrors(t *testing.T) {
 
 }
 
-// func TestEncryptChaChaInvalidNilUsage(t *testing.T) {
-// 	vlt := vaultFactory()
-// 	if vlt.ID == uuid.Nil {
-// 		t.Error("failed! no vault created for derive symmetric key unit test!")
-// 		return
-// 	}
-
-// 	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-
-// 	plaintext := []byte(common.RandomString(128))
-
-// 	key.Usage = nil
-// 	_, err := key.Encrypt(plaintext, nil)
-// 	if err == nil {
-// 		t.Error("failed to trap invalid nil usage on key")
-// 		return
-// 	}
-// }
-
-// func TestEncryptChaChaInvalidUsage(t *testing.T) {
-// 	vlt := vaultFactory()
-// 	if vlt.ID == uuid.Nil {
-// 		t.Error("failed! no vault created for derive symmetric key unit test!")
-// 		return
-// 	}
-
-// 	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-
-// 	plaintext := []byte(common.RandomString(128))
-
-// 	*key.Usage = vault.KeyUsageSignVerify
-// 	_, err := key.Encrypt(plaintext, nil)
-// 	if err == nil {
-// 		t.Error("failed to trap invalid usage on key")
-// 		return
-// 	}
-// }
-
 func TestEncryptChaChaNilKeyType(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {
@@ -684,12 +670,16 @@ func TestEncryptChaChaNilKeyType(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
 	key.Type = nil
-	_, err := key.Encrypt(plaintext, nil)
+	_, err = key.Encrypt(plaintext, nil)
 	if err == nil {
 		t.Error("failed to trap nil type on key")
 		return
@@ -703,12 +693,16 @@ func TestEncryptChaChaNilSeed(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
 	key.Seed = nil
-	_, err := key.Encrypt(plaintext, nil)
+	_, err = key.Encrypt(plaintext, nil)
 	if err == nil {
 		t.Error("failed to trap nil seed on key")
 		return
@@ -722,7 +716,11 @@ func TestEncryptAndDecryptSymmetricChaChaNoErrors(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
@@ -762,7 +760,11 @@ func TestDeleteKey(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	deleted := key.Delete(keyDB)
 	if !deleted {
@@ -780,19 +782,25 @@ func TestECDH(t *testing.T) {
 
 	// TODO add test for ephemeral
 	// create the peer ecdh key
-	peerECDHkey := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
-	if peerECDHkey == nil {
-		t.Error("peer ecdh key is nil after being created!")
+	peerECDHkey, err := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
+	if err != nil {
+		t.Errorf("failed to create peer ECDH key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
 	}
 
 	//create my ecdh key
-	myECDHkey := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
-	if myECDHkey == nil {
-		t.Error("my ecdh key is nil after being created!")
+	myECDHkey, err := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
+	if err != nil {
+		t.Errorf("failed to create my ECDH key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
 	}
 
 	// create the peer signing key
-	peerSigningkey := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
+	peerSigningkey, err := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
+	if err != nil {
+		t.Errorf("failed to create peer Ed25519 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	// sign the peer ecdh key with the peer signing key
 	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey), nil)
@@ -811,7 +819,11 @@ func TestECDH(t *testing.T) {
 		common.Log.Debug("peer signature validated ok")
 	}
 
-	mySigningKey := vault.Ed25519Factory(keyDB, &vlt.ID, "my ecdh signing key", "test key")
+	mySigningKey, err := vault.Ed25519Factory(keyDB, &vlt.ID, "my ecdh signing key", "test key")
+	if err != nil {
+		t.Errorf("failed to create my Ed25519 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 	mySignature, err := mySigningKey.Sign([]byte(*myECDHkey.PublicKey), nil)
 	if err != nil {
 		t.Errorf("got error signing my c25519 public key. Error: %s", err.Error())
@@ -880,19 +892,25 @@ func TestECDHNilPrivateKey(t *testing.T) {
 
 	// TODO add test for ephemeral
 	// create the peer ecdh key
-	peerECDHkey := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
-	if peerECDHkey == nil {
-		t.Error("peer ecdh key is nil after being created!")
+	peerECDHkey, err := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
+	if err != nil {
+		t.Errorf("failed to create peer ECDH key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
 	}
 
 	//create my ecdh key
-	myECDHkey := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
-	if myECDHkey == nil {
-		t.Error("my ecdh key is nil after being created!")
+	myECDHkey, err := vault.C25519Factory(keyDB, &vlt.ID, "ecdh public key", "test key")
+	if err != nil {
+		t.Errorf("failed to create my ECDH key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
 	}
 
 	// create the peer signing key
-	peerSigningkey := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
+	peerSigningkey, err := vault.Ed25519Factory(keyDB, &vlt.ID, "peer ecdh signing key", "test key")
+	if err != nil {
+		t.Errorf("failed to create peer signing key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	// sign the peer ecdh key with the peer signing key
 	peerSignature, err := peerSigningkey.Sign([]byte(*peerECDHkey.PublicKey), nil)
@@ -914,114 +932,6 @@ func TestECDHNilPrivateKey(t *testing.T) {
 	}
 }
 
-// func TestSign256k1NilType(t *testing.T) {
-// 	vlt := vaultFactory()
-// 	if vlt.ID == uuid.Nil {
-// 		t.Error("failed! no vault created for 256k1 key signing unit test!")
-// 		return
-// 	}
-
-// 	key := vault.Secp256k1Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-// 	if key == nil {
-// 		t.Errorf("failed to create 256k1 keypair for vault: %s", vlt.ID)
-// 		return
-// 	}
-
-// 	msg := []byte(common.RandomString(10))
-// 	key.Type = nil
-// 	_, err := key.Sign(msg, nil)
-// 	if err == nil {
-// 		t.Errorf("signed message using 256k1 keypair with nil type for vault: %s %s", vlt.ID, err.Error())
-// 		return
-// 	}
-// 	if err != nil {
-// 		common.Log.Debug("correctly failed to sign with 256k1 key with nil type")
-// 	}
-// }
-
-// func TestSign256k1NilUsage(t *testing.T) {
-// 	vlt := vaultFactory()
-// 	if vlt.ID == uuid.Nil {
-// 		t.Error("failed! no vault created for 256k1 key signing unit test!")
-// 		return
-// 	}
-
-// 	key := vault.Secp256k1Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-// 	if key == nil {
-// 		t.Errorf("failed to create 256k1 keypair for vault: %s", vlt.ID)
-// 		return
-// 	}
-
-// 	msg := []byte(common.RandomString(10))
-// 	key.Usage = nil
-// 	_, err := key.Sign(msg, nil)
-// 	if err == nil {
-// 		t.Errorf("signed message using 256k1 keypair with nil type for vault: %s %s", vlt.ID, err.Error())
-// 		return
-// 	}
-// 	if err != nil {
-// 		common.Log.Debug("correctly failed to sign with 256k1 key with nil usage")
-// 	}
-// }
-
-// func TestVerifyEd25519NilUsage(t *testing.T) {
-// 	vlt := vaultFactory()
-// 	if vlt.ID == uuid.Nil {
-// 		t.Error("failed! no vault created for ed25519 key signing unit test!")
-// 		return
-// 	}
-
-// 	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-// 	if key == nil {
-// 		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
-// 		return
-// 	}
-
-// 	msg := []byte(common.RandomString(10))
-// 	sig, err := key.Sign(msg, nil)
-// 	if err != nil {
-// 		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
-// 		return
-// 	}
-
-// 	key.Usage = nil
-// 	err = key.Verify(msg, sig, nil)
-// 	if err == nil {
-// 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
-// 		return
-// 	}
-
-// 	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with nil usage for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
-// }
-
-// func TestVerifyEd25519NilType(t *testing.T) {
-// 	vlt := vaultFactory()
-// 	if vlt.ID == uuid.Nil {
-// 		t.Error("failed! no vault created for ed25519 key signing unit test!")
-// 		return
-// 	}
-
-// 	key := vault.Ed25519Factory(keyDB, &vlt.ID, "test key", "just some key :D")
-// 	if key == nil {
-// 		t.Errorf("failed to create ed25519 keypair for vault: %s", vlt.ID)
-// 		return
-// 	}
-
-// 	msg := []byte(common.RandomString(10))
-// 	sig, err := key.Sign(msg, nil)
-// 	if err != nil {
-// 		t.Errorf("error signing message using ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
-// 		return
-// 	}
-
-// 	key.Type = nil
-// 	err = key.Verify(msg, sig, nil)
-// 	if err == nil {
-// 		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
-// 		return
-// 	}
-
-// 	common.Log.Debugf("correctly failed to verify message using Ed25519 keypair with nil type for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
 func TestEncryptAndDecryptSymmetricChaChaNoErrorsOptionalNonce(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {
@@ -1029,7 +939,11 @@ func TestEncryptAndDecryptSymmetricChaChaNoErrorsOptionalNonce(t *testing.T) {
 		return
 	}
 
-	key := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	key, err := vault.Chacha20Factory(keyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create chacha20 key for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
 
 	plaintext := []byte(common.RandomString(128))
 
@@ -1071,4 +985,12 @@ func TestEncryptAndDecryptSymmetricChaChaNoErrorsOptionalNonce(t *testing.T) {
 		return
 	}
 	common.Log.Debug("decrypted ciphertext is identical to original plaintext")
+}
+
+func TestCreateNoVault(t *testing.T) {
+	_, err := vault.Ed25519Factory(keyDB, nil, "test key", "just some key :D")
+	if err == nil {
+		t.Errorf("created Ed25519 key for nil vault")
+		return
+	}
 }

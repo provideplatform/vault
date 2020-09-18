@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kthomas/go-pgputil"
 
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
@@ -33,8 +32,6 @@ var (
 
 func init() {
 	common.RequireJWTVerifiers()
-	pgputil.RequirePGP()
-	// common.RequireAPIAccounting()
 }
 
 func main() {
@@ -91,6 +88,7 @@ func runAPI() {
 	r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
 	r.Use(provide.TrackAPICalls())
+	r.Use(vault.AuditLogMiddleware())
 
 	vault.InstallAPI(r)
 

@@ -3,6 +3,7 @@ package common
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"time"
@@ -46,4 +47,14 @@ func SHA256(str string) string {
 	digest := sha256.New()
 	digest.Write([]byte(str))
 	return hex.EncodeToString(digest.Sum(nil))
+}
+
+// RandomBytes generates a cryptographically random byte array
+func RandomBytes(length int) ([]byte, error) {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, fmt.Errorf("error generating random bytes %s", err.Error())
+	}
+	return b, nil
 }

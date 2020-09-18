@@ -6,15 +6,10 @@ import (
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
-	vaultpgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 )
-
-func init() {
-	vaultpgputil.RequirePGP()
-}
 
 var secretDB = dbconf.DatabaseConnection()
 
@@ -26,9 +21,9 @@ func TestSecretStore(t *testing.T) {
 	}
 
 	secretText := common.RandomString(32)
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "secret name", "secret type", "secret description")
-	if secret == nil {
-		t.Errorf("failed to create secret for vault: %s", vlt.ID)
+	_, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "secret name", "secret type", "secret description")
+	if err != nil {
+		t.Errorf("failed to create secret for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 }
@@ -42,22 +37,19 @@ func TestSecretStoreAndResponse(t *testing.T) {
 
 	secretText := common.RandomString(32)
 	t.Logf("generated secret %s", secretText)
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "secret name", "secret type", "secret description 123456")
-	if secret == nil {
-		t.Errorf("failed to create secret for vault: %s", vlt.ID)
+	secret, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "secret name", "secret type", "secret description 123456")
+	if err != nil {
+		t.Errorf("failed to create secret for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
-	//next we will list the secrets for the vault, select our secret and retrieve the text
-	storedSecret := &vault.Secret{}
-	vlt.ListSecretsQuery(secretDB).Where("secrets.id=?", secret.ID).Find(&storedSecret)
-	secretResp, err := storedSecret.AsResponse()
-	if err != nil {
-		t.Errorf("error retrieving secret %s", err.Error())
-	}
+	t.Logf("secret returned %+v", *secret)
+	storedSecret := vault.GetVaultSecret(secret.ID.String(), vlt.ID.String(), vlt.ApplicationID, vlt.OrganizationID, vlt.UserID)
 
-	if *secretResp.Value != secretText {
-		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *storedSecret.Value)
+	decryptedSecret, _ := storedSecret.AsResponse()
+
+	if *decryptedSecret.Value != secretText {
+		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *decryptedSecret.Value)
 		return
 	}
 	t.Logf("got expected secret back")
@@ -71,12 +63,11 @@ func TestSecretStoreNoName(t *testing.T) {
 	}
 
 	secretText := common.RandomString(32)
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "", "type", "decription")
-	if secret != nil {
-		t.Errorf("validation failure in secret generation (no name provided) for vault: %s", vlt.ID)
+	_, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "", "type", "decription")
+	if err == nil {
+		t.Errorf("created secret with no name for vault: %s", vlt.ID)
 		return
 	}
-	t.Log("correctly failed to validate secret without name")
 }
 
 func TestSecretStoreNoType(t *testing.T) {
@@ -87,12 +78,11 @@ func TestSecretStoreNoType(t *testing.T) {
 	}
 
 	secretText := common.RandomString(32)
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "", "description")
-	if secret != nil {
-		t.Errorf("validation failure in secret generation (no type provided) for vault: %s", vlt.ID)
+	_, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "", "description")
+	if err == nil {
+		t.Errorf("created secret with no type for vault: %s", vlt.ID)
 		return
 	}
-	t.Log("correctly failed to validate secret without type")
 }
 func TestSecretStoreNoDescription(t *testing.T) {
 	vlt := vaultFactory()
@@ -102,12 +92,11 @@ func TestSecretStoreNoDescription(t *testing.T) {
 	}
 
 	secretText := common.RandomString(32)
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "")
-	if secret == nil {
-		t.Errorf("failure to create secret with no description (optional) for vault: %s", vlt.ID)
+	_, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "")
+	if err != nil {
+		t.Errorf("failed to create secret with no (optional) description for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
-	t.Log("correctly created secret without description")
 }
 
 func TestSecretStoreNoSecret(t *testing.T) {
@@ -118,12 +107,11 @@ func TestSecretStoreNoSecret(t *testing.T) {
 	}
 
 	secretText := ""
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "description")
-	if secret != nil {
-		t.Errorf("validation failure in secret generation (no secret provided) for vault: %s", vlt.ID)
+	_, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "description")
+	if err == nil {
+		t.Errorf("created secret with no secret for vault: %s", vlt.ID)
 		return
 	}
-	t.Log("correctly failed to validate secret without secret")
 }
 
 func TestSecretStoreTooLong(t *testing.T) {
@@ -134,12 +122,11 @@ func TestSecretStoreTooLong(t *testing.T) {
 	}
 
 	secretText := common.RandomString(4097)
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "description")
-	if secret != nil {
-		t.Errorf("validation failure in secret generation (no secret provided) for vault: %s", vlt.ID)
+	_, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "description")
+	if err == nil {
+		t.Errorf("created secret too long for vault: %s", vlt.ID)
 		return
 	}
-	t.Log("correctly failed to validate secret that was too long")
 }
 
 func TestSecretDelete(t *testing.T) {
@@ -151,9 +138,9 @@ func TestSecretDelete(t *testing.T) {
 
 	secretText := common.RandomString(32)
 	secretName := "to be deleted secret"
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), secretName, "secret type", "secret to be deleted")
-	if secret == nil {
-		t.Errorf("failed to create secret for vault: %s", vlt.ID)
+	secret, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), secretName, "secret type", "secret to be deleted")
+	if err != nil {
+		t.Errorf("failed to create secret for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -162,17 +149,13 @@ func TestSecretDelete(t *testing.T) {
 		return
 	}
 
-	//next we will list the secrets for the vault, select our secret and retrieve the text
-	deletedSecret := &vault.Secret{}
-	vlt.ListSecretsQuery(secretDB).Where("secrets.id=?", secret.ID).Find(&deletedSecret)
+	t.Logf("secret returned %+v", *secret)
+	deletedSecret := vault.GetVaultSecret(secret.ID.String(), vlt.ID.String(), vlt.ApplicationID, vlt.OrganizationID, vlt.UserID)
 
-	_, err := deletedSecret.AsResponse()
-	if err == nil {
-		t.Errorf("no error retrieving deleted secret")
+	if deletedSecret.ID != uuid.Nil {
+		t.Errorf("retrieved deleted secret")
 		return
 	}
-
-	t.Logf("secret deleted as expected %s", err.Error())
 }
 
 func TestSecretDeleteNilSecretID(t *testing.T) {
@@ -184,9 +167,9 @@ func TestSecretDeleteNilSecretID(t *testing.T) {
 
 	secretText := common.RandomString(32)
 	secretName := "to be fail deleted secret"
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), secretName, "secret type", "secret to be fail deleted")
-	if secret == nil {
-		t.Errorf("failed to create fail secret for vault: %s", vlt.ID)
+	secret, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), secretName, "secret type", "secret to be fail deleted")
+	if err != nil {
+		t.Errorf("failed to create secret for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -205,10 +188,9 @@ func TestGetVaultSecret(t *testing.T) {
 	}
 
 	secretText := common.RandomString(32)
-	t.Logf("generated secret %s", secretText)
-	secret := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "secret name", "secret type", "secret description 123456")
-	if secret == nil {
-		t.Errorf("failed to create secret for vault: %s", vlt.ID)
+	secret, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "secret name", "secret type", "secret description 123456")
+	if err != nil {
+		t.Errorf("failed to create secret for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -227,6 +209,4 @@ func TestGetVaultSecret(t *testing.T) {
 		t.Errorf("got incorrect secret back, expected %s, got %s", secretText, *storedSecret.Value)
 		return
 	}
-
-	t.Logf("got expected secret back")
 }

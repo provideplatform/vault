@@ -8,15 +8,10 @@ import (
 	"time"
 
 	dbconf "github.com/kthomas/go-db-config"
-	keyspgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 )
-
-func init() {
-	keyspgputil.RequirePGP()
-}
 
 var ethHDKeyDB = dbconf.DatabaseConnection()
 
@@ -27,9 +22,9 @@ func TestCreateEthHDWallet(t *testing.T) {
 		return
 	}
 
-	wallet := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test key", "just some key :D")
-	if wallet == nil {
-		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+	wallet, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -49,9 +44,9 @@ func TestDeriveKeyFromEthHDWallet(t *testing.T) {
 		return
 	}
 
-	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
-	if walletKey == nil {
-		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+	walletKey, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -91,9 +86,9 @@ func TestDeriveXKeysFromEthHDWallet(t *testing.T) {
 	}
 	log.Printf("Vault creation took %s", time.Since(start))
 	start = time.Now()
-	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
-	if walletKey == nil {
-		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+	walletKey, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 	log.Printf("HD Wallet creation took %s", time.Since(start))
@@ -137,9 +132,9 @@ func TestDeriveAutoKeyFromEthHDWallet(t *testing.T) {
 		return
 	}
 
-	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
-	if walletKey == nil {
-		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+	walletKey, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -173,9 +168,9 @@ func TestDeriveAutoKeyFromEthHDWallet_IncorrectVerifyIteration(t *testing.T) {
 		return
 	}
 
-	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
-	if walletKey == nil {
-		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+	walletKey, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -212,9 +207,9 @@ func TestDerivedKeyIteration(t *testing.T) {
 
 	organizationId := vlt.OrganizationID
 
-	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
-	if walletKey == nil {
-		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+	walletKey, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -277,9 +272,9 @@ func TestSignWithMaximumKey(t *testing.T) {
 		return
 	}
 
-	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
-	if walletKey == nil {
-		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+	walletKey, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -316,9 +311,9 @@ func TestSignWithInvalidKeyIteration(t *testing.T) {
 		return
 	}
 
-	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
-	if walletKey == nil {
-		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+	walletKey, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -328,7 +323,7 @@ func TestSignWithInvalidKeyIteration(t *testing.T) {
 
 	// attempt to sign with the invalid key
 	payload := []byte(common.RandomString(128))
-	_, err := walletKey.Sign(payload, nil)
+	_, err = walletKey.Sign(payload, nil)
 	if err == nil {
 		t.Errorf("no error signing payload")
 	}
@@ -343,16 +338,16 @@ func TestDeriveAutoKeyFromEthHDWallet_IncorrectCoin(t *testing.T) {
 		return
 	}
 
-	walletKey := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
-	if walletKey == nil {
-		t.Errorf("failed to create eth HD wallet for vault: %s", vlt.ID)
+	walletKey, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
 	iteration := uint32(0)
 	// test a sign with the key
 	payload := []byte(common.RandomString(128))
-	_, err := walletKey.Sign(payload, &vault.SigningOptions{
+	_, err = walletKey.Sign(payload, &vault.SigningOptions{
 		HDWallet: &vault.HDWalletOptions{
 			Coin:  common.StringOrNil("BTC"),
 			Index: &iteration,

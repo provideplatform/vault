@@ -7,15 +7,10 @@ import (
 	"testing"
 
 	dbconf "github.com/kthomas/go-db-config"
-	keyspgputil "github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/vault"
 )
-
-func init() {
-	keyspgputil.RequirePGP()
-}
 
 var babyjubjubKeyDB = dbconf.DatabaseConnection()
 
@@ -26,9 +21,9 @@ func TestBabyJubJubSign(t *testing.T) {
 		return
 	}
 
-	key := vault.BabyJubJubFactory(babyjubjubKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create babyJubJub keypair for vault: %s", vlt.ID)
+	key, err := vault.BabyJubJubFactory(babyjubjubKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create babyJubJub keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -59,9 +54,9 @@ func TestBabyJubJubVerify(t *testing.T) {
 		return
 	}
 
-	key := vault.BabyJubJubFactory(babyjubjubKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create babyjubjub keypair for vault: %s", vlt.ID)
+	key, err := vault.BabyJubJubFactory(babyjubjubKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create babyJubJub keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
@@ -98,15 +93,15 @@ func TestSignBabyJubJubNilPrivateKey(t *testing.T) {
 		return
 	}
 
-	key := vault.BabyJubJubFactory(babyjubjubKeyDB, &vlt.ID, "test key", "just some key :D")
-	if key == nil {
-		t.Errorf("failed to create BabyJubJub keypair for vault: %s", vlt.ID)
+	key, err := vault.BabyJubJubFactory(babyjubjubKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create babyJubJub keypair for vault: %s; Error: %s", vlt.ID, err.Error())
 		return
 	}
 
 	msg := []byte(common.RandomString(10))
 	key.PrivateKey = nil
-	_, err := key.Sign(msg, nil)
+	_, err = key.Sign(msg, nil)
 	if err == nil {
 		t.Errorf("signed message using BabyJubJub keypair with nil private key for vault: %s %s", vlt.ID, err.Error())
 		return

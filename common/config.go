@@ -3,11 +3,16 @@ package common
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
 	selfsignedcert "github.com/kthomas/go-self-signed-cert"
+	"github.com/provideapp/ident/common"
 )
+
+// UnsealerKeyRequiredBytes is the required length of the UnsealerKey in bytes
+const UnsealerKeyRequiredBytes = 32
 
 var (
 	// Log is the configured logger
@@ -24,6 +29,9 @@ var (
 
 	// ServeTLS is true when CertificatePath and PrivateKeyPath are valid
 	ServeTLS bool
+
+	// UnsealerKeyValidationHash is the SHA256 validation hash for the unsealer key
+	UnsealerKeyValidationHash string
 )
 
 func init() {
@@ -31,6 +39,7 @@ func init() {
 
 	requireLogger()
 	requireGin()
+	requireSealerValidationHash()
 }
 
 func requireGin() {
@@ -59,6 +68,15 @@ func requireLogger() {
 	}
 
 	Log = logger.NewLogger("vault", lvl, endpoint)
+}
+
+func requireSealerValidationHash() {
+	if os.Getenv("VAULT_USK_VALIDATION_HASH") == "" {
+		common.Log.Warning("vault unsealer key validation hash not provided")
+	} else {
+		UnsealerKeyValidationHash = strings.Replace(os.Getenv("VAULT_USK_VALIDATION_HASH"), "0x", "", -1)
+		common.Log.Debugf("vault validation hash set %s", UnsealerKeyValidationHash)
+	}
 }
 
 func requireTLSConfiguration() {

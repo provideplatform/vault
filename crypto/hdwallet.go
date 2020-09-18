@@ -11,7 +11,7 @@ import (
 
 // HDWallet is the internal struct for an asymmetric keypair
 type HDWallet struct {
-	Seed *[]byte // contains the mnemonic seed phrase
+	Seed *[]byte // contains the mnemonic seed phrase in bytes
 }
 
 // EthereumCoin is the standard abbreviation for native coin of the Ethereum chain
@@ -25,6 +25,9 @@ const BitcoinCoin = "BTC"
 
 // BitcoinCoinCode from the BIP39 spec
 const BitcoinCoinCode = uint(0)
+
+// SeedEntropy is default entropy for seed phrases (24 words)
+const SeedEntropy = 256
 
 // CreateKeyFromWallet deterministically creates a secp256k1 key
 // include private and public key and ETH address
@@ -82,7 +85,7 @@ func (w *HDWallet) CreateKeyFromWallet(coin string, index uint32) (*Secp256k1, e
 	secp256k1.PublicKey = &publickey
 	secp256k1.DerivationPath = &pathstr
 
-	common.Log.Debugf("generated hd wallet %s key with public key %s", coin, hex.EncodeToString(publickey))
+	common.Log.Debugf("generated hd wallet %s key with public key 0x%s", coin, hex.EncodeToString(publickey))
 	return &secp256k1, nil
 }
 
@@ -91,7 +94,7 @@ func (w *HDWallet) CreateKeyFromWallet(coin string, index uint32) (*Secp256k1, e
 func CreateHDWalletSeedPhrase() (*HDWallet, error) {
 
 	// first we generate a random mnemonic (256 bits of entropy)
-	entropy, err := bip39.NewEntropy(256)
+	entropy, err := bip39.NewEntropy(SeedEntropy)
 	if err != nil {
 		common.Log.Warningf("failed to create entropy for HD wallet mnemonic; %s", err.Error())
 		return nil, err
@@ -118,4 +121,15 @@ func CreateHDWalletSeedPhrase() (*HDWallet, error) {
 	hdWallet.Seed = &mnemonicAsBytes
 
 	return &hdWallet, nil
+}
+
+// GetEntropyFromMnemonic is used by the mnemonic-based unsealer key
+func GetEntropyFromMnemonic(mnemonic string) ([]byte, error) {
+
+	entropy, err := bip39.EntropyFromMnemonic(mnemonic)
+	if err != nil {
+		return nil, err
+	}
+
+	return entropy, nil
 }

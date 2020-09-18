@@ -125,7 +125,11 @@ func (v *Vault) Create(tx *gorm.DB) bool {
 				common.Log.Debugf("created vault %s", v.ID.String())
 				err := v.createMasterKey(db)
 				if err != nil {
+					v.Errors = append(v.Errors, &provide.Error{
+						Message: common.StringOrNil(err.Error()),
+					})
 					common.Log.Warningf("failed to create master key for vault: %s; %s", v.ID.String(), err.Error())
+					return false
 				}
 
 				return success
@@ -206,9 +210,8 @@ func GetVaults(applicationID, organizationID, userID *uuid.UUID) []*Vault {
 }
 
 // GetVault returns a vault for the specified parameters
-func GetVault(vaultID string, applicationID, organizationID, userID *uuid.UUID) *Vault {
-	// Set up the database connection
-	db := dbconf.DatabaseConnection()
+func GetVault(db *gorm.DB, vaultID string, applicationID, organizationID, userID *uuid.UUID) *Vault {
+
 	var query *gorm.DB
 
 	var vault = &Vault{}

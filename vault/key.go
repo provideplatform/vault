@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
-	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/crypto"
@@ -115,8 +114,8 @@ type Key struct {
 
 	Address             *string `sql:"-" json:"address,omitempty"`
 	Ephemeral           *bool   `sql:"-" json:"ephemeral,omitempty"`
-	EphemeralPrivateKey *[]byte `sql:"-" json:"private_key,omitempty"`
-	EphemeralSeed       *[]byte `sql:"-" json:"seed,omitempty"`
+	EphemeralPrivateKey *string `sql:"-" json:"private_key,omitempty"`
+	EphemeralSeed       *string `sql:"-" json:"seed,omitempty"`
 	PublicKeyHex        *string `sql:"-" json:"public_key,omitempty"`
 	DerivationPath      *string `sql:"-" json:"hd_derivation_path,omitempty"`
 
@@ -134,6 +133,15 @@ type Key struct {
 type KeyEncryptDecryptRequestResponse struct {
 	Data  *string `json:"data,omitempty"`
 	Nonce *string `json:"nonce,omitempty"` //optional nonce parameter
+}
+
+// KeyDeriveRequest contains the details for the derivation of a
+// new chacha20 key from the provided chacha20 key
+type KeyDeriveRequest struct {
+	Nonce       *int    `json:"nonce,omitempty"`
+	Context     *string `json:"context,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
 }
 
 // SigningOptions contains the options for the signing algorithm
@@ -400,6 +408,10 @@ func (k *Key) decryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
+	if unsealerKey == nil {
+		return fmt.Errorf("vault is sealed")
+	}
+
 	if k.encrypted == nil {
 		k.setEncrypted(k.ID != uuid.Nil)
 	}
@@ -413,19 +425,19 @@ func (k *Key) decryptFields() error {
 		common.Log.Tracef("decrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			seed, err := pgputil.PGPPubDecrypt(*k.Seed)
+			// unseal the data with the unsealer key
+			k.Seed, err = unseal(k.Seed)
 			if err != nil {
 				return err
 			}
-			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
-			privateKey, err := pgputil.PGPPubDecrypt(*k.PrivateKey)
+			// unseal the data with the unsealer key
+			k.PrivateKey, err = unseal(k.PrivateKey)
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("decrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
@@ -434,7 +446,7 @@ func (k *Key) decryptFields() error {
 		defer masterKey.encryptFields()
 
 		if k.Seed != nil {
-			seed, err := masterKey.Decrypt([]byte(*k.Seed))
+			seed, err := masterKey.Decrypt(*k.Seed)
 			if err != nil {
 				return err
 			}
@@ -442,7 +454,7 @@ func (k *Key) decryptFields() error {
 		}
 
 		if k.PrivateKey != nil {
-			privateKey, err := masterKey.Decrypt([]byte(*k.PrivateKey))
+			privateKey, err := masterKey.Decrypt(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
@@ -458,6 +470,10 @@ func (k *Key) encryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
+	if unsealerKey == nil {
+		return fmt.Errorf("vault is sealed")
+	}
+
 	if k.encrypted == nil {
 		k.setEncrypted(k.ID != uuid.Nil)
 	}
@@ -471,19 +487,19 @@ func (k *Key) encryptFields() error {
 		common.Log.Tracef("encrypting master key fields for vault: %s", k.VaultID)
 
 		if k.Seed != nil {
-			seed, err := pgputil.PGPPubEncrypt(*k.Seed)
+			// seal the data with the unsealer key
+			k.Seed, err = seal(k.Seed)
 			if err != nil {
 				return err
 			}
-			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
-			privateKey, err := pgputil.PGPPubEncrypt([]byte(*k.PrivateKey))
+			// seal the data with the unsealer key
+			k.PrivateKey, err = seal(k.PrivateKey)
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("encrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
@@ -544,7 +560,6 @@ func (k *Key) createPersisted(db *gorm.DB) bool {
 	if success {
 		k.Enrich()
 	}
-
 	return success
 }
 
@@ -622,11 +637,20 @@ func (k *Key) create() error {
 
 	if isEphemeral {
 		if k.Seed != nil {
-			ephemeralSeed := *k.Seed
+			ephemeralSeed := string(*k.Seed)
+
+			//hex encode the seed if it's not a BIP39 seed
+			if *k.Spec != KeySpecECCBIP39 {
+				SeedHex := hex.EncodeToString(*k.Seed)
+				ephemeralSeed = fmt.Sprintf("0x%s", SeedHex)
+			}
+
 			k.EphemeralSeed = &ephemeralSeed
 		}
+
 		if k.PrivateKey != nil {
-			ephemeralPrivateKey := *k.PrivateKey
+			privateKeyHex := hex.EncodeToString(*k.PrivateKey)
+			ephemeralPrivateKey := fmt.Sprintf("0x%s", privateKeyHex)
 			k.EphemeralPrivateKey = &ephemeralPrivateKey
 		}
 	}
@@ -637,7 +661,6 @@ func (k *Key) create() error {
 			return fmt.Errorf("failed to encrypt key material; %s", err.Error())
 		}
 	}
-
 	return nil
 }
 

@@ -189,7 +189,7 @@ func CreateUnsealerKey() (*SealUnsealRequestResponse, error) {
 	responseHash := common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(validationHash.Sum(nil))))
 
 	response := SealUnsealRequestResponse{
-		unsealerKey:    &seedPhrase,
+		UnsealerKey:    &seedPhrase,
 		ValidationHash: responseHash,
 	}
 

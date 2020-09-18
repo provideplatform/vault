@@ -29,10 +29,15 @@ func setValidationHash(hash string) {
 
 func TestVaultUnseal(t *testing.T) {
 	// seal the vault
-	vault.UnsealerKey = nil
-	err := vault.SetUnsealerKey(unsealerKey)
+	err := vault.ClearUnsealerKey(unsealerKey)
 	if err != nil {
-		t.Errorf("failed to unseal vault")
+		t.Errorf("error sealing vault: %s", err.Error())
+		return
+	}
+
+	err = vault.SetUnsealerKey(unsealerKey)
+	if err != nil {
+		t.Errorf("failed to unseal vault: %s", err.Error())
 		return
 	}
 }
@@ -40,9 +45,13 @@ func TestVaultUnseal(t *testing.T) {
 func TestVaultUnsealNoUnsealerPhrase(t *testing.T) {
 	defer unsealVault()
 	// seal the vault
-	vault.UnsealerKey = nil
+	err := vault.ClearUnsealerKey(unsealerKey)
+	if err != nil {
+		t.Errorf("error sealing vault: %s", err.Error())
+		return
+	}
 
-	err := vault.SetUnsealerKey("")
+	err = vault.SetUnsealerKey("")
 	if err == nil {
 		t.Errorf("unsealed vault with no key")
 		return
@@ -61,12 +70,17 @@ func TestUnsealSealedVault(t *testing.T) {
 func TestUnsealVaultNoValidationHash(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
-	vault.UnsealerKey = nil
+	err := vault.ClearUnsealerKey(unsealerKey)
+	if err != nil {
+		t.Errorf("error sealing vault: %s", err.Error())
+		return
+	}
+
 	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
 	setValidationHash("")
-	err := vault.SetUnsealerKey(unsealerKey)
+	err = vault.SetUnsealerKey(unsealerKey)
 	if err == nil {
 		t.Errorf("unsealed vault without validation hash")
 		return
@@ -77,9 +91,13 @@ func TestUnsealVaultNoValidationHash(t *testing.T) {
 func TestUnsealVaultIncorrectKey(t *testing.T) {
 	defer unsealVault()
 	// seal the vault
-	vault.UnsealerKey = nil
+	err := vault.ClearUnsealerKey(unsealerKey)
+	if err != nil {
+		t.Errorf("error sealing vault: %s", err.Error())
+		return
+	}
 
-	err := vault.SetUnsealerKey("incorrect value")
+	err = vault.SetUnsealerKey("incorrect value")
 	if err == nil {
 		t.Errorf("unsealed vault with incorrect unsealer key")
 		return
@@ -90,7 +108,12 @@ func TestUnsealVaultIncorrectKey(t *testing.T) {
 func TestUnsealVaultInvalidBIP39Phrase(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
-	vault.UnsealerKey = nil
+	err := vault.ClearUnsealerKey(unsealerKey)
+	if err != nil {
+		t.Errorf("error sealing vault: %s", err.Error())
+		return
+	}
+
 	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
@@ -100,7 +123,7 @@ func TestUnsealVaultInvalidBIP39Phrase(t *testing.T) {
 	_, _ = badHash.Write(badKey)
 	common.UnsealerKeyValidationHash = hex.EncodeToString(badHash.Sum(nil))
 
-	err := vault.SetUnsealerKey(string(badKey))
+	err = vault.SetUnsealerKey(string(badKey))
 	if err == nil {
 		t.Errorf("unsealed vault with non-BIP39 key")
 		return
@@ -111,7 +134,12 @@ func TestUnsealVaultInvalidBIP39Phrase(t *testing.T) {
 func TestUnsealVaultLowEntropyBIP39Phrase(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
-	vault.UnsealerKey = nil
+	err := vault.ClearUnsealerKey(unsealerKey)
+	if err != nil {
+		t.Errorf("error sealing vault: %s", err.Error())
+		return
+	}
+
 	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
@@ -121,7 +149,7 @@ func TestUnsealVaultLowEntropyBIP39Phrase(t *testing.T) {
 	_, _ = badHash.Write([]byte(badMnemonic))
 	common.UnsealerKeyValidationHash = hex.EncodeToString(badHash.Sum(nil))
 
-	err := vault.SetUnsealerKey(badMnemonic)
+	err = vault.SetUnsealerKey(badMnemonic)
 	if err == nil {
 		t.Errorf("unsealed vault with low-entropy BIP39 key")
 		return
@@ -132,7 +160,12 @@ func TestUnsealVaultLowEntropyBIP39Phrase(t *testing.T) {
 func TestCreateUnsealer(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
-	vault.UnsealerKey = nil
+	err := vault.ClearUnsealerKey(unsealerKey)
+	if err != nil {
+		t.Errorf("error sealing vault: %s", err.Error())
+		return
+	}
+
 	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
@@ -145,7 +178,7 @@ func TestCreateUnsealer(t *testing.T) {
 
 	// then we will use these to seal a vault
 	setValidationHash(strings.Replace(*validationHash, "0x", "", -1))
-	err := vault.SetUnsealerKey(*unsealerKey)
+	err = vault.SetUnsealerKey(*unsealerKey)
 	if err != nil {
 		t.Errorf("error unsealing vault with created key, error: %s", err.Error())
 		return
@@ -155,7 +188,12 @@ func TestCreateUnsealer(t *testing.T) {
 func TestCreateUnsealerAndSignVerify(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
-	vault.UnsealerKey = nil
+	err := vault.ClearUnsealerKey(unsealerKey)
+	if err != nil {
+		t.Errorf("error sealing vault: %s", err.Error())
+		return
+	}
+
 	hash := common.UnsealerKeyValidationHash
 	defer setValidationHash(hash)
 
@@ -168,7 +206,7 @@ func TestCreateUnsealerAndSignVerify(t *testing.T) {
 
 	// then we will use these to seal a vault
 	setValidationHash(strings.Replace(*validationHash, "0x", "", -1))
-	err := vault.SetUnsealerKey(*unsealerKey)
+	err = vault.SetUnsealerKey(*unsealerKey)
 	if err != nil {
 		t.Errorf("error unsealing vault with created key")
 		return

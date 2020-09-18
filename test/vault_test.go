@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	if vault.UnsealerKey == nil {
+	if vault.IsSealed() {
 		common.Log.Debug("vault is sealed, unsealing vault")
 
 		unsealerKey := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"

@@ -126,7 +126,7 @@ func init() {
 	if err != nil {
 		log.Printf("error generating new unsealer key %s", err.Error())
 	}
-
+	log.Printf("newkeyresp: %+v", *newkeyresp)
 	log.Printf("newly generated unsealer key %s", *newkeyresp.UnsealerKey)
 	log.Printf("newly generated unsealer key hash %s", *newkeyresp.ValidationHash)
 	_, err = provide.UnsealVault(*token, map[string]interface{}{

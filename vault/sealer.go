@@ -21,8 +21,47 @@ var (
 
 // SealUnsealRequestResponse provides the unseal information
 type SealUnsealRequestResponse struct {
-	unsealerKey    *string `json:"unsealer_key,omitempty"`
+	UnsealerKey    *string `json:"unsealer_key,omitempty"`
 	ValidationHash *string `json:"validation_hash,omitempty"`
+}
+
+// ClearUnsealerKey clears the unsealer key - used to seal the vault (handler not implemented)
+func ClearUnsealerKey(passphrase string) error {
+	if passphrase == "" {
+		return fmt.Errorf("error sealing vault (100)") // no unsealer key provided
+	}
+
+	// get the SHA512 hash of the generated unsealerkey
+	incomingKeyHash := crypto.SHA256.New()
+	_, err := incomingKeyHash.Write([]byte(passphrase))
+	if err != nil {
+		return fmt.Errorf("error sealing vault (300)") // error hashing incoming key
+	}
+
+	if common.UnsealerKeyValidationHash == "" {
+		return fmt.Errorf("error sealing vault (400)")
+	}
+
+	validator, _ := hex.DecodeString(common.UnsealerKeyValidationHash)
+
+	// validate the SHA256 hash against the validation hash
+	res := bytes.Compare(incomingKeyHash.Sum(nil), validator[:])
+	if res != 0 {
+		return fmt.Errorf("error sealing vault (500)") // unsealer key provided doesn't match validator hash
+	}
+	common.Log.Debugf("Seal vault: valid vault unsealing key received")
+
+	unsealerKey = nil
+	unsealerCloakingKey = nil
+	return nil
+}
+
+// IsSealed checks to see if the vault is sealed (true) or unsealed (false)
+func IsSealed() bool {
+	if unsealerKey == nil {
+		return true
+	}
+	return false
 }
 
 // SetUnsealerKey sets the unsealer key; this only possible with a SEALED vault
@@ -189,7 +228,7 @@ func CreateUnsealerKey() (*SealUnsealRequestResponse, error) {
 	responseHash := common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(validationHash.Sum(nil))))
 
 	response := SealUnsealRequestResponse{
-		unsealerKey:    &seedPhrase,
+		UnsealerKey:    &seedPhrase,
 		ValidationHash: responseHash,
 	}
 

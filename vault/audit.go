@@ -29,7 +29,6 @@ type AuditLogEvent struct {
 
 // AuditRequest logs data from the http request for audit purposes
 func AuditRequest(c *gin.Context, msg string) {
-
 	// set the audit data
 	requestID := c.GetString("RequestId")
 	timestamp := time.Now().UTC()
@@ -58,12 +57,6 @@ func AuditRequest(c *gin.Context, msg string) {
 	}
 
 	writeAuditLogEvent(auditEvent)
-}
-
-func writeAuditLogEvent(event *AuditLogEvent) {
-	// log to stdout for the moment, add more options later (like file)
-	logEvent, _ := json.Marshal(*event)
-	fmt.Fprintln(os.Stdout, string(logEvent))
 }
 
 // AuditResponse logs data from the http response for audit purposes
@@ -108,7 +101,6 @@ func AuditResponse(c *gin.Context, msg string, start int64) {
 // AuditLogMiddleware logs incoming requests and outgoing responses
 func AuditLogMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		// Check for incoming header, use it if exists
 		requestID := c.Request.Header.Get("X-Request-Id")
 
@@ -134,4 +126,9 @@ func AuditLogMiddleware() gin.HandlerFunc {
 		defer AuditResponse(c, "Audit:Response", startTime)
 		c.Next()
 	}
+}
+
+func writeAuditLogEvent(event *AuditLogEvent) {
+	logEvent, _ := json.Marshal(*event)
+	common.Log.Trace(string(logEvent))
 }

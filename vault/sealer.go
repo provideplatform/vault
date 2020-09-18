@@ -21,7 +21,7 @@ var (
 
 // SealUnsealRequestResponse provides the unseal information
 type SealUnsealRequestResponse struct {
-	unsealerKey    *string `json:"unsealer_key,omitempty"`
+	UnsealerKey    *string `json:"unsealer_key,omitempty"`
 	ValidationHash *string `json:"validation_hash,omitempty"`
 }
 

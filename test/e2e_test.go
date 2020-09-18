@@ -18,7 +18,7 @@ import (
 
 func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
 
-	resp, err := provide.CreateVaultKey(token, vaultID, map[string]interface{}{
+	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
 		"type":        keyType,
 		"usage":       keyUsage,
 		"spec":        keySpec,
@@ -42,7 +42,7 @@ func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, ke
 
 func keyFactory(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
 
-	resp, err := provide.CreateVaultKey(token, vaultID, map[string]interface{}{
+	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
 		"type":        keyType,
 		"usage":       keyUsage,
 		"spec":        keySpec,
@@ -81,25 +81,16 @@ func vaultFactory(token, name, desc string) (*provide.Vault, error) {
 }
 
 func userFactory(email, password string) (*uuid.UUID, error) {
-	status, resp, err := ident.CreateUser("", map[string]interface{}{
+	resp, err := ident.CreateUser("", map[string]interface{}{
 		"first_name": "A",
 		"last_name":  "User",
 		"email":      email,
 		"password":   password,
 	})
-	if err != nil || status != 201 {
+	if err != nil {
 		return nil, errors.New("failed to create user")
 	}
-	var usrID *uuid.UUID
-	if usr, usrOk := resp.(map[string]interface{}); usrOk {
-		if id, idok := usr["id"].(string); idok {
-			usrUUID, err := uuid.FromString(id)
-			if err != nil {
-				return nil, err
-			}
-			usrID = &usrUUID
-		}
-	}
+	usrID := &resp.ID
 	return usrID, nil
 }
 
@@ -116,19 +107,11 @@ func userTokenFactory() (*string, error) {
 		return nil, err
 	}
 
-	status, resp, err := ident.Authenticate(email, password)
-	if err != nil || status != 201 {
+	resp, err := ident.Authenticate(email, password)
+	if err != nil {
 		return nil, errors.New("failed to authenticate user")
 	}
-	var token *string
-	if authresp, authrespOk := resp.(map[string]interface{}); authrespOk {
-		if tok, tokOk := authresp["token"].(map[string]interface{}); tokOk {
-			if tokenstr, tokenstrOk := tok["token"].(string); tokenstrOk {
-				token = common.StringOrNil(tokenstr)
-			}
-		}
-	}
-	return token, nil
+	return resp.Token.Token, nil
 }
 
 func init() {
@@ -183,7 +166,7 @@ func TestAPICreateKey(t *testing.T) {
 		return
 	}
 
-	_, err = provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+	_, err = provide.CreateKey(*token, vault.ID.String(), map[string]interface{}{
 		"type":        "asymmetric",
 		"usage":       "sign/verify",
 		"spec":        "secp256k1",
@@ -216,7 +199,7 @@ func TestAPIDeleteKey(t *testing.T) {
 		return
 	}
 
-	err = provide.DeleteVaultKey(*token, vault.ID.String(), key.ID.String())
+	err = provide.DeleteKey(*token, vault.ID.String(), key.ID.String())
 	if err != nil {
 		t.Errorf("failed to delete key for vault: %s", err.Error())
 		return
@@ -649,7 +632,7 @@ func TestListKeys(t *testing.T) {
 
 	for looper := 1; looper <= numberOfKeys; looper++ {
 		keyName := fmt.Sprintf("integration test ethereum key %d", looper)
-		key, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+		key, err := provide.CreateKey(*token, vault.ID.String(), map[string]interface{}{
 			"type":        "asymmetric",
 			"usage":       "sign/verify",
 			"spec":        "secp256k1",
@@ -669,7 +652,7 @@ func TestListKeys(t *testing.T) {
 		}
 	}
 
-	listVaultKeysResponse, err := provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{})
+	listVaultKeysResponse, err := provide.ListKeys(*token, vault.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("failed to list keys. error %s", err.Error())
 	}
@@ -739,7 +722,7 @@ func TestListKeys_Filtered(t *testing.T) {
 	}
 
 	// generate a key that will be filtered out
-	_, err = provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+	_, err = provide.CreateKey(*token, vault.ID.String(), map[string]interface{}{
 		"type":        "asymmetric",
 		"usage":       "sign/verify",
 		"spec":        "babyJubJub",
@@ -758,7 +741,7 @@ func TestListKeys_Filtered(t *testing.T) {
 
 	for looper := 0; looper < numberOfKeys; looper++ {
 		keyName := fmt.Sprintf("integration test ethereum key %d", looper)
-		key, err := provide.CreateVaultKey(*token, vault.ID.String(), map[string]interface{}{
+		key, err := provide.CreateKey(*token, vault.ID.String(), map[string]interface{}{
 			"type":        "asymmetric",
 			"usage":       "sign/verify",
 			"spec":        "secp256k1",
@@ -779,7 +762,7 @@ func TestListKeys_Filtered(t *testing.T) {
 	}
 
 	// first run without filter
-	listVaultKeysResponse, err := provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{})
+	listVaultKeysResponse, err := provide.ListKeys(*token, vault.ID.String(), map[string]interface{}{})
 	if err != nil {
 		t.Errorf("failed to list keys. error %s", err.Error())
 	}
@@ -790,7 +773,7 @@ func TestListKeys_Filtered(t *testing.T) {
 	}
 
 	// now filter to just secp256k1
-	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+	listVaultKeysResponse, err = provide.ListKeys(*token, vault.ID.String(), map[string]interface{}{
 		"spec": "secp256k1",
 	})
 	if err != nil {
@@ -803,7 +786,7 @@ func TestListKeys_Filtered(t *testing.T) {
 	}
 
 	// now filter to babyjubjub
-	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+	listVaultKeysResponse, err = provide.ListKeys(*token, vault.ID.String(), map[string]interface{}{
 		"spec": "babyJubJub",
 	})
 	if err != nil {
@@ -816,7 +799,7 @@ func TestListKeys_Filtered(t *testing.T) {
 	}
 
 	// now filter to symmetric (should be just the master key)
-	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+	listVaultKeysResponse, err = provide.ListKeys(*token, vault.ID.String(), map[string]interface{}{
 		"type": "symmetric",
 	})
 	if err != nil {
@@ -829,7 +812,7 @@ func TestListKeys_Filtered(t *testing.T) {
 	}
 
 	// now filter to asymmetric (should be babyjubjub + numberOfKeys secp256k1 keys)
-	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+	listVaultKeysResponse, err = provide.ListKeys(*token, vault.ID.String(), map[string]interface{}{
 		"type": "asymmetric",
 	})
 	if err != nil {
@@ -843,7 +826,7 @@ func TestListKeys_Filtered(t *testing.T) {
 
 	//now check the value of all the secp256k1 keys added
 	// now filter to babyjubjub
-	listVaultKeysResponse, err = provide.ListVaultKeys(*token, vault.ID.String(), map[string]interface{}{
+	listVaultKeysResponse, err = provide.ListKeys(*token, vault.ID.String(), map[string]interface{}{
 		"spec": "secp256k1",
 	})
 	if err != nil {

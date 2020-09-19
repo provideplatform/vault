@@ -16,6 +16,7 @@ import (
 	"github.com/provideapp/vault/vault"
 
 	provide "github.com/provideservices/provide-go/common"
+	util "github.com/provideservices/provide-go/common/util"
 )
 
 const runloopSleepInterval = 250 * time.Millisecond
@@ -31,8 +32,8 @@ var (
 )
 
 func init() {
-	provide.RequireJWTVerifiers()
-	provide.RequireGin()
+	util.RequireJWTVerifiers()
+	util.RequireGin()
 }
 
 func main() {
@@ -88,23 +89,23 @@ func runAPI() {
 	r.Use(token.AuthMiddleware())
 	r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
-	r.Use(provide.TrackAPICalls())
+	r.Use(util.TrackAPICalls())
 	r.Use(vault.AuditLogMiddleware())
 
 	vault.InstallAPI(r)
 
 	srv = &http.Server{
-		Addr:    provide.ListenAddr,
+		Addr:    util.ListenAddr,
 		Handler: r,
 	}
 
-	if provide.ServeTLS {
-		go srv.ListenAndServeTLS(provide.CertificatePath, provide.PrivateKeyPath)
+	if util.ServeTLS {
+		go srv.ListenAndServeTLS(util.CertificatePath, util.PrivateKeyPath)
 	} else {
 		go srv.ListenAndServe()
 	}
 
-	common.Log.Debugf("listening on %s", provide.ListenAddr)
+	common.Log.Debugf("listening on %s", util.ListenAddr)
 }
 
 func statusHandler(c *gin.Context) {

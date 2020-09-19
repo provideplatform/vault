@@ -129,6 +129,7 @@ func init() {
 	log.Printf("newkeyresp: %+v", *newkeyresp)
 	log.Printf("newly generated unsealer key %s", *newkeyresp.UnsealerKey)
 	log.Printf("newly generated unsealer key hash %s", *newkeyresp.ValidationHash)
+
 	_, err = provide.UnsealVault(*token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
@@ -136,6 +137,16 @@ func init() {
 		log.Printf("**vault not unsealed**. error: %s", err.Error())
 		return
 	}
+
+	// now try it again, and we expect a 204 (no response) when trying to unseal a sealed vault
+	_, err = provide.UnsealVault(*token, map[string]interface{}{
+		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
+	})
+	if err != nil {
+		log.Printf("**second unseal attempt failed when it should pass**. error: %s", err.Error())
+		return
+	}
+
 }
 
 func TestAPICreateVault(t *testing.T) {

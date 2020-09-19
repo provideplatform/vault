@@ -72,7 +72,7 @@ func SetUnsealerKey(passphrase string) error {
 
 	// we can't unseal an unsealed vault
 	if unsealerKey != nil {
-		return fmt.Errorf("error unsealing vault; already unsealed")
+		return nil
 	}
 
 	// get the SHA512 hash of the generated unsealerkey

@@ -31,7 +31,8 @@ var (
 )
 
 func init() {
-	common.RequireJWTVerifiers()
+	provide.RequireJWTVerifiers()
+	provide.RequireGin()
 }
 
 func main() {
@@ -93,17 +94,17 @@ func runAPI() {
 	vault.InstallAPI(r)
 
 	srv = &http.Server{
-		Addr:    common.ListenAddr,
+		Addr:    provide.ListenAddr,
 		Handler: r,
 	}
 
-	if common.ServeTLS {
-		go srv.ListenAndServeTLS(common.CertificatePath, common.PrivateKeyPath)
+	if provide.ServeTLS {
+		go srv.ListenAndServeTLS(provide.CertificatePath, provide.PrivateKeyPath)
 	} else {
 		go srv.ListenAndServe()
 	}
 
-	common.Log.Debugf("listening on %s", common.ListenAddr)
+	common.Log.Debugf("listening on %s", provide.ListenAddr)
 }
 
 func statusHandler(c *gin.Context) {

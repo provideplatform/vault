@@ -22,6 +22,7 @@ import (
 func InstallAPI(r *gin.Engine) {
 	r.POST("/api/v1/unsealerkey", createUnsealerKeyHandler)
 	r.POST("/api/v1/unseal", unsealHandler)
+	r.POST("/api/v1/seal", sealHandler)
 
 	r.GET("/api/v1/vaults", vaultsListHandler)
 	r.POST("/api/v1/vaults", createVaultHandler)
@@ -61,7 +62,7 @@ func createUnsealerKeyHandler(c *gin.Context) {
 	provide.Render(key, 201, c)
 }
 
-// unsealHandler enables locking and unlocking the master key for all vaults
+// unsealHandler enables unlocking the master key for all vaults
 func unsealHandler(c *gin.Context) {
 	// TODO what elements are required in the token to enable the locking/ unlocking of the vault?
 	// currently, it's just a valid token from IDENT and a valid unsealer key
@@ -88,6 +89,41 @@ func unsealHandler(c *gin.Context) {
 	err = SetUnsealerKey(*params.UnsealerKey)
 	if err != nil {
 		msg := fmt.Sprintf("failed to unseal vault; %s", err.Error())
+		common.Log.Warning(msg)
+		provide.RenderError(msg, 500, c)
+		return
+	}
+
+	provide.Render(nil, 204, c)
+}
+
+// sealHandler enables locking the master key for all vaults
+func sealHandler(c *gin.Context) {
+	// TODO what elements are required in the token to enable the locking/ unlocking of the vault?
+	// currently, it's just a valid token from IDENT and a valid unsealer key
+	_ = token.InContext(c)
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &SealUnsealRequestResponse{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	if params.UnsealerKey == nil {
+		provide.RenderError("unsealer key material required", 422, c)
+		return
+	}
+
+	err = ClearUnsealerKey(*params.UnsealerKey)
+	if err != nil {
+		msg := fmt.Sprintf("failed to seal vault; %s", err.Error())
 		common.Log.Warning(msg)
 		provide.RenderError(msg, 500, c)
 		return

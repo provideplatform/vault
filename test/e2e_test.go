@@ -149,6 +149,126 @@ func init() {
 
 }
 
+func unsealVault() error {
+	token, err := userTokenFactory()
+	if err != nil {
+		return fmt.Errorf("failed to create token; %s", err.Error())
+
+	}
+
+	_, err = provide.UnsealVault(*token, map[string]interface{}{
+		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
+	})
+	if err != nil {
+		return fmt.Errorf("**vault not unsealed**. error: %s", err.Error())
+	}
+	return nil
+}
+
+func TestSealUnsealer(t *testing.T) {
+	// we're going to unseal the vault,
+	// do an operation
+	// seal the vault
+	// retry operation, expect it to fail
+	// unseal the vault, retry operation and expect it to succeed
+
+	//get the vault unsealed to make sure other tests can continue
+	defer unsealVault()
+
+	token, err := userTokenFactory()
+	if err != nil {
+		log.Printf("failed to create token; %s", err.Error())
+		return
+	}
+
+	_, err = provide.UnsealVault(*token, map[string]interface{}{
+		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
+	})
+	if err != nil {
+		t.Errorf("**vault not unsealed**. error: %s", err.Error())
+		return
+	}
+
+	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	_, err = provide.SealVault(*token, map[string]interface{}{
+		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
+	})
+	if err != nil {
+		t.Errorf("**vault not sealed**. error: %s", err.Error())
+		return
+	}
+
+	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
+	if err == nil {
+		t.Errorf("performed operation while sealed!")
+		return
+	}
+
+	_, err = provide.UnsealVault(*token, map[string]interface{}{
+		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
+	})
+	if err != nil {
+		t.Errorf("**vault not unsealed**. error: %s", err.Error())
+		return
+	}
+
+	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	// now we'll try to seal it badly and expect it to continue working
+	_, err = provide.SealVault(*token, map[string]interface{}{
+		"key": "raffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
+	})
+	if err == nil {
+		t.Errorf("**vault sealed with bad key**")
+		return
+	}
+
+	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	// now we'll seal it and unseal it badly and expect it to fail
+	_, err = provide.SealVault(*token, map[string]interface{}{
+		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
+	})
+	if err != nil {
+		t.Errorf("**vault not sealed**. error: %s", err.Error())
+		return
+	}
+
+	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
+	if err == nil {
+		t.Errorf("performed operation while sealed!")
+		return
+	}
+
+	_, err = provide.UnsealVault(*token, map[string]interface{}{
+		"key": "raffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
+	})
+	if err == nil {
+		t.Errorf("unsealed vault with bad key.")
+		return
+	}
+
+	_, err = vaultFactory(*token, "vaulty vault", "just a boring vaulty vault")
+	if err == nil {
+		t.Errorf("created vault while sealed!")
+		return
+	}
+
+}
+
 func TestAPICreateVault(t *testing.T) {
 	token, err := userTokenFactory()
 	if err != nil {

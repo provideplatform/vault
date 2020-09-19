@@ -61,8 +61,8 @@ func TestVaultUnsealNoUnsealerPhrase(t *testing.T) {
 
 func TestUnsealSealedVault(t *testing.T) {
 	err := vault.SetUnsealerKey(unsealerKey)
-	if err == nil {
-		t.Errorf("unsealed sealed vault")
+	if err != nil {
+		t.Errorf("error unsealing unsealed vault")
 		return
 	}
 }

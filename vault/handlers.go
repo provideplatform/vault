@@ -329,7 +329,6 @@ func createVaultHandler(c *gin.Context) {
 	}
 
 	provide.Render(vault, 201, c)
-	return
 }
 
 func deleteVaultHandler(c *gin.Context) {

@@ -267,6 +267,7 @@ func vaultsListHandler(c *gin.Context) {
 		_, err := vault.resolveMasterKey(db)
 		if err != nil {
 			provide.RenderError(err.Error(), 500, c)
+			return
 		}
 	}
 

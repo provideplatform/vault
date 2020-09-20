@@ -130,7 +130,7 @@ func init() {
 	log.Printf("newly generated unsealer key %s", *newkeyresp.UnsealerKey)
 	log.Printf("newly generated unsealer key hash %s", *newkeyresp.ValidationHash)
 
-	_, err = provide.UnsealVault(*token, map[string]interface{}{
+	_, err = provide.Unseal(*token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -139,7 +139,7 @@ func init() {
 	}
 
 	// now try it again, and we expect a 204 (no response) when trying to unseal a sealed vault
-	_, err = provide.UnsealVault(*token, map[string]interface{}{
+	_, err = provide.Unseal(*token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -156,7 +156,7 @@ func unsealVault() error {
 
 	}
 
-	_, err = provide.UnsealVault(*token, map[string]interface{}{
+	_, err = provide.Unseal(*token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -181,7 +181,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.UnsealVault(*token, map[string]interface{}{
+	_, err = provide.Unseal(*token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -195,7 +195,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.SealVault(*token, map[string]interface{}{
+	_, err = provide.Seal(*token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -209,7 +209,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.UnsealVault(*token, map[string]interface{}{
+	_, err = provide.Unseal(*token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -224,7 +224,7 @@ func TestSealUnsealer(t *testing.T) {
 	}
 
 	// now we'll try to seal it badly and expect it to continue working
-	_, err = provide.SealVault(*token, map[string]interface{}{
+	_, err = provide.Seal(*token, map[string]interface{}{
 		"key": "raffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err == nil {
@@ -239,7 +239,7 @@ func TestSealUnsealer(t *testing.T) {
 	}
 
 	// now we'll seal it and unseal it badly and expect it to fail
-	_, err = provide.SealVault(*token, map[string]interface{}{
+	_, err = provide.Seal(*token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -253,7 +253,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.UnsealVault(*token, map[string]interface{}{
+	_, err = provide.Unseal(*token, map[string]interface{}{
 		"key": "raffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err == nil {

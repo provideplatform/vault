@@ -67,7 +67,7 @@ func TestUnsealSealedVault(t *testing.T) {
 	}
 }
 
-func TestUnsealVaultNoValidationHash(t *testing.T) {
+func TestUnsealNoValidationHash(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
 	err := vault.ClearUnsealerKey(unsealerKey)
@@ -88,7 +88,7 @@ func TestUnsealVaultNoValidationHash(t *testing.T) {
 	t.Logf("error received: %s", err.Error())
 }
 
-func TestUnsealVaultIncorrectKey(t *testing.T) {
+func TestUnsealIncorrectKey(t *testing.T) {
 	defer unsealVault()
 	// seal the vault
 	err := vault.ClearUnsealerKey(unsealerKey)
@@ -105,7 +105,7 @@ func TestUnsealVaultIncorrectKey(t *testing.T) {
 	t.Logf("error received: %s", err.Error())
 }
 
-func TestUnsealVaultInvalidBIP39Phrase(t *testing.T) {
+func TestUnsealInvalidBIP39Phrase(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
 	err := vault.ClearUnsealerKey(unsealerKey)
@@ -131,7 +131,7 @@ func TestUnsealVaultInvalidBIP39Phrase(t *testing.T) {
 	t.Logf("error received: %s", err.Error())
 }
 
-func TestUnsealVaultLowEntropyBIP39Phrase(t *testing.T) {
+func TestUnsealLowEntropyBIP39Phrase(t *testing.T) {
 	//correct everything after test
 	defer unsealVault()
 	err := vault.ClearUnsealerKey(unsealerKey)

@@ -43,7 +43,7 @@ func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 		return nil, ErrNilPrivateKey
 	}
 
-	secp256k1Key, err := ethcrypto.ToECDSA(*k.PrivateKey)
+	secp256k1Key, err := ethcrypto.HexToECDSA(string(*k.PrivateKey))
 	if err != nil {
 		return nil, ErrCannotSignPayload
 	}

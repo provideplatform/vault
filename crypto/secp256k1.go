@@ -37,7 +37,6 @@ func CreateSecp256k1KeyPair() (*Secp256k1, error) {
 }
 
 // Sign uses SECP256k1 private key to sign the payload
-// note that this mechanism is designed for Ethereum signing
 func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 	if k.PrivateKey == nil {
 		return nil, ErrNilPrivateKey
@@ -48,9 +47,7 @@ func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 		return nil, ErrCannotSignPayload
 	}
 
-	hash := ethcrypto.Keccak256Hash(payload)
-
-	sig, err := ethcrypto.Sign(hash.Bytes(), secp256k1Key)
+	sig, err := ethcrypto.Sign(payload, secp256k1Key)
 	if err != nil {
 		return nil, ErrCannotSignPayload
 	}

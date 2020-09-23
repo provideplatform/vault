@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/elliptic"
 
-	"github.com/ethereum/go-ethereum/common/math"
+	// "github.com/ethereum/go-ethereum/common/math"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	providecrypto "github.com/provideservices/provide-go/crypto"
@@ -25,7 +25,7 @@ func CreateSecp256k1KeyPair() (*Secp256k1, error) {
 		return nil, ErrCannotGenerateSeed
 	}
 
-	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
+	privateKey := privkey.D.Bytes() //math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
 	publicKey := elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y)
 
 	secp256k1 := Secp256k1{}
@@ -52,7 +52,7 @@ func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 
 	sig, err := ethcrypto.Sign(hash.Bytes(), secp256k1Key)
 	if err != nil {
-		return nil, ErrCannotSignPayload
+		return nil, err
 	}
 
 	return sig, nil

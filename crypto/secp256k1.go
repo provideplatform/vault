@@ -48,9 +48,7 @@ func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 		return nil, ErrCannotSignPayload
 	}
 
-	hash := ethcrypto.Keccak256Hash(payload)
-
-	sig, err := ethcrypto.Sign(hash.Bytes(), secp256k1Key)
+	sig, err := ethcrypto.Sign(payload, secp256k1Key)
 	if err != nil {
 		return nil, ErrCannotSignPayload
 	}

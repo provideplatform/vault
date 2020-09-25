@@ -357,7 +357,8 @@ func TestAPISign(t *testing.T) {
 		return
 	}
 
-	_, err = provide.SignMessage(*token, vault.ID.String(), key.ID.String(), "hello world", nil)
+	payload := common.RandomString(32)
+	_, err = provide.SignMessage(*token, vault.ID.String(), key.ID.String(), payload, nil)
 	if err != nil {
 		t.Errorf("failed to sign message %s", err.Error())
 		return
@@ -385,7 +386,7 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 		return
 	}
 
-	messageToSign := common.RandomString(1000)
+	messageToSign := common.RandomString(32)
 	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
 	if err != nil {
 		t.Errorf("failed to sign message %s", err.Error())
@@ -667,7 +668,7 @@ func TestCreateHDWallet(t *testing.T) {
 	opts := map[string]interface{}{}
 	json.Unmarshal([]byte(`{"hdwallet":{"coin":"ETH", "index":0}}`), &opts)
 
-	messageToSign := common.RandomString(1000)
+	messageToSign := common.RandomString(32)
 	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
 	if err != nil {
 		t.Errorf("failed to sign message %s", err.Error())
@@ -706,7 +707,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 	}
 
 	for iteration := 0; iteration < 10; iteration++ {
-		messageToSign := common.RandomString(1000)
+		messageToSign := common.RandomString(32)
 		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
 		if err != nil {
 			t.Errorf("failed to sign message %s", err.Error())

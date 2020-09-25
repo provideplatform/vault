@@ -2,23 +2,52 @@ name: unit-test
 on:
   push:
     branches:
-      - no_no_branch
+      - dev
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout
+      - name: Checkout vault
         uses: actions/checkout@v2
+        with:
+          path: 'vaultyvault'
       - name: Setup go
         uses: actions/setup-go@v2
         with:
-          go-version: `1.15.1`
-#      - name: Run unit tests
-#        run: docker-compose -f ./ops/docker-compose.yml build vault
-#        run: TAGS=unit ./ops/run_local_tests.sh
-#        run: docker-compose -f ./ops/docker-compose-db.yml down
-#        run: docker volume rm ops_vault-db
-
-
+          go-version: '1.15.1'
+      - name: Checkout ident
+        uses: actions/checkout@v2
+        with:
+          repository: provideapp/ident
+          path: 'ident'
+          ref: minified
+          token: ${{ secrets.PAT }}
+      - run: docker-compose -f ./ops/docker-compose-db.yml up -d
+        working-directory: vaultyvault
+      - run: echo '::set-env name=LOG_LEVEL::info'
+      - run: echo '::set-env name=DATABASE_HOST::localhost'
+      - run: echo '::set-env name=DATABASE_NAME::vault_dev'  
+      - run: echo '::set-env name=DATABSE_PORT::5432'  
+      - run: echo '::set-env name=DATABASE_USER::vault' 
+      - run: echo '::set-env name=DATABASE_PASSWORD::vault' 
+      - run: echo '::set-env name=DATABASE_SUPERUSER::prvd'
+      - run: echo '::set-env name=DATABASE_SUPERUSER_PASSWORD::prvdp455'
+      - run: echo '::set-env name=DATABASE_SSL_MODE::disable'
+      - run: echo '::set-env name=DATABASE_LOGGING::false'
+      - run: echo '::set-env name=SEAL_UNSEAL_VALIDATION_HASH::0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309'
+      - run: echo '::set-env name=TAGS::unit'
+      - run: echo '::set-env name=JWT_SIGNER_PUBLIC_KEY::${{ secrets.DEV_JWT }}'
+      - run: go mod tidy
+        working-directory: vaultyvault
+      - run: go mod vendor
+        working-directory: vaultyvault      
+      - run: go build -v -o ./.bin/vault_migrate ./cmd/migrate
+        working-directory: vaultyvault
+      - run: ./.bin/vault_migrate
+        working-directory: vaultyvault 
+      - run:     go test ./... -v -race -timeout 1800s -tags="$TAGS"                                      
+        working-directory: vaultyvault       
+      - run: docker-compose -f vaultyvault/ops/docker-compose-db.yml down
+      - run: docker volume rm ops_vault-db
 

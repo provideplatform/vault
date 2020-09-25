@@ -62,7 +62,7 @@ func TestSecp256k1Sign(t *testing.T) {
 		return
 	}
 
-	msg := []byte(common.RandomString(10))
+	msg := []byte(common.RandomString(32))
 	sig, err := key.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
@@ -90,7 +90,7 @@ func TestSecp256k1Verify(t *testing.T) {
 		return
 	}
 
-	msg := []byte(common.RandomString(128))
+	msg := []byte(common.RandomString(32))
 	sig, err := key.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
@@ -124,8 +124,8 @@ func TestSecp256k1NoVerifyInvalidMessage(t *testing.T) {
 		return
 	}
 
-	msg := []byte(common.RandomString(128))
-	msg_invalid := []byte(common.RandomString(128))
+	msg := []byte(common.RandomString(32))
+	msg_invalid := []byte(common.RandomString(32))
 	sig, err := key.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())
@@ -165,7 +165,7 @@ func TestSecp256k1NoVerifyInvalidSigningKey(t *testing.T) {
 		return
 	}
 
-	msg := []byte(common.RandomString(128))
+	msg := []byte(common.RandomString(32))
 
 	sig, err := key1.Sign(msg, nil)
 	if err != nil {
@@ -214,7 +214,7 @@ func TestSign256k1NilPrivateKey(t *testing.T) {
 		return
 	}
 
-	msg := []byte(common.RandomString(10))
+	msg := []byte(common.RandomString(32))
 	key.PrivateKey = nil
 	_, err = key.Sign(msg, nil)
 	if err == nil {
@@ -239,7 +239,7 @@ func TestSign256k1NilSpec(t *testing.T) {
 		return
 	}
 
-	msg := []byte(common.RandomString(10))
+	msg := []byte(common.RandomString(32))
 	key.Spec = nil
 	_, err = key.Sign(msg, nil)
 	if err == nil {

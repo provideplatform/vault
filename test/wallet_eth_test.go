@@ -53,7 +53,7 @@ func TestDeriveKeyFromEthHDWallet(t *testing.T) {
 	idx := uint32(1)
 
 	// test a sign with the key
-	payload := []byte(common.RandomString(128))
+	payload := []byte(common.RandomString(32))
 	sig, err := walletKey.Sign(payload, &vault.SigningOptions{
 		HDWallet: &vault.HDWalletOptions{
 			Coin:  common.StringOrNil("ETH"),
@@ -96,7 +96,7 @@ func TestDeriveXKeysFromEthHDWallet(t *testing.T) {
 	var i uint32
 	for i = 0; i < 5; i++ {
 		// test a sign with the key
-		payload := []byte(common.RandomString(128))
+		payload := []byte(common.RandomString(32))
 		start = time.Now()
 		sig, err := walletKey.Sign(payload, &vault.SigningOptions{
 			HDWallet: &vault.HDWalletOptions{
@@ -141,7 +141,7 @@ func TestDeriveAutoKeyFromEthHDWallet(t *testing.T) {
 	iteration := *walletKey.Iteration
 
 	// test a sign with the key
-	payload := []byte(common.RandomString(128))
+	payload := []byte(common.RandomString(32))
 	sig, err := walletKey.Sign(payload, nil)
 	if err != nil {
 		t.Errorf("error signing payload %s", err.Error())
@@ -176,7 +176,7 @@ func TestDeriveAutoKeyFromEthHDWallet_IncorrectVerifyIteration(t *testing.T) {
 
 	iteration := *walletKey.Iteration
 	// test a sign with the key
-	payload := []byte(common.RandomString(128))
+	payload := []byte(common.RandomString(32))
 	sig, err := walletKey.Sign(payload, nil)
 	if err != nil {
 		t.Errorf("error signing payload %s", err.Error())
@@ -228,7 +228,7 @@ func TestDerivedKeyIteration(t *testing.T) {
 
 		//sign something with the key
 		t.Logf("loop %d, about to sign", idx)
-		payload := []byte(common.RandomString(128))
+		payload := []byte(common.RandomString(32))
 		sig, err := walletKey.Sign(payload, nil)
 		if err != nil {
 			t.Errorf("error signing payload %s", err.Error())
@@ -281,7 +281,7 @@ func TestSignWithMaximumKey(t *testing.T) {
 	idx := uint32(4294967295)
 
 	// test a sign with the key
-	payload := []byte(common.RandomString(128))
+	payload := []byte(common.RandomString(32))
 	sig, err := walletKey.Sign(payload, &vault.SigningOptions{
 		HDWallet: &vault.HDWalletOptions{
 			Coin:  common.StringOrNil("ETH"),
@@ -322,7 +322,7 @@ func TestSignWithInvalidKeyIteration(t *testing.T) {
 	walletKey.Iteration = &idx
 
 	// attempt to sign with the invalid key
-	payload := []byte(common.RandomString(128))
+	payload := []byte(common.RandomString(32))
 	_, err = walletKey.Sign(payload, nil)
 	if err == nil {
 		t.Errorf("no error signing payload")
@@ -346,7 +346,7 @@ func TestDeriveAutoKeyFromEthHDWallet_IncorrectCoin(t *testing.T) {
 
 	iteration := uint32(0)
 	// test a sign with the key
-	payload := []byte(common.RandomString(128))
+	payload := []byte(common.RandomString(32))
 	_, err = walletKey.Sign(payload, &vault.SigningOptions{
 		HDWallet: &vault.HDWalletOptions{
 			Coin:  common.StringOrNil("BTC"),

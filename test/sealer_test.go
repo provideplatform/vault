@@ -224,7 +224,7 @@ func TestCreateUnsealerAndSignVerify(t *testing.T) {
 		return
 	}
 
-	msg := []byte(common.RandomString(128))
+	msg := []byte(common.RandomString(32))
 	sig, err := key.Sign(msg, nil)
 	if err != nil {
 		t.Errorf("failed to sign message using secp256k1 keypair for vault: %s %s", vlt.ID, err.Error())

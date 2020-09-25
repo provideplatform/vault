@@ -59,11 +59,8 @@ func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 // Verify uses Secp256k1 public key to verify the payload's signature
 func (k *Secp256k1) Verify(payload, sig []byte) error {
 
-	// get the keccak256 hash of the payload
-	hash := ethcrypto.Keccak256Hash(payload)
-
 	// get the signature's public key
-	sigPublicKey, err := ethcrypto.Ecrecover(hash.Bytes(), sig)
+	sigPublicKey, err := ethcrypto.Ecrecover(payload, sig)
 	if err != nil {
 		return ErrCannotVerifyPayload
 	}

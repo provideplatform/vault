@@ -594,7 +594,15 @@ func vaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	signature, err := key.Sign([]byte(*params.Message), params.Options)
+	msg, err := hex.DecodeString(*params.Message)
+	if err != nil {
+		// msg := fmt.Sprintf("failed to decode message from hex; %s", err.Error())
+		// provide.RenderError(msg, 422, c)
+		common.Log.Warningf("failed to decode message from hex; %s", err.Error())
+		msg = []byte(*params.Message)
+	}
+
+	signature, err := key.Sign(msg, params.Options)
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)
 		return
@@ -654,6 +662,14 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
+	msg, err := hex.DecodeString(*params.Message)
+	if err != nil {
+		// msg := fmt.Sprintf("failed to decode message from hex; %s", err.Error())
+		// provide.RenderError(msg, 422, c)
+		common.Log.Warningf("failed to decode message from hex; %s", err.Error())
+		msg = []byte(*params.Message)
+	}
+
 	sig, err := hex.DecodeString(*params.Signature)
 	if err != nil {
 		msg := fmt.Sprintf("failed to decode signature from hex; %s", err.Error())
@@ -661,7 +677,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	err = key.Verify([]byte(*params.Message), sig, params.Options)
+	err = key.Verify(msg, sig, params.Options)
 	verified := err == nil
 
 	provide.Render(&KeySignVerifyRequestResponse{

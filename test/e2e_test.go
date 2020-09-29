@@ -3,7 +3,6 @@
 package test
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -358,8 +357,7 @@ func TestAPISign(t *testing.T) {
 		return
 	}
 
-	payloadBytes, _ := common.RandomBytes(32)
-	payload := hex.EncodeToString(payloadBytes)
+	payload := common.RandomString(32)
 	_, err = provide.SignMessage(*token, vault.ID.String(), key.ID.String(), payload, nil)
 	if err != nil {
 		t.Errorf("failed to sign message %s", err.Error())
@@ -388,8 +386,7 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 		return
 	}
 
-	payloadBytes, _ := common.RandomBytes(32)
-	messageToSign := hex.EncodeToString(payloadBytes)
+	messageToSign := common.RandomString(32)
 	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
 	if err != nil {
 		t.Errorf("failed to sign message %s", err.Error())
@@ -441,8 +438,7 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 		return
 	}
 
-	payloadBytes, _ := common.RandomBytes(1000)
-	messageToSign := hex.EncodeToString(payloadBytes)
+	messageToSign := common.RandomString(1000)
 	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
 	if err != nil {
 		t.Errorf("failed to sign message %s", err.Error())
@@ -480,8 +476,7 @@ func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
 		return
 	}
 
-	payloadBytes, _ := common.RandomBytes(1000)
-	messageToSign := hex.EncodeToString(payloadBytes)
+	messageToSign := common.RandomString(1000)
 
 	opts := map[string]interface{}{}
 	json.Unmarshal([]byte(`{"algorithm":"PS256"}`), &opts)
@@ -673,8 +668,7 @@ func TestCreateHDWallet(t *testing.T) {
 	opts := map[string]interface{}{}
 	json.Unmarshal([]byte(`{"hdwallet":{"coin":"ETH", "index":0}}`), &opts)
 
-	payloadBytes, _ := common.RandomBytes(32)
-	messageToSign := hex.EncodeToString(payloadBytes)
+	messageToSign := common.RandomString(32)
 	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
 	if err != nil {
 		t.Errorf("failed to sign message %s", err.Error())
@@ -713,8 +707,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 	}
 
 	for iteration := 0; iteration < 10; iteration++ {
-		payloadBytes, _ := common.RandomBytes(32)
-		messageToSign := hex.EncodeToString(payloadBytes)
+		messageToSign := common.RandomString(32)
 		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
 		if err != nil {
 			t.Errorf("failed to sign message %s", err.Error())

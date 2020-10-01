@@ -1,0 +1,41 @@
+on: 
+  push:
+    branches:
+      - master
+
+jobs:
+  release-on-push:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.TEST_PAT }}
+    steps:
+      - id: release
+        uses: rymndhng/release-on-push-action@master
+        with:
+          bump_version_scheme: patch
+  push-to-registry:
+    name: Push docker image to DockerHub
+    needs: release-on-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: check out repo
+        id: checkout
+        uses: actions/checkout@v2
+      - name: create semver tags
+        id: semver
+        run: |
+          PATCH=${{ needs.release-on-push.outputs.version }}
+          echo ::set-output name=patch::${PATCH}
+          MINOR=${PATCH%.*}
+          MAJOR=${MINOR%.*}
+          TAGS="v${PATCH}, v${MINOR}, v${MAJOR}, latest"
+          echo ::set-output name=tags::${TAGS}
+      - name: push to docker hub 
+        uses: docker/build-push-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PAT }}
+          repository: provide/vault
+          tags: ${{ steps.semver.outputs.tags}}

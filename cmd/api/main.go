@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -94,6 +97,11 @@ func runAPI() {
 
 	vault.InstallAPI(r)
 
+	err := autoUnsealVault()
+	if err != nil {
+		common.Log.Warningf("error unsealing vault %s", err.Error())
+	}
+
 	srv = &http.Server{
 		Addr:    util.ListenAddr,
 		Handler: r,
@@ -106,6 +114,41 @@ func runAPI() {
 	}
 
 	common.Log.Debugf("listening on %s", util.ListenAddr)
+}
+
+func autoUnsealVault() error {
+	unsealerkey := os.Getenv("VAULT_SEAL_UNSEAL_KEY")
+
+	if unsealerkey == "" {
+		return fmt.Errorf("no unseal key found - vault is sealed")
+	}
+
+	if strings.HasPrefix(unsealerkey, "/run/secrets") {
+		common.Log.Debugf("unsealing via in-memory key")
+		// we have an unsealer key stored in memory in the docker secrets location
+		data, err := ioutil.ReadFile(unsealerkey)
+		if err != nil {
+			common.Log.Debugf("File reading error %s", err)
+			return err
+		}
+		unsealerKeyText := string(data)
+		err = vault.SetUnsealerKey(unsealerKeyText)
+		if err != nil {
+			return err
+		}
+
+		common.Log.Debug("vault unsealed")
+		return nil
+	}
+
+	common.Log.Debug("unsealing with environment variable - INSECURE")
+	// if the environment var is not an empty string, check if we have the actual unsealer key in the environment variables
+	err := vault.SetUnsealerKey(unsealerkey)
+	if err != nil {
+		return err
+	}
+	common.Log.Debug("vault unsealed")
+	return nil
 }
 
 func statusHandler(c *gin.Context) {

@@ -117,38 +117,41 @@ func runAPI() {
 }
 
 func autoUnsealVault() error {
-	unsealerkey := os.Getenv("VAULT_SEAL_UNSEAL_KEY")
-
-	if unsealerkey == "" {
-		return fmt.Errorf("no unseal key found - vault is sealed")
+	unsealerkey, err := GetEnv("VAULT_SEAL_UNSEAL_KEY")
+	if err != nil {
+		return fmt.Errorf("vault not unsealed. Error: %s", err.Error())
 	}
 
-	if strings.HasPrefix(unsealerkey, "/run/secrets") {
-		common.Log.Debugf("unsealing via in-memory key")
-		// we have an unsealer key stored in memory in the docker secrets location
-		data, err := ioutil.ReadFile(unsealerkey)
-		if err != nil {
-			common.Log.Debugf("File reading error %s", err)
-			return err
-		}
-		unsealerKeyText := string(data)
-		err = vault.SetUnsealerKey(unsealerKeyText)
-		if err != nil {
-			return err
-		}
-
-		common.Log.Debug("vault unsealed")
-		return nil
-	}
-
-	common.Log.Debug("unsealing with environment variable - INSECURE")
-	// if the environment var is not an empty string, check if we have the actual unsealer key in the environment variables
-	err := vault.SetUnsealerKey(unsealerkey)
+	err = vault.SetUnsealerKey(*unsealerkey)
 	if err != nil {
 		return err
 	}
+
 	common.Log.Debug("vault unsealed")
 	return nil
+}
+
+// GetEnv gets environment data, including from docker secrets in-memory file system
+func GetEnv(s string) (*string, error) {
+
+	// first check if it exists
+	if s == "" {
+		return nil, fmt.Errorf("environment variable %s not found", s)
+	}
+
+	// then check if it's a docker secret
+	if strings.HasPrefix(s, "/run/secrets") {
+		data, err := ioutil.ReadFile(s)
+		if err != nil {
+			common.Log.Debugf("File reading error %s", err)
+			return nil, err
+		}
+		returnData := string(data)
+		return &returnData, nil
+	}
+
+	returnData := os.Getenv(s)
+	return &returnData, nil
 }
 
 func statusHandler(c *gin.Context) {

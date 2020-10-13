@@ -18,7 +18,6 @@ import (
 )
 
 func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
-
 	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
 		"type":        keyType,
 		"usage":       keyUsage,
@@ -42,7 +41,6 @@ func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, ke
 }
 
 func keyFactory(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
-
 	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
 		"type":        keyType,
 		"usage":       keyUsage,
@@ -670,8 +668,13 @@ func TestCreateHDWallet(t *testing.T) {
 		return
 	}
 
+	if key.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key.ID)
+		return
+	}
+
 	opts := map[string]interface{}{}
-	json.Unmarshal([]byte(`{"hdwallet":{"coin":"ETH", "index":0}}`), &opts)
+	json.Unmarshal([]byte(`{"hdwallet":{"coin_abbr":"ETH", "index":0}}`), &opts)
 
 	payloadBytes, _ := common.RandomBytes(32)
 	messageToSign := hex.EncodeToString(payloadBytes)
@@ -735,7 +738,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 
 		// set up the verification options
 		opts := map[string]interface{}{}
-		options := fmt.Sprintf(`{"hdwallet":{"coin":"ETH", "index":%d}}`, iteration)
+		options := fmt.Sprintf(`{"hdwallet":{"coin_abbr":"ETH", "index":%d}}`, iteration)
 		json.Unmarshal([]byte(options), &opts)
 
 		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
@@ -1212,7 +1215,7 @@ func TestEphemeralCreation(t *testing.T) {
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Ed25519"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "secp256k1"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "babyJubJub"},
-		{"ephemeral key", "ephemeral key description", "hdwallet", "EthHdWallet", "BIP39"},
+		{"ephemeral key", "ephemeral key description", "hdwallet", "EthHdWallet", "BIP39"}, // FIXME-- redundant...
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-2048"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-3072"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-4096"},

@@ -1086,8 +1086,6 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 			walletOpts = crypto.DefaultHDWalletWithIndex(k.Iteration)
 		}
 
-		common.Log.Debugf("%v", walletOpts)
-
 		// derive the secp256k1 key using the keyindex
 		secp256k1Derived, err := k.deriveSecp256k1KeyFromHDWallet(*walletOpts.Coin, *walletOpts.Index)
 		if err != nil {

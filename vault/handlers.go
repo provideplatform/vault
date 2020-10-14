@@ -20,14 +20,25 @@ import (
 
 // InstallAPI installs the handlers using the given gin Engine
 func InstallAPI(r *gin.Engine) {
+	installSealUnsealAPI(r)
+	installVaultsAPI(r)
+	installKeysAPI(r)
+	installSecretsAPI(r)
+}
+
+func installSealUnsealAPI(r *gin.Engine) {
 	r.POST("/api/v1/unsealerkey", createUnsealerKeyHandler)
 	r.POST("/api/v1/unseal", unsealHandler)
 	r.POST("/api/v1/seal", sealHandler)
+}
 
+func installVaultsAPI(r *gin.Engine) {
 	r.GET("/api/v1/vaults", vaultsListHandler)
 	r.POST("/api/v1/vaults", createVaultHandler)
 	r.DELETE("/api/v1/vaults/:id", deleteVaultHandler)
+}
 
+func installKeysAPI(r *gin.Engine) {
 	r.GET("/api/v1/vaults/:id/keys", vaultKeysListHandler)
 	r.POST("/api/v1/vaults/:id/keys", createVaultKeyHandler)
 	r.POST("api/v1/vaults/:id/keys/:keyId/derive", vaultKeyDeriveHandler)
@@ -36,7 +47,9 @@ func InstallAPI(r *gin.Engine) {
 	r.POST("/api/v1/vaults/:id/keys/:keyId/sign", vaultKeySignHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/verify", vaultKeyVerifyHandler)
 	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
+}
 
+func installSecretsAPI(r *gin.Engine) {
 	r.GET("/api/v1/vaults/:id/secrets", vaultSecretsListHandler)
 	r.POST("api/v1/vaults/:id/secrets", createVaultSecretHandler)
 	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretDetailsHandler)

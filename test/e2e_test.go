@@ -662,7 +662,101 @@ func TestCreateHDWallet(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "hdwallet", "EthHdWallet", "BIP39", "hdwallet", "integration test hd wallet")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	if key.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key.ID)
+		return
+	}
+
+	opts := map[string]interface{}{}
+	json.Unmarshal([]byte(`{"hdwallet":{"coin":60, "index":0}}`), &opts)
+
+	payloadBytes, _ := common.RandomBytes(32)
+	messageToSign := hex.EncodeToString(payloadBytes)
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+	if err != nil {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+
+	if verifyresponse.Verified != true {
+		t.Errorf("failed to verify signature for vault")
+		return
+	}
+}
+
+func TestCreateHDWalletFailsWithInvalidCoin(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	if key.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key.ID)
+		return
+	}
+
+	opts := map[string]interface{}{}
+	json.Unmarshal([]byte(`{"hdwallet":{"coin":61, "index":0}}`), &opts) // coin: 61 <-- this is not supported
+
+	payloadBytes, _ := common.RandomBytes(32)
+	messageToSign := hex.EncodeToString(payloadBytes)
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+	if err != nil {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+
+	if verifyresponse.Verified != true {
+		t.Errorf("failed to verify signature for vault")
+		return
+	}
+}
+
+func TestCreateHDWalletCoinAbbr(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -709,7 +803,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "hdwallet", "EthHdWallet", "BIP39", "hdwallet", "integration test hd wallet")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -1215,7 +1309,7 @@ func TestEphemeralCreation(t *testing.T) {
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Ed25519"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "secp256k1"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "babyJubJub"},
-		{"ephemeral key", "ephemeral key description", "hdwallet", "EthHdWallet", "BIP39"}, // FIXME-- redundant...
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "BIP39"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-2048"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-3072"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-4096"},
@@ -1350,7 +1444,7 @@ func TestNonEphemeralCreation(t *testing.T) {
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "Ed25519"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "secp256k1"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "babyJubJub"},
-		{"regular key", "regular key description", "hdwallet", "EthHdWallet", "BIP39"},
+		{"regular key", "regular key description", "asymmetric", "sign/verify", "BIP39"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "RSA-2048"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "RSA-3072"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "RSA-4096"},

@@ -30,20 +30,11 @@ const KeyTypeAsymmetric = "asymmetric"
 // KeyTypeSymmetric symmetric key type
 const KeyTypeSymmetric = "symmetric"
 
-// KeyTypeHDWallet hd wallet key type
-const KeyTypeHDWallet = "hdwallet"
-
 // KeyUsageEncryptDecrypt encrypt/decrypt usage
 const KeyUsageEncryptDecrypt = "encrypt/decrypt"
 
 // KeyUsageSignVerify sign/verify usage
 const KeyUsageSignVerify = "sign/verify"
-
-// KeyUsageEthereumHDWallet derivation path for ethereum hd wallets
-const KeyUsageEthereumHDWallet = "EthHdWallet"
-
-// KeyUsageBitcoinHDWallet derivation path for bitcoin hd wallets
-const KeyUsageBitcoinHDWallet = "BtcHdWallet"
 
 // KeySpecAES256GCM AES-256-GCM key spec
 const KeySpecAES256GCM = "AES-256-GCM"
@@ -321,15 +312,15 @@ func (k *Key) createSecp256k1Keypair() error {
 func (k *Key) createHDWallet() error {
 	hdwllt, err := crypto.CreateHDWalletSeedPhrase(crypto.DefaultHDWalletSeedEntropy)
 	if err != nil {
-		return fmt.Errorf("unable to create Ethereum HD wallet")
+		return fmt.Errorf("unable to create HD wallet; %s", err.Error())
 	}
 
-	iteration := uint32(0) // FIXME-- support passing this into createHDWallet()
+	iteration := uint32(0)
+	k.Iteration = &iteration
 	k.Seed = hdwllt.Seed
 	// k.DerivationPath FIXME-- check for hd derivation path and validate/populate purpose/coin/coinabbr...
-	k.Iteration = &iteration
-	k.Type = common.StringOrNil(KeyTypeHDWallet)
-	// k.PublicKey = *hdwllt.PublicKey
+	*k.Type = KeyTypeAsymmetric
+	k.PublicKey = hdwllt.PublicKey
 	k.PublicKeyHex = common.StringOrNil(string(*hdwllt.PublicKey))
 
 	if k.Description == nil {
@@ -867,15 +858,13 @@ func (k *Key) deriveSecp256k1KeyFromHDWallet(coin, idx uint32) (*crypto.Secp256k
 	k.decryptFields()
 	defer k.encryptFields()
 
-	switch *k.Usage {
-	case KeyUsageEthereumHDWallet:
-		if coin != crypto.HDWalletCoinCodeEthereum {
-			return nil, fmt.Errorf("wallet is configured for %s coin derivation, which does not match %d", crypto.HDWalletCoinAbbrETH, coin)
-		}
-		hdWallet := &crypto.HDWallet{
+	switch coin {
+	case crypto.HDWalletCoinCodeEthereum:
+		hdwllt := &crypto.HDWallet{
 			Seed: k.Seed,
 		}
-		derivedKey, err := hdWallet.CreateKeyFromWallet(
+
+		derivedKey, err := hdwllt.CreateKeyFromWallet(
 			crypto.DefaultHDWalletPurpose,
 			crypto.HDWalletCoinCodeEthereum,
 			idx,
@@ -885,10 +874,7 @@ func (k *Key) deriveSecp256k1KeyFromHDWallet(coin, idx uint32) (*crypto.Secp256k
 		}
 		return derivedKey, nil
 
-	case KeyUsageBitcoinHDWallet:
-		if coin != crypto.HDWalletCoinCodeBitcoin {
-			return nil, fmt.Errorf("wallet is configured for %s coin derivation, which does not match %d", crypto.HDWalletCoinAbbrBTC, coin)
-		}
+	case crypto.HDWalletCoinCodeBitcoin:
 		return nil, fmt.Errorf("still to be implemented: usage specification %s", *k.Usage)
 
 	default:
@@ -1175,7 +1161,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
-	if *k.Type == KeyTypeHDWallet && k.Seed == nil {
+	if *k.Type == KeyTypeAsymmetric && *k.Spec == KeySpecECCBIP39 && k.Seed == nil {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using derived key: %s; no seed phrase available", len(payload), k.ID)
 	}
 
@@ -1279,9 +1265,9 @@ func (k *Key) Validate() bool {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil("key type required"),
 		})
-	} else if *k.Type != KeyTypeAsymmetric && *k.Type != KeyTypeSymmetric && *k.Type != KeyTypeHDWallet {
+	} else if *k.Type != KeyTypeAsymmetric && *k.Type != KeyTypeSymmetric {
 		k.Errors = append(k.Errors, &provide.Error{
-			Message: common.StringOrNil(fmt.Sprintf("key type must be (%s, %s or %s)", KeyTypeAsymmetric, KeyTypeSymmetric, KeyTypeHDWallet)),
+			Message: common.StringOrNil(fmt.Sprintf("key type must be (%s or %s)", KeyTypeAsymmetric, KeyTypeSymmetric)),
 		})
 	}
 

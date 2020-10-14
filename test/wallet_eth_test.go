@@ -10,6 +10,7 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
+	"github.com/provideapp/vault/crypto"
 	"github.com/provideapp/vault/vault"
 )
 
@@ -55,9 +56,9 @@ func TestDeriveKeyFromEthHDWallet(t *testing.T) {
 	// test a sign with the key
 	payload := []byte(common.RandomString(32))
 	sig, err := walletKey.Sign(payload, &vault.SigningOptions{
-		HDWallet: &vault.HDWallet{
-			Coin:  common.StringOrNil("ETH"),
-			Index: &idx,
+		HDWallet: &crypto.HDWallet{
+			CoinAbbr: common.StringOrNil("ETH"),
+			Index:    &idx,
 		},
 	})
 	if err != nil {
@@ -65,9 +66,9 @@ func TestDeriveKeyFromEthHDWallet(t *testing.T) {
 	}
 	t.Log("about to verify with wallet key")
 	err = walletKey.Verify(payload, sig, &vault.SigningOptions{
-		HDWallet: &vault.HDWallet{
-			Coin:  common.StringOrNil("ETH"),
-			Index: &idx,
+		HDWallet: &crypto.HDWallet{
+			CoinAbbr: common.StringOrNil("ETH"),
+			Index:    &idx,
 		},
 	})
 	if err != nil {
@@ -99,9 +100,9 @@ func TestDeriveXKeysFromEthHDWallet(t *testing.T) {
 		payload := []byte(common.RandomString(32))
 		start = time.Now()
 		sig, err := walletKey.Sign(payload, &vault.SigningOptions{
-			HDWallet: &vault.HDWallet{
-				Coin:  common.StringOrNil("ETH"),
-				Index: &i,
+			HDWallet: &crypto.HDWallet{
+				CoinAbbr: common.StringOrNil("ETH"),
+				Index:    &i,
 			},
 		})
 		if err != nil {
@@ -111,9 +112,9 @@ func TestDeriveXKeysFromEthHDWallet(t *testing.T) {
 		log.Printf("Signing took %s", time.Since(start))
 		start = time.Now()
 		err = walletKey.Verify(payload, sig, &vault.SigningOptions{
-			HDWallet: &vault.HDWallet{
-				Coin:  common.StringOrNil("ETH"),
-				Index: &i,
+			HDWallet: &crypto.HDWallet{
+				CoinAbbr: common.StringOrNil("ETH"),
+				Index:    &i,
 			},
 		})
 		if err != nil {
@@ -148,9 +149,9 @@ func TestDeriveAutoKeyFromEthHDWallet(t *testing.T) {
 	}
 
 	err = walletKey.Verify(payload, sig, &vault.SigningOptions{
-		HDWallet: &vault.HDWallet{
-			Coin:  common.StringOrNil("ETH"),
-			Index: &iteration,
+		HDWallet: &crypto.HDWallet{
+			CoinAbbr: common.StringOrNil("ETH"),
+			Index:    &iteration,
 		},
 	})
 	if err != nil {
@@ -185,9 +186,9 @@ func TestDeriveAutoKeyFromEthHDWallet_IncorrectVerifyIteration(t *testing.T) {
 	// create an invalid iteration
 	iteration++
 	err = walletKey.Verify(payload, sig, &vault.SigningOptions{
-		HDWallet: &vault.HDWallet{
-			Coin:  common.StringOrNil("ETH"),
-			Index: &iteration,
+		HDWallet: &crypto.HDWallet{
+			CoinAbbr: common.StringOrNil("ETH"),
+			Index:    &iteration,
 		},
 	})
 	if err == nil {
@@ -249,9 +250,9 @@ func TestDerivedKeyIteration(t *testing.T) {
 
 		t.Logf("validating for iteration %d", keyIteration)
 		err = dbKey.Verify(payload, sig, &vault.SigningOptions{
-			HDWallet: &vault.HDWallet{
-				Coin:  common.StringOrNil("ETH"),
-				Index: &keyIteration,
+			HDWallet: &crypto.HDWallet{
+				CoinAbbr: common.StringOrNil("ETH"),
+				Index:    &keyIteration,
 			},
 		})
 		if err != nil {
@@ -283,9 +284,9 @@ func TestSignWithMaximumKey(t *testing.T) {
 	// test a sign with the key
 	payload := []byte(common.RandomString(32))
 	sig, err := walletKey.Sign(payload, &vault.SigningOptions{
-		HDWallet: &vault.HDWallet{
-			Coin:  common.StringOrNil("ETH"),
-			Index: &idx,
+		HDWallet: &crypto.HDWallet{
+			CoinAbbr: common.StringOrNil("ETH"),
+			Index:    &idx,
 		},
 	})
 	if err != nil {
@@ -293,9 +294,9 @@ func TestSignWithMaximumKey(t *testing.T) {
 	}
 	t.Log("about to verify with wallet key")
 	err = walletKey.Verify(payload, sig, &vault.SigningOptions{
-		HDWallet: &vault.HDWallet{
-			Coin:  common.StringOrNil("ETH"),
-			Index: &idx,
+		HDWallet: &crypto.HDWallet{
+			CoinAbbr: common.StringOrNil("ETH"),
+			Index:    &idx,
 		},
 	})
 	if err != nil {
@@ -348,9 +349,9 @@ func TestDeriveAutoKeyFromEthHDWallet_IncorrectCoin(t *testing.T) {
 	// test a sign with the key
 	payload := []byte(common.RandomString(32))
 	_, err = walletKey.Sign(payload, &vault.SigningOptions{
-		HDWallet: &vault.HDWallet{
-			Coin:  common.StringOrNil("BTC"),
-			Index: &iteration,
+		HDWallet: &crypto.HDWallet{
+			CoinAbbr: common.StringOrNil("BTC"),
+			Index:    &iteration,
 		},
 	})
 	if err == nil {

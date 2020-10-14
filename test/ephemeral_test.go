@@ -30,7 +30,7 @@ func TestEphemeralCreation(t *testing.T) {
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Ed25519"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "secp256k1"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "babyJubJub"},
-		{"ephemeral key", "ephemeral key description", "hdwallet", "EthHdWallet", "BIP39"},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "BIP39"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-2048"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-3072"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-4096"},

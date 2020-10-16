@@ -48,23 +48,20 @@ type HDWallet struct {
 	PrivateKey *[]byte `json:"-"` // contains the extended private key; NEVER share this! it exists here to support ephemeral wallet creation...
 }
 
-// DefaultHDWalletWithIndex returns hd wallet options, initialized with the given index
-func DefaultHDWalletWithIndex(index *uint32) *HDWallet {
+// DefaultHDDerivationPath returns the default hd derivation path
+func DefaultHDDerivationPath() *accounts.DerivationPath {
 	purpose := DefaultHDWalletPurpose
 	coin := DefaultHDWalletCoin
+	account := uint32(0)
 	change := uint32(0)
+	index := uint32(0)
 
-	idx := uint32(0)
-	if index != nil {
-		idx = *index
+	pathstr := fmt.Sprintf("m/%d'/%d'/%d'/%d/%d", purpose, coin, account, change, index)
+	path, err := hdwallet.ParseDerivationPath(pathstr)
+	if err != nil {
+		common.Log.Debugf("failed to parse derivation path 1; %s", err.Error())
 	}
-
-	return &HDWallet{
-		Purpose: &purpose,
-		Coin:    &coin,
-		Change:  &change,
-		Index:   &idx,
-	}
+	return &path
 }
 
 // ResolveCoin returns the coin as it should appear in the HD derivation path;
@@ -119,13 +116,12 @@ func (o *HDWallet) ResolvePath() (*accounts.DerivationPath, error) {
 	return &path, nil
 }
 
-// CreateKeyFromWallet deterministically creates a secp256k1 key
-// include private and public key and ETH address
-// which can be used to sign Ethereum transactions
-func (o *HDWallet) CreateKeyFromWallet(purpose, coin, index uint32) (*Secp256k1, error) {
+// DeriveKey deterministically derives and returns a secp256k1 key
+// from the given HD derivation path components
+func (o *HDWallet) DeriveKey(path accounts.DerivationPath) (*Secp256k1, error) {
 	defer func() {
 		if r := recover(); r != nil {
-			common.Log.Warningf("recovered from panic during CreateKeyFromWallet(); %s", r)
+			common.Log.Warningf("recovered from panic during hd walley key derivation; %s", r)
 		}
 	}()
 
@@ -135,27 +131,26 @@ func (o *HDWallet) CreateKeyFromWallet(purpose, coin, index uint32) (*Secp256k1,
 		return nil, fmt.Errorf("error generating wallet from mnemonic %s", err.Error())
 	}
 
-	pathstr := fmt.Sprintf("m/%d'/%d'/0'/0/%d", purpose, coin, index)
-	path := hdwallet.MustParseDerivationPath(pathstr)
+	pathstr := path.String()
 
-	account, err := wallet.Derive(path, true)
+	acct, err := wallet.Derive(path, false)
 	if err != nil {
-		return nil, fmt.Errorf("error creating account with path %s. Error %s", pathstr, err.Error())
+		return nil, fmt.Errorf("error creating account with path %s; %s", pathstr, err.Error())
 	}
 
-	privatekey, err := wallet.PrivateKeyBytes(account)
+	privatekey, err := wallet.PrivateKeyBytes(acct)
 	if err != nil {
-		return nil, fmt.Errorf("error generating private key for path %s. Error: %s", pathstr, err.Error())
+		return nil, fmt.Errorf("error generating private key for path %s; %s", pathstr, err.Error())
 	}
 
-	publickey, err := wallet.PublicKeyBytes(account)
+	publickey, err := wallet.PublicKeyBytes(acct)
 	if err != nil {
-		return nil, fmt.Errorf("error generating public key for path %s. Error: %s", pathstr, err.Error())
+		return nil, fmt.Errorf("error generating public key for path %s; %s", pathstr, err.Error())
 	}
 
-	address, err := wallet.AddressHex(account)
+	address, err := wallet.AddressHex(acct)
 	if err != nil {
-		return nil, fmt.Errorf("error generating address for path %s. Error: %s", pathstr, err.Error())
+		return nil, fmt.Errorf("error generating address for path %s; %s", pathstr, err.Error())
 	}
 
 	secp256k1 := Secp256k1{
@@ -165,7 +160,7 @@ func (o *HDWallet) CreateKeyFromWallet(purpose, coin, index uint32) (*Secp256k1,
 		DerivationPath: &pathstr,
 	}
 
-	common.Log.Debugf("generated hd wallet %d key with public key 0x%s", coin, hex.EncodeToString(publickey))
+	common.Log.Debugf("derived hd wallet key with derivation path %s; public key %s", pathstr, hex.EncodeToString(publickey))
 	return &secp256k1, nil
 }
 
@@ -196,7 +191,7 @@ func CreateHDWalletSeedPhrase(bitsize int) (*HDWallet, error) {
 	mnemonicBytes := []byte(mnemonic)
 	masterKey, err := bip32.NewMasterKey(mnemonicBytes)
 	if err != nil {
-		return nil, fmt.Errorf("error resolving extended public key for HD wallet; %s", err.Error())
+		return nil, fmt.Errorf("error resolving master extended key for HD wallet; %s", err.Error())
 	}
 
 	xpub := masterKey.PublicKey().String()

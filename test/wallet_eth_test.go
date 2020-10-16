@@ -3,12 +3,14 @@
 package test
 
 import (
+	"fmt"
 	"log"
 	"testing"
 	"time"
 
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
+	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/provideapp/vault/common"
 	"github.com/provideapp/vault/crypto"
 	"github.com/provideapp/vault/vault"
@@ -139,7 +141,8 @@ func TestDeriveAutoKeyFromEthHDWallet(t *testing.T) {
 		return
 	}
 
-	iteration := *walletKey.Iteration
+	path, _ := hdwallet.ParseDerivationPath(*walletKey.IterativeDerivationPath)
+	iteration := path[4]
 
 	// test a sign with the key
 	payload := []byte(common.RandomString(32))
@@ -175,7 +178,9 @@ func TestDeriveAutoKeyFromEthHDWallet_IncorrectVerifyIteration(t *testing.T) {
 		return
 	}
 
-	iteration := *walletKey.Iteration
+	path, _ := hdwallet.ParseDerivationPath(*walletKey.IterativeDerivationPath)
+	iteration := path[4]
+
 	// test a sign with the key
 	payload := []byte(common.RandomString(32))
 	sig, err := walletKey.Sign(payload, nil)
@@ -220,14 +225,16 @@ func TestDerivedKeyIteration(t *testing.T) {
 		t.Errorf("failed to retrieve created key from DB, key ID %s", dbKey.ID)
 		return
 	}
-	iteration := *dbKey.Iteration
+
+	path, _ := hdwallet.ParseDerivationPath(*dbKey.IterativeDerivationPath)
+	iteration := path[len(path)-1]
 
 	var keyIteration uint32
 
 	for idx := 0; idx < 5; idx++ {
 		keyIteration = iteration + uint32(idx)
 
-		//sign something with the key
+		// sign something with the key
 		t.Logf("loop %d, about to sign", idx)
 		payload := []byte(common.RandomString(32))
 		sig, err := walletKey.Sign(payload, nil)
@@ -243,8 +250,11 @@ func TestDerivedKeyIteration(t *testing.T) {
 			return
 		}
 
-		if *dbKey.Iteration != keyIteration+1 {
-			t.Errorf("error in iteration. expected %d, got %d", keyIteration+1, *dbKey.Iteration)
+		path, _ := hdwallet.ParseDerivationPath(*dbKey.IterativeDerivationPath)
+		iteration := path[4]
+
+		if iteration != keyIteration+1 {
+			t.Errorf("error in iteration. expected %d, got %d", keyIteration+1, iteration)
 			return
 		}
 
@@ -262,7 +272,7 @@ func TestDerivedKeyIteration(t *testing.T) {
 
 	}
 
-	t.Logf("iterative signing OK for key id: %s, current iteration: %d", dbKey.ID, *dbKey.Iteration)
+	t.Logf("iterative signing OK for key id: %s, current iteration: %d", dbKey.ID, keyIteration)
 	return
 }
 
@@ -319,12 +329,18 @@ func TestSignWithInvalidKeyIteration(t *testing.T) {
 	}
 
 	idx := uint32(10)
-	// set the key to an invalid iteration
-	walletKey.Iteration = &idx
+	pathstr := fmt.Sprintf("m/44'/60'/0'/0/%d", idx)
+	// set the key to an invalid iterative derivation path
+	// walletKey.DerivationPath = &pathstr
 
 	// attempt to sign with the invalid key
 	payload := []byte(common.RandomString(32))
-	_, err = walletKey.Sign(payload, nil)
+	_, err = walletKey.Sign(payload, &vault.SigningOptions{
+		HDWallet: &crypto.HDWallet{
+			CoinAbbr: common.StringOrNil("ETH"),
+			Path:     &pathstr,
+		},
+	})
 	if err == nil {
 		t.Errorf("no error signing payload")
 	}

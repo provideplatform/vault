@@ -21,7 +21,7 @@ jobs:
         with:
           repository: provideapp/ident
           path: 'ident'
-          ref: minified
+          ref: master
           token: ${{ secrets.PAT }}
       - run: docker-compose -f ./ops/docker-compose-db.yml up -d
         working-directory: vaultyvault

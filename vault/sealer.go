@@ -25,6 +25,11 @@ type SealUnsealRequestResponse struct {
 	ValidationHash *string `json:"validation_hash,omitempty"`
 }
 
+// Unsealer interface
+type Unsealer interface {
+	Unseal() error
+}
+
 // ClearUnsealerKey clears the unsealer key - used to seal the vault (handler not implemented)
 func ClearUnsealerKey(passphrase string) error {
 	if passphrase == "" {

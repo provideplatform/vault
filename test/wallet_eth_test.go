@@ -315,7 +315,35 @@ func TestSignWithMaximumKey(t *testing.T) {
 	}
 }
 
-func TestSignWithInvalidKeyIteration(t *testing.T) {
+func TestSignWithArbitraryKeyIterationIndex(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for eth hd wallet create unit test!")
+		return
+	}
+
+	walletKey, err := vault.EthHDWalletFactory(ethHDKeyDB, &vlt.ID, "test wallet", "test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create eth HD wallet for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
+
+	idx := uint32(10)
+	// set the key to an invalid iterative derivation path
+	// attempt to sign with the invalid key
+	payload := []byte(common.RandomString(32))
+	_, err = walletKey.Sign(payload, &vault.SigningOptions{
+		HDWallet: &crypto.HDWallet{
+			CoinAbbr: common.StringOrNil("ETH"),
+			Index:    &idx,
+		},
+	})
+	if err != nil {
+		t.Logf("got unexpected error signing with arbitrary coin_abbr and index %s", err.Error())
+	}
+}
+
+func TestSignWithArbitraryKeyIterationPath(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {
 		t.Error("failed! no vault created for eth hd wallet create unit test!")
@@ -337,15 +365,12 @@ func TestSignWithInvalidKeyIteration(t *testing.T) {
 	payload := []byte(common.RandomString(32))
 	_, err = walletKey.Sign(payload, &vault.SigningOptions{
 		HDWallet: &crypto.HDWallet{
-			CoinAbbr: common.StringOrNil("ETH"),
-			Path:     &pathstr,
+			Path: &pathstr,
 		},
 	})
-	if err == nil {
-		t.Errorf("no error signing payload")
+	if err != nil {
+		t.Logf("got unexpected error signing with arbitrary derivation path %s", err.Error())
 	}
-
-	t.Logf("got expected error generating signing key with invalid iteration %s", err.Error())
 }
 
 func TestDeriveAutoKeyFromEthHDWallet_IncorrectCoin(t *testing.T) {

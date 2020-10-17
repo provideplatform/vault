@@ -694,19 +694,6 @@ func (k *Key) updateIterativeDerivationPath(db *gorm.DB) error {
 	account := derivationPath[2] - 0x80000000
 	index := derivationPath[len(derivationPath)-1]
 
-	// if k.DerivationPath != nil {
-	// 	selectedDerivationPath, err := hdwallet.ParseDerivationPath(*k.DerivationPath)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to update iterative hd derivation path on key: %s; failed path: %s", k.ID, *k.IterativeDerivationPath)
-	// 	}
-
-	// 	selectedAccount := selectedDerivationPath[2] - 0x80000000
-	// 	selectedIndex := selectedDerivationPath[len(selectedDerivationPath)-1]
-	// 	if account != selectedAccount || index != selectedIndex {
-	// 		return fmt.Errorf("failed to update iterative hd derivation path on key: %s; requested derivation path breaks sequential iteration", k.ID)
-	// 	}
-	// }
-
 	// if we have reached the uint32 maximum, we cannot generate any more keys
 	if index == maxHDIteration {
 		common.Log.Debugf("maximum index %d reached - incrementing account", index)

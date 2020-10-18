@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/miguelmota/go-ethereum-hdwallet"
 	"math/rand"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/vault/common"
+	"github.com/provideapp/vault/crypto"
 	provide "github.com/provideservices/provide-go/common"
 )
 
@@ -549,24 +552,49 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO break this out into a function if we allow derivation from more than ChaCha20
-	if *key.Spec != KeySpecChaCha20 {
+	var derivedKey *Key
+
+	switch *key.Spec {
+	case KeySpecChaCha20:
+		// handle empty nonces - replace with random 32-bit integer
+		// and convert to bigendian 16-byte array
+		nonceAsBytes := make([]byte, 16)
+		if params.Nonce != nil {
+			binary.BigEndian.PutUint32(nonceAsBytes, uint32(*params.Nonce))
+		} else {
+			binary.BigEndian.PutUint32(nonceAsBytes, uint32(rand.Int31()))
+		}
+
+		derivedKey, err = key.DeriveSymmetric(nonceAsBytes, []byte(*params.Context), *params.Name, *params.Description)
+		if err != nil {
+			provide.RenderError(err.Error(), 500, c)
+			return
+		}
+	case KeySpecECCBIP39:
+		var path *accounts.DerivationPath
+		if params.Path != nil {
+			derivationPath, err := hdwallet.ParseDerivationPath(*params.Path)
+			if err != nil {
+				provide.RenderError(err.Error(), 500, c)
+				return
+			}
+			path = &derivationPath
+		} else {
+			path = crypto.DefaultHDDerivationPath()
+		}
+
+		secp256k1Derived, err := key.deriveSecp256k1KeyFromHDWallet(*path)
+		if err != nil {
+			provide.RenderError(err.Error(), 500, c)
+			return
+		}
+
+		key.Address = secp256k1Derived.Address
+		key.DerivationPath = secp256k1Derived.DerivationPath
+		key.Enrich()
+		derivedKey = key
+	default:
 		provide.RenderError("key does not support derivation", 400, c)
-		return
-	}
-
-	// handle empty nonces - replace with random 32-bit integer
-	// and convert to bigendian 16-byte array
-	nonceAsBytes := make([]byte, 16)
-	if params.Nonce != nil {
-		binary.BigEndian.PutUint32(nonceAsBytes, uint32(*params.Nonce))
-	} else {
-		binary.BigEndian.PutUint32(nonceAsBytes, uint32(rand.Int31()))
-	}
-
-	derivedKey, err := key.DeriveSymmetric(nonceAsBytes, []byte(*params.Context), *params.Name, *params.Description)
-	if err != nil {
-		provide.RenderError(err.Error(), 500, c)
 		return
 	}
 

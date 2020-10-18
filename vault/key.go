@@ -123,13 +123,14 @@ type KeyEncryptDecryptRequestResponse struct {
 	Nonce *string `json:"nonce,omitempty"` //optional nonce parameter
 }
 
-// KeyDeriveRequest contains the details for the derivation of a
-// new chacha20 key from the provided chacha20 key
+// KeyDeriveRequest contains the details for the derivation of a new key,
+// provided the parent key is supports derivation; currently supports ChaCha20 or BIP30 keys
 type KeyDeriveRequest struct {
 	Nonce       *int    `json:"nonce,omitempty"`
 	Context     *string `json:"context,omitempty"`
 	Name        *string `json:"name,omitempty"`
 	Description *string `json:"description,omitempty"`
+	Path        *string `json:"hd_derivation_path,omitempty"`
 }
 
 // SigningOptions contains the options for the signing algorithm
@@ -761,7 +762,6 @@ func (k *Key) save(db *gorm.DB) bool {
 
 // Decrypt a ciphertext using the key according to its spec
 func (k *Key) Decrypt(ciphertext []byte) ([]byte, error) {
-
 	if k.Type != nil && *k.Type == KeyTypeSymmetric {
 		return k.decryptSymmetric(ciphertext[NonceSizeSymmetric:], ciphertext[0:NonceSizeSymmetric])
 	}

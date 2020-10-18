@@ -1285,6 +1285,48 @@ func TestAPIDerivedNonChachaDecryptNoNonce(t *testing.T) {
 	}
 }
 
+func TestAPIDeriveBIP39(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	derivedKey, err := provide.DeriveKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{})
+
+	if err != nil {
+		t.Errorf("failed to derive key for vault: %s", vault.ID)
+		return
+	}
+
+	if derivedKey.Address == nil {
+		t.Errorf("address should be non-nil for derived secp256k1 BIP39 HD wallet key")
+		return
+	}
+
+	if derivedKey.HDDerivationPath == nil {
+		t.Errorf("derivation path should be non-nil for derived secp256k1 BIP39 HD wallet key")
+		return
+	}
+
+	if derivedKey.PublicKey == nil {
+		t.Errorf("public key should be non-nil for derived secp256k1 BIP39 HD wallet key")
+		return
+	}
+}
+
 func TestEphemeralCreation(t *testing.T) {
 	token, err := userTokenFactory()
 	if err != nil {

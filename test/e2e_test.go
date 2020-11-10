@@ -129,7 +129,7 @@ func init() {
 	log.Printf("newly generated unsealer key %s", *newkeyresp.UnsealerKey)
 	log.Printf("newly generated unsealer key hash %s", *newkeyresp.ValidationHash)
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -138,7 +138,7 @@ func init() {
 	}
 
 	// now try it again, and we expect a 204 (no response) when trying to unseal a sealed vault
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -155,7 +155,7 @@ func unsealVault() error {
 
 	}
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -180,7 +180,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -208,7 +208,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -252,7 +252,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "raffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err == nil {
@@ -1142,7 +1142,7 @@ func TestAPIDerivedChachaDecrypt(t *testing.T) {
 	name := "derived key 01"
 	description := "derived key 01 description"
 
-	derivedKey, err := provide.DeriveVaultKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
+	derivedKey, err := provide.DeriveKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"nonce":       nonce,
 		"context":     context,
 		"name":        name,
@@ -1206,7 +1206,7 @@ func TestAPIDerivedChachaDecryptNoNonce(t *testing.T) {
 	name := "derived key 01"
 	description := "derived key 01 description"
 
-	derivedKey, err := provide.DeriveVaultKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
+	derivedKey, err := provide.DeriveKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"context":     context,
 		"name":        name,
 		"description": description,
@@ -1269,14 +1269,14 @@ func TestAPIDerivedNonChachaDecryptNoNonce(t *testing.T) {
 	name := "derived key 01"
 	description := "derived key 01 description"
 
-	_, err = provide.DeriveVaultKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
+	_, err = provide.DeriveKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"context":     context,
 		"name":        name,
 		"description": description,
 	})
 
 	if err == nil {
-		t.Errorf("incorrectly derived non-chacha20 key for vault: %s", vault.ID)
+		t.Errorf("incorrectly derived non-chacha20 key for vault: %s.", vault.ID)
 		return
 	}
 

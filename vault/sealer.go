@@ -52,8 +52,7 @@ func ClearUnsealerKey(passphrase string) error {
 	// validate the SHA256 hash against the validation hash
 	res := bytes.Compare(incomingKeyHash.Sum(nil), validator[:])
 	if res != 0 {
-		// 		return fmt.Errorf("error sealing vault. unsealer key doesn't match validation hash")
-		return fmt.Errorf("error sealing vault. unsealer key hash %s doesn't match validation hash %s", hex.EncodeToString(incomingKeyHash.Sum(nil)), hex.EncodeToString(validator[:]))
+		return fmt.Errorf("error sealing vault. unsealer key provided doesn't match validation hash")
 	}
 	common.Log.Debugf("Seal vault: valid vault unsealing key received")
 

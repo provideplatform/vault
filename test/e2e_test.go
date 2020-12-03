@@ -1597,7 +1597,7 @@ func TestNonEphemeralCreation(t *testing.T) {
 	}
 }
 
-func TestArbitrarySignature(t *testing.T) {
+func TestArbitrarySignatureSecp256k1(t *testing.T) {
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1621,6 +1621,80 @@ func TestArbitrarySignature(t *testing.T) {
 
 	opts := map[string]interface{}{}
 	//json.Unmarshal([]byte(`{"algorithm":"PS256"}`), &opts)
+
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+	if err != nil {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+
+	if verifyresponse.Verified != true {
+		t.Error("failed to verify signature for vault")
+		return
+	}
+}
+
+func TestArbitrarySignatureSecp256k1_ShouldFail(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecECCSecp256k1, "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	payloadBytes, _ := common.RandomBytes(33)
+	messageToSign := hex.EncodeToString(payloadBytes)
+
+	opts := map[string]interface{}{}
+	//json.Unmarshal([]byte(`{"algorithm":"PS256"}`), &opts)
+
+	_, err = provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err == nil {
+		t.Errorf("signed 33-byte message with secp256k1 - should only sign 32-byte messages")
+		return
+	}
+}
+
+func TestArbitrarySignatureEd25519(t *testing.T) {
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecECCEd25519, "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	payloadBytes, _ := common.RandomBytes(1000)
+	messageToSign := hex.EncodeToString(payloadBytes)
+
+	opts := map[string]interface{}{}
 
 	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
 	if err != nil {

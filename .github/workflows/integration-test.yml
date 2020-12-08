@@ -32,7 +32,7 @@ jobs:
           token: ${{ secrets.DEPLOY_GITHUB_PAT }}          
       - run: docker-compose -f ./ops/docker-compose-integration.yml up -d
         working-directory: vault
-      - run:     make integration_vault                                    
+      - run:     TAGS=vault ./ops/run_local_tests.sh                                   
         working-directory: integration       
       - run: docker-compose -f ./ops/docker-compose-integration.yml down
         working-directory: vault

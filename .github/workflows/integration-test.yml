@@ -22,14 +22,14 @@ jobs:
           repository: provideapp/ident
           path: 'ident'
           ref: integration
-          token: ${{ secrets.PAT }}
+          token: ${{ secrets.DEPLOY_GITHUB_PAT }}
       - name: Checkout integration test
         uses: actions/checkout@v2
         with:
           repository: provideapp/integration
           path: 'integration'
           ref: master
-          token: ${{ secrets.PAT }}          
+          token: ${{ secrets.DEPLOY_GITHUB_PAT }}          
       - run: docker-compose -f ./ops/docker-compose-integration.yml up -d
         working-directory: vault
       - run:     make integration_vault                                    

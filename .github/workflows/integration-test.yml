@@ -30,10 +30,11 @@ jobs:
           path: 'integration'
           ref: master
           token: ${{ secrets.PAT }}          
-      - run: docker-compose -f ./ops/docker-compose.yml up -d
+      - run: docker-compose -f ./ops/docker-compose-integration.yml up -d
         working-directory: vault
       - run:     make integration_vault                                    
         working-directory: integration       
-      - run: docker-compose -f vaultyvault/ops/docker-compose.yml down
+      - run: docker-compose -f ./ops/docker-compose-integration.yml down
+        working-directory: vault
       - run: docker volume rm ops_vault-db
 

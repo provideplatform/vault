@@ -413,13 +413,14 @@ func vaultKeysListHandler(c *gin.Context) {
 	db := dbconf.DatabaseConnection()
 	var query *gorm.DB
 
-	query = db.Where("id = ?", c.Param("id"))
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID)
+		query = query.Where("id = ? AND application_id = ?", c.Param("id"), bearer.ApplicationID).W
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("organization_id = ?", bearer.OrganizationID)
+		query = query.Where("id = ? AND organization_id = ?", c.Param("id"), bearer.OrganizationID)
 	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("user_id = ?", bearer.UserID)
+		query = query.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID)
+	} else {
+		query = query.Where("id = ?", c.Param("id"))
 	}
 	query.Find(&vault)
 

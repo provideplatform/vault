@@ -414,7 +414,7 @@ func vaultKeysListHandler(c *gin.Context) {
 	var query *gorm.DB
 
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("id = ? AND application_id = ?", c.Param("id"), bearer.ApplicationID).W
+		query = query.Where("id = ? AND application_id = ?", c.Param("id"), bearer.ApplicationID)
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
 		query = query.Where("id = ? AND organization_id = ?", c.Param("id"), bearer.OrganizationID)
 	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {

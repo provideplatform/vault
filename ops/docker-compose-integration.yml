@@ -3,7 +3,7 @@ version: '3.5'
 services:
   postgres:
     image: postgres
-    container_name: postgres
+    container_name: postgres-local
     environment:
       - POSTGRES_DB=prvd
       - POSTGRES_USER=prvd
@@ -16,11 +16,45 @@ services:
       start_period: 10s
     hostname: postgres
     volumes:
-      - vault-db:/var/lib/postgresql/data
+      - provide-db:/var/lib/postgresql/data
     networks:
       - provide
     ports:
       - 5432:5432
+    restart: always
+
+  vault:
+    build: ../
+    container_name: vault
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_NAME=vault_dev
+      - DATABASE_USER=vault
+      - DATABASE_PASSWORD=vault
+      - DATABASE_SUPERUSER=prvd
+      - DATABASE_SUPERUSER_PASSWORD=prvdp455
+      - LOG_LEVEL=DEBUG
+      - PORT=8080
+      - SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
+      - IDENT_API_HOST=ident:8080
+      - IDENT_API_PATH=api/v1
+      - IDENT_API_SCHEME=http
+      - VAULT_API_HOST=vault:8080
+      - VAULT_API_PATH=api/v1
+      - VAULT_API_SCHEME=http
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://vault:8080/status"]
+      interval: 1m
+      timeout: 1s
+      retries: 2
+      start_period: 10s
+    hostname: vault
+    networks:
+      - provide
+    ports:
+      - 8082:8080
     restart: always
 
   redis:
@@ -82,7 +116,7 @@ services:
     depends_on:
       - nats
     healthcheck:
-      test: ["CMD", "/usr/local/bin/await_tcp.sh", "localhost:4222"]
+      test: ["CMD", "/usr/local/bin/await_tcp.sh", "localhost:4224"]
       interval: 1m
       timeout: 1s
       retries: 2
@@ -90,12 +124,14 @@ services:
     hostname: nats-streaming
     networks:
       - provide
+    ports:
+      - 4224:4224
     restart: always
     volumes:
       - ./ops/await_tcp.sh:/usr/local/bin/await_tcp.sh:cached
-
+ 
   ident:
-    image: provide/ident:integration
+    image: provide/ident:dev
     container_name: ident
     depends_on:
       - nats-streaming
@@ -108,12 +144,18 @@ services:
       - DATABASE_PASSWORD=ident
       - DATABASE_SUPERUSER=prvd
       - DATABASE_SUPERUSER_PASSWORD=prvdp455
+      - DATABASE_PORT=5432
       - NATS_CLIENT_PREFIX=ident
+      - NATS_CLUSTER_ID=provide
+      - NATS_TOKEN=testtoken
       - NATS_URL=nats://nats:4222
       - NATS_STREAMING_URL=nats://nats-streaming:4222
       - REDIS_HOSTS=redis:6379
       - LOG_LEVEL=DEBUG
       - PORT=8080
+      - IDENT_API_HOST=ident:8080
+      - IDENT_API_PATH=api/v1
+      - IDENT_API_SCHEME=http
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ident:8080/status"]
       interval: 1m
@@ -125,67 +167,6 @@ services:
       - provide
     ports:
       - 8081:8080
-    restart: always
-
-  ident-consumer:
-    image: provide/ident:integration
-    entrypoint: ./ops/run_consumer.sh
-    container_name: ident-consumer
-    depends_on:
-      - nats-streaming
-      - postgres
-      - redis
-    environment:
-      - CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true
-      - DATABASE_HOST=postgres
-      - DATABASE_NAME=ident_dev
-      - DATABASE_USER=ident
-      - DATABASE_PASSWORD=ident
-      - DATABASE_SUPERUSER=prvd
-      - DATABASE_SUPERUSER_PASSWORD=prvdp455
-      - NATS_CLIENT_PREFIX=ident-consumer
-      - NATS_URL=nats://nats:4222
-      - NATS_STREAMING_URL=nats://nats-streaming:4222
-      - REDIS_HOSTS=redis:6379
-      - LOG_LEVEL=DEBUG
-      - PORT=8080
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://ident:8080/status"]
-      interval: 1m
-      timeout: 1s
-      retries: 2
-      start_period: 10s
-    hostname: ident-consumer
-    networks:
-      - provide
-    restart: always
-
-  vault:
-    build: ../
-    container_name: vault
-    depends_on:
-      - postgres
-    environment:
-      - DATABASE_HOST=postgres
-      - DATABASE_NAME=vault_dev
-      - DATABASE_USER=vault
-      - DATABASE_PASSWORD=vault
-      - DATABASE_SUPERUSER=prvd
-      - DATABASE_SUPERUSER_PASSWORD=prvdp455
-      - LOG_LEVEL=DEBUG
-      - PORT=8080
-      - SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://vault:8080/status"]
-      interval: 1m
-      timeout: 1s
-      retries: 2
-      start_period: 10s
-    hostname: vault
-    networks:
-      - provide
-    ports:
-      - 8082:8080
     restart: always
 
   nchain:
@@ -320,7 +301,7 @@ networks:
     driver: bridge
     ipam:
       config:
-      - subnet: 172.40.0.0/24
+      - subnet: 172.30.0.0/24
 
 volumes:
-  vault-db:
+  provide-db:

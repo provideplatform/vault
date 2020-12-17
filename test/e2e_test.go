@@ -1,4 +1,4 @@
-// +build integration
+// +build integration vault
 
 package test
 
@@ -269,6 +269,7 @@ func TestSealUnsealer(t *testing.T) {
 }
 
 func TestAPICreateVault(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -284,6 +285,7 @@ func TestAPICreateVault(t *testing.T) {
 }
 
 func TestAPICreateKey(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -311,6 +313,7 @@ func TestAPICreateKey(t *testing.T) {
 }
 
 func TestAPIDeleteKey(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -337,7 +340,7 @@ func TestAPIDeleteKey(t *testing.T) {
 }
 
 func TestAPISign(t *testing.T) {
-
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -368,6 +371,7 @@ func TestAPISign(t *testing.T) {
 }
 
 func TestAPIVerifySecp256k1Signature(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -421,6 +425,7 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 }
 
 func TestAPIVerifyEd25519Signature(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -460,6 +465,7 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 }
 
 func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -504,6 +510,7 @@ func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
 }
 
 func TestAPIEncrypt(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -534,6 +541,7 @@ func TestAPIEncrypt(t *testing.T) {
 }
 
 func TestAPIChachaDecrypt(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -573,6 +581,7 @@ func TestAPIChachaDecrypt(t *testing.T) {
 }
 
 func TestAPIDecrypt(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -612,6 +621,7 @@ func TestAPIDecrypt(t *testing.T) {
 }
 
 func TestAPIDecryptNoNonce(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -650,6 +660,7 @@ func TestAPIDecryptNoNonce(t *testing.T) {
 }
 
 func TestCreateHDWallet(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -697,6 +708,7 @@ func TestCreateHDWallet(t *testing.T) {
 }
 
 func TestCreateHDWalletFailsWithInvalidCoin(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -744,6 +756,7 @@ func TestCreateHDWalletFailsWithInvalidCoin(t *testing.T) {
 }
 
 func TestCreateHDWalletCoinAbbr(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -791,6 +804,7 @@ func TestCreateHDWalletCoinAbbr(t *testing.T) {
 }
 
 func TestHDWalletAutoSign(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -849,6 +863,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 }
 
 func TestListKeys(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -945,6 +960,7 @@ func TestListKeys(t *testing.T) {
 }
 
 func TestListKeys_Filtered(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1119,6 +1135,7 @@ func TestListKeys_Filtered(t *testing.T) {
 }
 
 func TestAPIDerivedChachaDecrypt(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1184,6 +1201,7 @@ func TestAPIDerivedChachaDecrypt(t *testing.T) {
 }
 
 func TestAPIDerivedChachaDecryptNoNonce(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1247,6 +1265,7 @@ func TestAPIDerivedChachaDecryptNoNonce(t *testing.T) {
 }
 
 func TestAPIDerivedNonChachaDecryptNoNonce(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1286,6 +1305,7 @@ func TestAPIDerivedNonChachaDecryptNoNonce(t *testing.T) {
 }
 
 func TestAPIDeriveBIP39(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1328,6 +1348,7 @@ func TestAPIDeriveBIP39(t *testing.T) {
 }
 
 func TestEphemeralCreation(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1463,6 +1484,7 @@ func TestEphemeralCreation(t *testing.T) {
 }
 
 func TestNonEphemeralCreation(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1598,6 +1620,7 @@ func TestNonEphemeralCreation(t *testing.T) {
 }
 
 func TestArbitrarySignatureSecp256k1(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1641,6 +1664,7 @@ func TestArbitrarySignatureSecp256k1(t *testing.T) {
 }
 
 func TestArbitrarySignatureSecp256k1_ShouldFail(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1673,6 +1697,7 @@ func TestArbitrarySignatureSecp256k1_ShouldFail(t *testing.T) {
 }
 
 func TestArbitrarySignatureEd25519(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())

@@ -1,4 +1,4 @@
-// +build integration
+// +build integration vault
 
 package test
 
@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/provideapp/vault/common"
+	"github.com/provideapp/ident/common"
 	provide "github.com/provideservices/provide-go/api/vault"
 )
 
 func TestAPILIstSecretTypeFilter(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -81,6 +83,8 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 }
 
 func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
+	t.Parallel()
+
 	// add the secrets out of order, and expect to get thte same out of order secrets returned, unfiltered
 	token, err := userTokenFactory()
 	if err != nil {
@@ -153,6 +157,8 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 }
 
 func TestAPIListSecrets(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -205,6 +211,8 @@ func TestAPIListSecrets(t *testing.T) {
 }
 
 func TestAPICreateSecret(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -229,6 +237,8 @@ func TestAPICreateSecret(t *testing.T) {
 }
 
 func TestAPICreateSecretTooLong(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -249,6 +259,8 @@ func TestAPICreateSecretTooLong(t *testing.T) {
 }
 
 func TestAPICreateSecretNoName(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -270,6 +282,8 @@ func TestAPICreateSecretNoName(t *testing.T) {
 }
 
 func TestAPICreateSecretNoType(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -291,6 +305,8 @@ func TestAPICreateSecretNoType(t *testing.T) {
 }
 
 func TestAPICreateSecretNoData(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -312,6 +328,8 @@ func TestAPICreateSecretNoData(t *testing.T) {
 }
 
 func TestAPICreateAndRetrieveSecret(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -344,6 +362,8 @@ func TestAPICreateAndRetrieveSecret(t *testing.T) {
 }
 
 func TestAPIDeleteSecret(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())

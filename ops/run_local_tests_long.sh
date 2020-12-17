@@ -32,7 +32,7 @@ if [[ -z "${RACE}" ]]; then
 fi
 
 if [[ -z "${TAGS}" ]]; then
-  export TAGS=unit
+  export TAGS=integration
 fi
 
 export PGP_PUBLIC_KEY='-----BEGIN PGP PUBLIC KEY BLOCK-----

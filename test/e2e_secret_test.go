@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/provideapp/ident/common"
+	"github.com/provideapp/vault/common"
 	provide "github.com/provideservices/provide-go/api/vault"
 )
 

@@ -1,0 +1,28 @@
+name: dev-integration-test
+on:
+  push:
+    branches:
+      - dev   
+jobs:
+  integration-test-vault:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10    
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.INTEGRATION_SLACK_WEBHOOK }}
+    steps:
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.15.1'
+      - name: Checkout vault
+        uses: actions/checkout@v2
+        with:
+          path: 'vault'                      
+      - run: make integration
+        working-directory: vault
+      - name: slack channel update
+        uses: act10ns/slack@v1
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+        if: failure()     

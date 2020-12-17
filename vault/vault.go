@@ -211,21 +211,18 @@ func GetVaults(applicationID, organizationID, userID *uuid.UUID) []*Vault {
 
 // GetVault returns a vault for the specified parameters
 func GetVault(db *gorm.DB, vaultID string, applicationID, organizationID, userID *uuid.UUID) *Vault {
-
-	var query *gorm.DB
-
 	var vault = &Vault{}
+	query := db.Where("vaults.id = ?", vaultID)
 
-	query = db.Where("id = ?", vaultID)
 	if applicationID != nil && *applicationID != uuid.Nil {
-		query = query.Where("vaults.application_id = ?", applicationID)
+		query = query.Where("vaults.id = ? AND vaults.application_id = ?", vaultID, applicationID)
 	} else if organizationID != nil && *organizationID != uuid.Nil {
-		query = query.Where("vaults.organization_id = ?", organizationID)
+		query = query.Where("vaults.id = ? AND vaults.organization_id = ?", vaultID, organizationID)
 	} else if userID != nil && *userID != uuid.Nil {
-		query = query.Where("vaults.user_id = ?", userID)
+		query = query.Where("vaults.id = ? AND vaults.user_id = ?", vaultID, userID)
 	}
-	query.Find(&vault)
 
+	query.Find(&vault)
 	return vault
 }
 

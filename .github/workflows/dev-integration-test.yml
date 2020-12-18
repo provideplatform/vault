@@ -22,11 +22,21 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: 'vault'                      
-      - run: make integration
+      - run: docker-compose -f ./ops/docker-compose-integration.yml build --no-cache vault
         working-directory: vault
+      - run: docker-compose -f ./ops/docker-compose-integration.yml up -d
+        working-directory: vault
+      - run: TAGS=integration ./ops/run_local_tests_long.sh
+        working-directory: vault
+      - run: docker-compose -f ./ops/docker-compose.yml logs
+        working-directory: vault
+      - run: docker-compose -f ./ops/docker-compose-integration.yml down
+        working-directory: vault
+      - run: docker volume rm ops_provide-db
+        working-directory: vault                                        
       - name: slack channel update
         uses: act10ns/slack@v1
         with:
           status: ${{ job.status }}
           steps: ${{ toJson(steps) }}
-        if: failure()     
+        if: always()  

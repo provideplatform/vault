@@ -17,7 +17,10 @@ jobs:
       - name: Checkout ident
         uses: actions/checkout@v2
         with:
-          path: 'ident'               
+          repository: provideapp/ident
+          path: 'ident'
+          ref: dev
+          token: ${{ secrets.DEPLOY_GITHUB_PAT }}             
       - name: Checkout vault
         uses: actions/checkout@v2
         with:

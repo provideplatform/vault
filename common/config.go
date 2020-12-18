@@ -6,7 +6,6 @@ import (
 
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
-	"github.com/provideapp/ident/common"
 )
 
 // UnsealerKeyRequiredBytes is the required length of the UnsealerKey in bytes
@@ -44,9 +43,9 @@ func requireLogger() {
 
 func requireSealerValidationHash() {
 	if os.Getenv("SEAL_UNSEAL_VALIDATION_HASH") == "" {
-		common.Log.Warning("vault unsealer key validation hash not provided")
+		Log.Warning("vault unsealer key validation hash not provided")
 	} else {
 		UnsealerKeyValidationHash = strings.Replace(os.Getenv("SEAL_UNSEAL_VALIDATION_HASH"), "0x", "", -1)
-		common.Log.Debugf("vault validation hash set %s", UnsealerKeyValidationHash)
+		Log.Debugf("vault validation hash set %s", UnsealerKeyValidationHash)
 	}
 }

@@ -14,7 +14,7 @@ import (
 )
 
 // MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored
-const MaxSecretLengthInBytes = 4096
+const MaxSecretLengthInBytes = 4096 * 2
 
 // Secret represents a secret encrypted by the vault's master key
 type Secret struct {

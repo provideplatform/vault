@@ -34,6 +34,7 @@ var (
 func init() {
 	util.RequireJWTVerifiers()
 	util.RequireGin()
+	common.EnableAPIAccounting()
 }
 
 func main() {

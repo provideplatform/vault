@@ -44,6 +44,7 @@ func installVaultsAPI(r *gin.Engine) {
 func installKeysAPI(r *gin.Engine) {
 	r.GET("/api/v1/vaults/:id/keys", vaultKeysListHandler)
 	r.POST("/api/v1/vaults/:id/keys", createVaultKeyHandler)
+	r.GET("api/v1/vaults/:id/keys/:keyId", vaultKeyDetailsHandler)
 	r.POST("api/v1/vaults/:id/keys/:keyId/derive", vaultKeyDeriveHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/encrypt", vaultKeyEncryptHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/decrypt", vaultKeyDecryptHandler)
@@ -520,6 +521,45 @@ func deleteVaultKeyHandler(c *gin.Context) {
 	}
 
 	provide.Render(nil, 204, c)
+}
+
+// vaultKeyDetailsHandler fetches details for a specific key
+func vaultKeysListHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
+	var vault = &Vault{}
+
+	db := dbconf.DatabaseConnection()
+	query := db.Where("id = ?", c.Param("id"))
+
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		query = query.Where("id = ? AND application_id = ?", c.Param("id"), bearer.ApplicationID)
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		query = query.Where("id = ? AND organization_id = ?", c.Param("id"), bearer.OrganizationID)
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		query = query.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID)
+	}
+	query.Find(&vault)
+
+	if vault.ID == uuid.Nil {
+		provide.RenderError("vault not found", 404, c)
+		return
+	}
+
+	var key *Key
+	vault.KeyDetailsQuery(db, c.Param("keyId")).Find(&key)
+	if key == nil || key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	key.Enrich()
+	provide.Render(key, 200, c)
 }
 
 // vaultKeyDeriveHandler derives a new symmetric key from a chacha20 key

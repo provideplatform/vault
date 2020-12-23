@@ -26,6 +26,11 @@ type Vault struct {
 	MasterKeyID *uuid.UUID `sql:"type:uuid" json:"-"`
 }
 
+// KeyDetailsQuery returns the fields to SELECT from vault keys table
+func (v *Vault) KeyDetailsQuery(db *gorm.DB, keyID string) *gorm.DB {
+	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.seed, keys.private_key, keys.public_key, keys.vault_id").Where("keys.vault_id = ? AND keys.id = ?", v.ID, keyID)
+}
+
 // ListKeysQuery returns the fields to SELECT from vault keys table
 func (v *Vault) ListKeysQuery(db *gorm.DB) *gorm.DB {
 	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.seed, keys.private_key, keys.public_key, keys.vault_id").Where("keys.vault_id = ?", v.ID)

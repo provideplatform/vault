@@ -90,7 +90,6 @@ func runAPI() {
 	r.Use(token.AuthMiddleware())
 	r.Use(common.AccountingMiddleware())
 	r.Use(common.RateLimitingMiddleware())
-	r.Use(util.TrackAPICalls())
 	r.Use(vault.AuditLogMiddleware())
 
 	vault.InstallAPI(r)

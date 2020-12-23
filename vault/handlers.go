@@ -532,7 +532,7 @@ func vaultKeyDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	var vault = &Vault{}
+	vault := &Vault{}
 
 	db := dbconf.DatabaseConnection()
 	query := db.Where("id = ?", c.Param("id"))
@@ -551,7 +551,7 @@ func vaultKeyDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	var key *Key
+	key := &Key{}
 	vault.KeyDetailsQuery(db, c.Param("keyId")).Find(&key)
 	if key == nil || key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)

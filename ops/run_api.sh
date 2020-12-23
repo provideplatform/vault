@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ -z "${API_ACCOUNTING_ADDRESS}" ]]; then
-  API_ACCOUNTING_ADDRESS=127.0.0.1:8889
+  API_ACCOUNTING_ADDRESS=
 fi
 
 if [[ -z "${JWT_SIGNER_PUBLIC_KEY}" ]]; then

@@ -524,7 +524,7 @@ func deleteVaultKeyHandler(c *gin.Context) {
 }
 
 // vaultKeyDetailsHandler fetches details for a specific key
-func vaultKeysListHandler(c *gin.Context) {
+func vaultKeyDetailsHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
 	if vaultIsSealed() {

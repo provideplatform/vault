@@ -66,6 +66,11 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 		return
 	}
 
+	if *firstSecret.Value != secret {
+		t.Errorf("Error retrieving first secret value, expected %s, got %s", name, *firstSecret.Name)
+		return
+	}
+
 	if *secondSecret.Name != name2 {
 		t.Errorf("Error retrieving second secret, expected %s, got %s", name, *secondSecret.Name)
 		return

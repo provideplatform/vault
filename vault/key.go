@@ -2,6 +2,7 @@ package vault
 
 import (
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"encoding/hex"
 	"errors"
@@ -231,12 +232,15 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 		return nil, err
 	}
 
-	ec25519Key, err := crypto.FromPublicKey(peerSigningKey)
-	if err != nil {
+	ec25519Key := ed25519.PrivateKey(peerSigningKey).Public().(ed25519.PublicKey) //crypto.FromPublicKey(peerSigningKey)
+	if ec25519Key != nil {
 		return nil, fmt.Errorf("failed to compute shared secret; failed to unmarshal %d-byte Ed22519 public key: %s", len(peerPublicKey), string(peerPublicKey))
 	}
 
-	err = ec25519Key.Verify(peerPublicKey, peerSignature)
+	var publicKeyBytes []byte
+	copy(publicKeyBytes[:], ec25519Key)
+
+	err := crypto.Ed25519Verify(publicKeyBytes, peerPublicKey, peerSignature)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute shared secret; failed to verify %d-byte Ed22519 signature using public key: %s; %s", len(peerSignature), string(peerPublicKey), err.Error())
 	}
@@ -270,23 +274,17 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 
 // createEd25519Keypair creates an Ed25519 keypair
 func (k *Key) createEd25519Keypair() error {
-	keypair, err := crypto.CreatePair(crypto.PrefixByteSeed)
+	publicKey, privateKey, err := crypto.CreateEd25519KeyPair()
 	if err != nil {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	seed, err := keypair.Seed()
-	if err != nil {
-		return crypto.ErrCannotGenerateSeed
-	}
+	var publicKeyBytes []byte
+	copy(publicKeyBytes[:], publicKey)
 
-	publicKey, err := keypair.PublicKey()
-	if err != nil {
-		return crypto.ErrCannotGeneratePublicKey
-	}
-
+	seed := privateKey.Seed()
 	k.Seed = &seed
-	k.PublicKey = &publicKey
+	k.PublicKey = &publicKeyBytes
 	*k.Type = KeyTypeAsymmetric
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, *k.PublicKey)
@@ -1121,11 +1119,11 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
 		}
-		ec25519Key, err := crypto.FromSeed(*k.Seed)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create public key from seed using key: %s; %s", k.ID, err.Error())
+		ec25519Key := crypto.FromSeed(*k.Seed)
+		if ec25519Key == nil {
+			return nil, fmt.Errorf("failed to create public key from seed using key: %s", k.ID)
 		}
-		sig, sigerr = ec25519Key.Sign(payload)
+		sig = crypto.Ed25519Sign(ec25519Key, payload)
 
 	case KeySpecECCSecp256k1:
 		if k.PrivateKey == nil {
@@ -1202,11 +1200,11 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 		return providecrypto.TECVerify(decodedPubKey, payload, sig)
 
 	case KeySpecECCEd25519:
-		ec25519Key, err := crypto.FromPublicKey(*k.PublicKey)
-		if err != nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s", len(payload), k.ID, err.Error())
+		ec25519Key := crypto.FromSeed(*k.Seed).Public().(ed25519.PublicKey)
+		if ec25519Key == nil {
+			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s", len(payload), k.ID)
 		}
-		return ec25519Key.Verify(payload, sig)
+		return crypto.Ed25519Verify(ec25519Key, payload, sig)
 
 	case KeySpecECCBIP39:
 		var path *accounts.DerivationPath

@@ -25,23 +25,12 @@ type ChaCha20 interface {
 
 // CreateChaChaSeed returns a suitable chacha20 seed
 func CreateChaChaSeed() ([]byte, error) {
-	keypair, err := CreatePair(PrefixByteSeed)
+	_, privateKey, err := CreateEd25519KeyPair()
 	if err != nil {
 		return nil, ErrCannotGenerateSeed
 	}
 
-	//NB: shared, unencrypted seed stored in only one memory location
-	seed, err := keypair.Seed()
-	if err != nil {
-		return nil, ErrCannotGenerateSeed
-	}
-
-	_, seed, err = DecodeSeed(seed)
-	if err != nil {
-		return nil, ErrCannotDecodeSeed
-	}
-
-	return seed, nil //no errors found in execution
+	return privateKey.Seed(), nil
 }
 
 // Encrypt encrypts byte array using chacha20 key

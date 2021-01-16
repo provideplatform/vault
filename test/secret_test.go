@@ -121,7 +121,7 @@ func TestSecretStoreTooLong(t *testing.T) {
 		return
 	}
 
-	secretText := common.RandomString(4097)
+	secretText := common.RandomString(vault.MaxSecretLengthInBytes + 1)
 	_, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "description")
 	if err == nil {
 		t.Errorf("created secret too long for vault: %s", vlt.ID)

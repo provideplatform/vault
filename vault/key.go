@@ -232,15 +232,15 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 		return nil, err
 	}
 
-	ec25519Key := ed25519.PrivateKey(peerSigningKey).Public().(ed25519.PublicKey) //crypto.FromPublicKey(peerSigningKey)
-	if ec25519Key != nil {
+	ec25519Key := ed25519.PrivateKey(peerSigningKey).Public().(ed25519.PublicKey)
+	if ec25519Key == nil {
 		return nil, fmt.Errorf("failed to compute shared secret; failed to unmarshal %d-byte Ed22519 public key: %s", len(peerPublicKey), string(peerPublicKey))
 	}
 
-	var publicKeyBytes []byte
-	copy(publicKeyBytes, ec25519Key)
+	var publicKeyBytes [32]byte
+	copy(publicKeyBytes[:], ec25519Key)
 
-	err := crypto.Ed25519Verify(publicKeyBytes, peerPublicKey, peerSignature)
+	err := crypto.Ed25519Verify(publicKeyBytes[:], peerPublicKey, peerSignature)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute shared secret; failed to verify %d-byte Ed22519 signature using public key: %s; %s", len(peerSignature), string(peerPublicKey), err.Error())
 	}
@@ -279,12 +279,13 @@ func (k *Key) createEd25519Keypair() error {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	var publicKeyBytes []byte
+	var publicKeyBytes [32]byte
 	copy(publicKeyBytes[:], publicKey)
+	_publicKeyBytes := publicKeyBytes[:]
 
 	seed := privateKey.Seed()
 	k.Seed = &seed
-	k.PublicKey = &publicKeyBytes
+	k.PublicKey = &_publicKeyBytes
 	*k.Type = KeyTypeAsymmetric
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, *k.PublicKey)

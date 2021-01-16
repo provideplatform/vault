@@ -238,7 +238,7 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 	}
 
 	var publicKeyBytes []byte
-	copy(publicKeyBytes[:], ec25519Key)
+	copy(publicKeyBytes, ec25519Key)
 
 	err := crypto.Ed25519Verify(publicKeyBytes, peerPublicKey, peerSignature)
 	if err != nil {

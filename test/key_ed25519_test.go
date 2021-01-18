@@ -230,3 +230,42 @@ func TestEd25519Verify(t *testing.T) {
 
 	common.Log.Debugf("verified message using Ed25519 keypair for vault: %s; sig: %s", vlt.ID, hex.EncodeToString(sig))
 }
+
+func TestEd25519VerifyFail(t *testing.T) {
+	vlt := vaultFactory()
+	if vlt.ID == uuid.Nil {
+		t.Error("failed! no vault created for Ed25519 key verify unit test!")
+		return
+	}
+
+	key, err := vault.Ed25519Factory(edKeyDB, &vlt.ID, "test key", "just some key :D")
+	if err != nil {
+		t.Errorf("failed to create Ed25519 keypair for vault: %s; Error: %s", vlt.ID, err.Error())
+		return
+	}
+
+	msg := []byte(common.RandomString(10))
+	invalidMsg := []byte(common.RandomString(10))
+
+	sig, err := key.Sign(msg, nil)
+	if err != nil {
+		t.Errorf("failed to verify message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+
+	if sig == nil {
+		t.Errorf("failed to sign message using Ed25519 keypair for vault: %s nil signature!", vlt.ID)
+		return
+	}
+
+	if len(sig) != 64 {
+		t.Errorf("failed to sign message using Ed25519 keypair for vault: %s received %d-byte signature: %s", vlt.ID, len(sig), sig)
+		return
+	}
+
+	err = key.Verify(invalidMsg, sig, nil)
+	if err == nil {
+		t.Errorf("verified invalid message using Ed25519 keypair for vault: %s %s", vlt.ID, err.Error())
+		return
+	}
+}

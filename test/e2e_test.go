@@ -1931,7 +1931,7 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 		invalidPayload, _ := common.RandomBytes(32)
 		invalidMessage := hex.EncodeToString(invalidPayload)
 
-		// testing invalid signature, expecting 500
+		// CHECKME testing invalid signature, expecting 500
 		// but this should really be a 201 with verified false (for consistency)
 		// because the only thing that has gone wrong is the signature is invalid
 		// as opposed to a parameter error

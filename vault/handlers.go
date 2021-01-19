@@ -995,8 +995,11 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		verified = true
 	}
 
+	// slight change from the regular verify so the error doesn't get swallowed
+	// note that key ID in this case is always nil UUID
 	if verifyError != nil {
-		common.Log.Debugf("verification error: %s", verifyError)
+		provide.RenderError(verifyError.Error(), 500, c)
+		return
 	}
 
 	provide.Render(&DetachedVerifyRequestResponse{

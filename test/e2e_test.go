@@ -1643,7 +1643,6 @@ func TestArbitrarySignatureSecp256k1(t *testing.T) {
 	messageToSign := hex.EncodeToString(payloadBytes)
 
 	opts := map[string]interface{}{}
-	//json.Unmarshal([]byte(`{"algorithm":"PS256"}`), &opts)
 
 	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
 	if err != nil {
@@ -1736,5 +1735,198 @@ func TestArbitrarySignatureEd25519(t *testing.T) {
 	if verifyresponse.Verified != true {
 		t.Error("failed to verify signature for vault")
 		return
+	}
+}
+
+func TestDetachedSignatureVerification(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	tt := []struct {
+		Name        string
+		Description string
+		Type        string
+		Usage       string
+		Spec        string
+		Options     string
+	}{
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecECCEd25519, ""},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecECCBabyJubJub, ""},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"RS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"RS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"RS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"RS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"RS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"RS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"RS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"RS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"RS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecECCSecp256k1, ""},
+	}
+
+	for _, tc := range tt {
+
+		key, err := keyFactory(*token, vault.ID.String(), tc.Type, tc.Usage, tc.Spec, "namey name", "cute description")
+		if err != nil {
+			t.Errorf("failed to create key; %s", err.Error())
+			return
+		}
+
+		payloadBytes, _ := common.RandomBytes(32)
+		messageToSign := hex.EncodeToString(payloadBytes)
+
+		opts := map[string]interface{}{}
+		if tc.Options != "" {
+			json.Unmarshal([]byte(tc.Options), &opts)
+		}
+
+		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+
+		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+		if err != nil {
+			t.Errorf("failed to verify signature for vault: %s", err.Error())
+			return
+		}
+
+		if verifyresponse.Verified != true {
+			t.Error("failed to verify signature for vault")
+			return
+		}
+
+		detachedverifyresponse, err := provide.VerifyDetachedSignature(*token, tc.Spec, messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
+		if err != nil {
+			t.Errorf("failed to verify detached signature: %s", err.Error())
+			return
+		}
+
+		if detachedverifyresponse.Verified != true {
+			t.Errorf("failed to verify detached signature for %s key type", tc.Spec)
+			return
+		}
+	}
+}
+
+func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	tt := []struct {
+		Name        string
+		Description string
+		Type        string
+		Usage       string
+		Spec        string
+		Options     string
+	}{
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS512"}`},
+	}
+
+	for _, tc := range tt {
+
+		key, err := keyFactory(*token, vault.ID.String(), tc.Type, tc.Usage, tc.Spec, "namey name", "cute description")
+		if err != nil {
+			t.Errorf("failed to create key; %s", err.Error())
+			return
+		}
+
+		payloadBytes, _ := common.RandomBytes(32)
+		messageToSign := hex.EncodeToString(payloadBytes)
+
+		opts := map[string]interface{}{}
+		if tc.Options != "" {
+			json.Unmarshal([]byte(tc.Options), &opts)
+		}
+
+		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+
+		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+		if err != nil {
+			t.Errorf("failed to verify signature for vault: %s", err.Error())
+			return
+		}
+
+		if verifyresponse.Verified != true {
+			t.Error("failed to verify signature for vault")
+			return
+		}
+
+		// now we will run the detached verification with invalid parameters for each of the test keys
+		// testing no spec, expect 422
+		_, err = provide.VerifyDetachedSignature(*token, "", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
+		if err == nil {
+			t.Errorf("verified invalid detached signature with no spec")
+		}
+
+		// testing no message, expecting 422
+		_, err = provide.VerifyDetachedSignature(*token, tc.Spec, "", *sigresponse.Signature, *key.PublicKey, opts)
+		if err == nil {
+			t.Errorf("verified invalid detached signature with no message")
+		}
+
+		// testing no signature, expecting 422
+		_, err = provide.VerifyDetachedSignature(*token, tc.Spec, messageToSign, "", *key.PublicKey, opts)
+		if err == nil {
+			t.Errorf("verified invalid detached signature with no signature")
+		}
+
+		// testing no pubkey, expecting 422
+		_, err = provide.VerifyDetachedSignature(*token, tc.Spec, messageToSign, *sigresponse.Signature, "", opts)
+		if err == nil {
+			t.Errorf("verified invalid detached signature with no public key")
+		}
+
+		//testing no algorithm (for RSA), expecting 422
+		_, err = provide.VerifyDetachedSignature(*token, tc.Spec, messageToSign, *sigresponse.Signature, *key.PublicKey, map[string]interface{}{})
+		if err == nil {
+			t.Errorf("verified invalid detached RSA signature with no options")
+			return
+		}
+
+		//testing invalid spec, expecting 500
+		_, err = provide.VerifyDetachedSignature(*token, "invalid_spec", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
+		if err == nil {
+			t.Errorf("verified invalid detached RSA signature with no options")
+			return
+		}
+
 	}
 }

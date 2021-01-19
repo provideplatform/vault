@@ -935,17 +935,17 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	if params.Message == nil || *params.Message == "" {
+	if common.StringOrNil(*params.Message) == nil {
 		provide.RenderError("message is required", 422, c)
 		return
 	}
 
-	if params.Signature == nil || *params.Signature == "" {
+	if common.StringOrNil(*params.Signature) == nil {
 		provide.RenderError("signature is required", 422, c)
 		return
 	}
 
-	if params.PublicKeyHex == nil || *params.PublicKeyHex == "" {
+	if common.StringOrNil(*params.PublicKeyHex) == nil {
 		provide.RenderError("public key (hex) is required", 422, c)
 		return
 	}
@@ -959,7 +959,6 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 
 	// next confirm that the public key provided is in hex format
 	pubkeyhex := strings.Replace(*params.PublicKeyHex, "0x", "", -1)
-
 	publicKey, err := hex.DecodeString(pubkeyhex)
 	if err != nil {
 		provide.RenderError("error converting public key (hex) to bytes", 422, c)
@@ -1000,7 +999,7 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		common.Log.Debugf("verification error: %s", verifyError)
 	}
 
-	provide.Render(&KeySignVerifyRequestResponse{
+	provide.Render(&DetachedVerifyRequestResponse{
 		Verified: &verified,
 	}, 201, c)
 

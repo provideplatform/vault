@@ -923,8 +923,14 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		return
 	}
 
+	// // first confirm we have the required input parameters
+	// if params.Spec == nil || *params.Spec == "" {
+	// 	provide.RenderError("key spec is required", 422, c)
+	// 	return
+	// }
+
 	// first confirm we have the required input parameters
-	if params.Spec == nil || *params.Spec == "" {
+	if common.StringOrNil(*params.Spec) == nil {
 		provide.RenderError("key spec is required", 422, c)
 		return
 	}
@@ -976,8 +982,6 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 
 	opts := params.Options
 
-	common.Log.Debugf("message converted to bytes from %s", messagehex)
-	common.Log.Debugf("signature converted to bytes from %s", signaturehex)
 	// generate a vault key from the parameters
 	key := &Key{}
 	key.PublicKey = &publicKey
@@ -993,7 +997,7 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	}
 
 	if verifyError != nil {
-		common.Log.Debugf("verification error: %s", err.Error())
+		common.Log.Debugf("verification error: %s", verifyError)
 	}
 
 	provide.Render(&KeySignVerifyRequestResponse{

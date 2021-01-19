@@ -1914,14 +1914,14 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 			t.Errorf("verified invalid detached signature with no public key")
 		}
 
-		//testing no algorithm (for RSA), expecting 422
+		// testing no algorithm (for RSA), expecting 422
 		_, err = provide.VerifyDetachedSignature(*token, tc.Spec, messageToSign, *sigresponse.Signature, *key.PublicKey, map[string]interface{}{})
 		if err == nil {
 			t.Errorf("verified invalid detached RSA signature with no options")
 			return
 		}
 
-		//testing invalid spec, expecting 500
+		// testing invalid spec, expecting 500
 		_, err = provide.VerifyDetachedSignature(*token, "invalid_spec", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
 		if err == nil {
 			t.Errorf("verified invalid detached RSA signature with no options")

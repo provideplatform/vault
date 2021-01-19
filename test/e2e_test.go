@@ -1924,7 +1924,20 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 		// testing invalid spec, expecting 500
 		_, err = provide.VerifyDetachedSignature(*token, "invalid_spec", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
 		if err == nil {
-			t.Errorf("verified invalid detached RSA signature with no options")
+			t.Errorf("verified invalid spec")
+			return
+		}
+
+		invalidPayload, _ := common.RandomBytes(32)
+		invalidMessage := hex.EncodeToString(invalidPayload)
+
+		// testing invalid signature, expecting 500
+		// but this should really be a 201 with verified false (for consistency)
+		// because the only thing that has gone wrong is the signature is invalid
+		// as opposed to a parameter error
+		_, err = provide.VerifyDetachedSignature(*token, "invalid_spec", invalidMessage, *sigresponse.Signature, *key.PublicKey, opts)
+		if err == nil {
+			t.Errorf("verified invalid spec")
 			return
 		}
 

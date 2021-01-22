@@ -62,6 +62,30 @@ func keyFactory(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescript
 	return key, nil
 }
 
+func keyFactoryWithSeed(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription, seedPhrase string) (*provide.Key, error) {
+
+	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
+		"type":        keyType,
+		"usage":       keyUsage,
+		"spec":        keySpec,
+		"name":        keyName,
+		"description": keyDescription,
+		"mnemonic":    seedPhrase,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create key error: %s", err.Error())
+	}
+
+	key := &provide.Key{}
+	respRaw, err := json.Marshal(resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshall key data: %s", err.Error())
+	}
+	json.Unmarshal(respRaw, &key)
+	return key, nil
+}
+
 func vaultFactory(token, name, desc string) (*provide.Vault, error) {
 	resp, err := provide.CreateVault(token, map[string]interface{}{
 		"name":        name,
@@ -1941,5 +1965,75 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 			return
 		}
 
+	}
+}
+
+func TestCreateHDWalletWithSeed(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	seed := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	if key.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key.ID)
+		return
+	}
+
+	t.Logf("publickeyhex: %s", *key.PublicKey)
+	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	if key2.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key2.ID)
+		return
+	}
+
+	if *key.PublicKey != *key2.PublicKey {
+		t.Errorf("deterministic wallet with seed did not create the same key")
+		return
+	}
+}
+
+func TestCreateHDWalletWithInvalidSeed(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	seed := "kraffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+	_, err = keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err == nil {
+		t.Errorf("created HD wallet with invalid seed")
+		return
+	}
+
+	if err != nil {
+		t.Logf("error received: %s", err.Error())
 	}
 }

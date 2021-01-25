@@ -60,6 +60,9 @@ const KeySpecECCEd25519 = "Ed25519"
 // KeySpecECCSecp256k1 secp256k1 key spec
 const KeySpecECCSecp256k1 = "secp256k1"
 
+// KeySpecBLS12381 BLS12-381 key curve
+const KeySpecBLS12381 = "BLS12-381"
+
 // NonceSizeSymmetric chacha20 & aes256 encrypt/decrypt nonce size
 const NonceSizeSymmetric = 12
 

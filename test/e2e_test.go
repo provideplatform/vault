@@ -1989,6 +1989,7 @@ func TestCreateHDWalletWithSeed(t *testing.T) {
 		return
 	}
 
+	//
 	if key.PublicKey == nil {
 		t.Errorf("failed to assign xpub key on hd wallet; %s", key.ID)
 		return
@@ -2035,5 +2036,159 @@ func TestCreateHDWalletWithInvalidSeed(t *testing.T) {
 
 	if err != nil {
 		t.Logf("error received: %s", err.Error())
+	}
+}
+
+func TestHDWalletSeedAutoSign(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	seed := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	for iteration := 0; iteration < 10; iteration++ {
+		payloadBytes, _ := common.RandomBytes(32)
+		messageToSign := hex.EncodeToString(payloadBytes)
+
+		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+
+		sigresponse2, err := provide.SignMessage(*token, vault.ID.String(), key2.ID.String(), messageToSign, nil)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+
+		if *sigresponse.Signature != *sigresponse2.Signature {
+			t.Errorf("mismatch in signatures from key with provided seed")
+			return
+		}
+
+		// set up the verification options
+		opts := map[string]interface{}{}
+		options := fmt.Sprintf(`{"hdwallet":{"coin_abbr":"ETH", "index":%d}}`, iteration)
+		json.Unmarshal([]byte(options), &opts)
+
+		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+		if err != nil {
+			t.Errorf("failed to verify signature for vault: %s", err.Error())
+			return
+		}
+
+		verifyresponse2, err := provide.VerifySignature(*token, vault.ID.String(), key2.ID.String(), messageToSign, *sigresponse2.Signature, opts)
+		if err != nil {
+			t.Errorf("failed to verify signature 2 for vault: %s", err.Error())
+			return
+		}
+
+		if verifyresponse.Verified != true {
+			t.Errorf("failed to verify signature for vault!")
+			return
+		}
+
+		if verifyresponse2.Verified != true {
+			t.Errorf("failed to verify signature 2 for vault!")
+			return
+		}
+
+	}
+}
+
+func TestHDWalletSeedLedgerDerivationPath(t *testing.T) {
+
+	// this test will generate an ethereum address using a particular derivation path
+	// using the mechanism that the ledger wallet uses to create new ethereum addresses
+	// we will then confirm that repeating this process
+	// for two different keys using the same seed phrase
+	// generates the same ETH address
+
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	seed := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+
+	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	// set up the verification options using a ledger-style Account path
+	opts := map[string]interface{}{}
+	path := `m/44'/60'/2'/0/0`
+	options := fmt.Sprintf(`{"hdwallet":{"hd_derivation_path":"%s"}}`, path)
+	json.Unmarshal([]byte(options), &opts)
+
+	payloadBytes, _ := common.RandomBytes(32)
+	messageToSign := hex.EncodeToString(payloadBytes)
+
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	sigresponse2, err := provide.SignMessage(*token, vault.ID.String(), key2.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	if *sigresponse.Signature != *sigresponse2.Signature {
+		t.Errorf("mismatch in signatures from derived key with provided seed")
+		return
+	}
+
+	if *sigresponse.Address != *sigresponse2.Address {
+		t.Errorf("mismatch in generated address from derived key and seed")
+		return
+	}
+	if *sigresponse.DerivationPath != *sigresponse2.DerivationPath {
+		t.Errorf("mismatch in derivation path")
+		return
+	}
+
+	if *sigresponse.DerivationPath != path {
+		t.Errorf("returned derivation path does not correspond to provided derivation path. Expected: %s, received %s", path, *sigresponse.DerivationPath)
+		return
 	}
 }

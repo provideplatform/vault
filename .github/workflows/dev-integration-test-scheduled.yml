@@ -1,7 +1,7 @@
 name: dev-integration-test-scheduled
 on:
   schedule:
-    - cron: '0,30 * * * *'  # every half hour  
+    - cron: '0 * * * *'  # every hour on the hour
 jobs:
   integration-test-vault:
     runs-on: ubuntu-latest

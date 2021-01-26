@@ -9,7 +9,7 @@ require (
 	github.com/ethereum/go-ethereum v1.9.22
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang-migrate/migrate v3.5.4+incompatible
-	github.com/herumi/bls v0.0.0-20201117031400-3005a32a97eb // indirect
+	github.com/herumi/bls-eth-go-binary v0.0.0-20210102080045-a126987eca2b
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
 	github.com/kthomas/go-db-config v0.0.0-20200612131637-ec0436a9685e

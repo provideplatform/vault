@@ -15,7 +15,9 @@ type BLS12381KeyPair struct {
 // CreateBLS12381KeyPair creates an BLS12-381 keypair
 func CreateBLS12381KeyPair() (*BLS12381KeyPair, error) {
 
+	// TODO bls.Init is not threadsafe!
 	bls.Init(bls.BLS12_381)
+
 	bls.SetETHmode(bls.EthModeDraft07)
 
 	// create private and public BLS keys using BLS library

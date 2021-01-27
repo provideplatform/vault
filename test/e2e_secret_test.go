@@ -1,4 +1,4 @@
-// +build integration vault
+// +build integration secret
 
 package test
 

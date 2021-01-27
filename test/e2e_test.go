@@ -5,164 +5,14 @@ package test
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"testing"
 
-	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
 	cryptovault "github.com/provideapp/vault/vault"
-	ident "github.com/provideservices/provide-go/api/ident"
 	provide "github.com/provideservices/provide-go/api/vault"
 )
-
-func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
-	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
-		"type":        keyType,
-		"usage":       keyUsage,
-		"spec":        keySpec,
-		"name":        keyName,
-		"description": keyDescription,
-		"ephemeral":   true,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create key error: %s", err.Error())
-	}
-
-	key := &provide.Key{}
-	respRaw, err := json.Marshal(resp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshall key data: %s", err.Error())
-	}
-	json.Unmarshal(respRaw, &key)
-	return key, nil
-}
-
-func keyFactory(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
-	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
-		"type":        keyType,
-		"usage":       keyUsage,
-		"spec":        keySpec,
-		"name":        keyName,
-		"description": keyDescription,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create key error: %s", err.Error())
-	}
-
-	key := &provide.Key{}
-	respRaw, err := json.Marshal(resp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshall key data: %s", err.Error())
-	}
-	json.Unmarshal(respRaw, &key)
-	return key, nil
-}
-
-func vaultFactory(token, name, desc string) (*provide.Vault, error) {
-	resp, err := provide.CreateVault(token, map[string]interface{}{
-		"name":        name,
-		"description": desc,
-	})
-	if err != nil {
-		return nil, err
-	}
-	vlt := &provide.Vault{}
-	respRaw, err := json.Marshal(resp)
-	if err != nil {
-		return nil, err
-	}
-	json.Unmarshal(respRaw, &vlt)
-	return vlt, nil
-}
-
-func userFactory(email, password string) (*uuid.UUID, error) {
-	resp, err := ident.CreateUser("", map[string]interface{}{
-		"first_name": "A",
-		"last_name":  "User",
-		"email":      email,
-		"password":   password,
-	})
-	if err != nil {
-		return nil, errors.New("failed to create user")
-	}
-	usrID := &resp.ID
-	return usrID, nil
-}
-
-func userTokenFactory() (*string, error) {
-	newUUID, err := uuid.NewV4()
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("error generating uuid %s", err.Error()))
-	}
-	email := fmt.Sprintf("%s@provide-integration-tests.com", newUUID.String())
-	password := fmt.Sprintf("%s", newUUID.String())
-
-	userID, err := userFactory(email, password)
-	if err != nil || userID == nil {
-		return nil, err
-	}
-
-	resp, err := ident.Authenticate(email, password)
-	if err != nil {
-		return nil, errors.New("failed to authenticate user")
-	}
-	return resp.Token.Token, nil
-}
-
-func init() {
-	token, err := userTokenFactory()
-	if err != nil {
-		log.Printf("failed to create token; %s", err.Error())
-		return
-	}
-
-	//test getting a new unsealer key
-	newkeyresp, err := provide.GenerateSeal(*token, map[string]interface{}{})
-	if err != nil {
-		log.Printf("error generating new unsealer key %s", err.Error())
-	}
-	log.Printf("newkeyresp: %+v", *newkeyresp)
-	log.Printf("newly generated unsealer key %s", *newkeyresp.UnsealerKey)
-	log.Printf("newly generated unsealer key hash %s", *newkeyresp.ValidationHash)
-
-	_, err = provide.Unseal(token, map[string]interface{}{
-		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
-	})
-	if err != nil {
-		log.Printf("**vault not unsealed**. error: %s", err.Error())
-		return
-	}
-
-	// now try it again, and we expect a 204 (no response) when trying to unseal a sealed vault
-	_, err = provide.Unseal(token, map[string]interface{}{
-		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
-	})
-	if err != nil {
-		log.Printf("**second unseal attempt failed when it should pass**. error: %s", err.Error())
-		return
-	}
-
-}
-
-func unsealVault() error {
-	token, err := userTokenFactory()
-	if err != nil {
-		return fmt.Errorf("failed to create token; %s", err.Error())
-
-	}
-
-	_, err = provide.Unseal(token, map[string]interface{}{
-		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
-	})
-	if err != nil {
-		return fmt.Errorf("**vault not unsealed**. error: %s", err.Error())
-	}
-	return nil
-}
 
 func TestSealUnsealer(t *testing.T) {
 	// we're going to unseal the vault,
@@ -1728,46 +1578,6 @@ func TestArbitrarySignatureEd25519(t *testing.T) {
 	}
 
 	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
-	if err != nil {
-		t.Errorf("failed to verify signature for vault: %s", err.Error())
-		return
-	}
-
-	if verifyresponse.Verified != true {
-		t.Error("failed to verify signature for vault")
-		return
-	}
-}
-
-func TestAPIVerifyBLSSignature(t *testing.T) {
-	t.Parallel()
-	token, err := userTokenFactory()
-	if err != nil {
-		t.Errorf("failed to create token; %s", err.Error())
-		return
-	}
-
-	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
-	if err != nil {
-		t.Errorf("failed to create vault; %s", err.Error())
-		return
-	}
-
-	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecBLS12381, "namey name", "cute description")
-	if err != nil {
-		t.Errorf("failed to create key; %s", err.Error())
-		return
-	}
-
-	payloadBytes, _ := common.RandomBytes(32)
-	messageToSign := hex.EncodeToString(payloadBytes)
-	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
-	if err != nil {
-		t.Errorf("failed to sign message %s", err.Error())
-		return
-	}
-
-	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, nil)
 	if err != nil {
 		t.Errorf("failed to verify signature for vault: %s", err.Error())
 		return

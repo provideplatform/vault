@@ -1,8 +1,6 @@
 package crypto
 
 import (
-	"encoding/json"
-
 	"github.com/herumi/bls-eth-go-binary/bls"
 )
 
@@ -28,16 +26,10 @@ func CreateBLS12381KeyPair() (*BLS12381KeyPair, error) {
 	// convert the private and public key structs to bytes for storing in the DB etc.
 	BLSKeyPair := BLS12381KeyPair{}
 
-	privkey, err := json.Marshal(privateKey)
-	if err != nil {
-		return nil, ErrCannotGenerateKey
-	}
+	privkey := privateKey.Serialize()
 	BLSKeyPair.PrivateKey = &privkey
 
-	pubkey, err := json.Marshal(publicKey)
-	if err != nil {
-		return nil, ErrCannotGenerateKey
-	}
+	pubkey := publicKey.Serialize()
 	BLSKeyPair.PublicKey = &pubkey
 
 	return &BLSKeyPair, nil
@@ -51,7 +43,7 @@ func (k *BLS12381KeyPair) Sign(payload []byte) ([]byte, error) {
 	}
 
 	var blsPrivateKey bls.SecretKey
-	json.Unmarshal(*k.PrivateKey, &blsPrivateKey)
+	blsPrivateKey.Deserialize(*k.PrivateKey)
 
 	// sign the payload and serialize to []byte
 	sig := blsPrivateKey.SignByte(payload).Serialize()
@@ -66,14 +58,13 @@ func (k *BLS12381KeyPair) Verify(payload []byte, sig []byte) error {
 		return ErrInvalidPublicKey
 	}
 
-	// get the BLS public key struct from the publickey bytes
+	// deserialize the BLS public key struct from the publickey bytes
 	var blsPublicKey bls.PublicKey
-	json.Unmarshal(*k.PublicKey, &blsPublicKey)
+	blsPublicKey.Deserialize(*k.PublicKey)
 
-	//unmarshal the signature to bls.Sign struct
+	// deserialize the BLS signature from the sig bytes
 	blsSignature := bls.Sign{}
-
-	json.Unmarshal(sig, &blsSignature)
+	blsSignature.Deserialize(sig)
 
 	// verify the signature using the BLS public key
 	verified := blsSignature.VerifyByte(&blsPublicKey, payload)

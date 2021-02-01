@@ -213,64 +213,23 @@ func AggregateTestSameMessage() bool {
 	return verified
 }
 
-// AggregateTestThreshold is the WIP for k-of-n threshold signatures
-func AggregateTestThreshold() bool {
+// AggregateSigs is a placeholder function for the aggregation of BLS sigs
+func AggregateSigs(signatures []*string) (*string, error) {
+	// convert string array from hex to bytes
+	// create an bls.Sign object
+	// run the aggregate operation on the signatures
+	// serialize the aggregate sig
+	// convert it to hex
+	// and return
+	return nil, nil
+}
 
-	// TODO bls.Init is not threadsafe!
-	bls.Init(bls.BLS12_381)
-
-	bls.SetETHmode(bls.EthModeDraft07)
-
-	// numKeys is the number of keys/signatures we'll aggregate
-	const numKeys = 3
-
-	var blsPubKeys [numKeys]bls.PublicKey
-	var blsPrivKeys [numKeys]*bls.SecretKey
-
-	// create the keys
-	for looper := 0; looper < numKeys; looper++ {
-		var privateKey bls.SecretKey
-		privateKey.SetByCSPRNG()
-		publicKey := privateKey.GetPublicKey()
-
-		// put the key into the relevant key array
-		blsPubKeys[looper] = *publicKey
-		blsPrivKeys[looper] = &privateKey
-	}
-
-	// the payloads to be signed can be the same
-	// if we do a verify with no check flag
-	var aggregatePayload []byte
-	var payloads [numKeys][]byte
-
-	// we'll set up a single message payload for all keys to sign
-	payloadBytes, _ := common.RandomBytes(32)
-
-	// get numKeys payloads
-	for looper := 0; looper < numKeys; looper++ {
-		// put the same payload into the payloads array
-		payloads[looper] = payloadBytes
-	}
-
-	// join the payloads together into a single byte array
-	for looper := 0; looper < numKeys; looper++ {
-		aggregatePayload = append(aggregatePayload, payloads[looper]...)
-	}
-
-	// use the private keys array to create an array of signatures of each payload
-	var blsSigs [numKeys]bls.Sign
-
-	for looper := 0; looper < numKeys; looper++ {
-		blsSig := &bls.Sign{}
-		blsSig = blsPrivKeys[looper].SignByte(payloads[looper])
-		blsSigs[looper] = *blsSig
-	}
-
-	//aggregate the signatures into a single BLS signature
-	aggregateSig := &bls.Sign{}
-	aggregateSig.Aggregate(blsSigs[:])
-
-	// verify the aggregated signature using the combined payload
-	verified := aggregateSig.AggregateVerifyNoCheck(blsPubKeys[:], aggregatePayload)
-	return verified
+// AggregateVerify is a placeholder function for the verification of aggregated bls sigs
+func AggregateVerify(signature *string, messages, publickeys []*string) bool {
+	// convert the signature back into a BLS signature
+	// convert the publickeys into an array of n bls.PublicKeys
+	// convert the payload into a []byte, ensuring the size is 32 *n
+	// run the aggregateverifynocheck on the pub keys and messages
+	// return true if it passes, or false if it fails
+	return false
 }

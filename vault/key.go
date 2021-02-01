@@ -158,6 +158,22 @@ type KeySignVerifyRequestResponse struct {
 	DerivationPath *string         `json:"hd_derivation_path,omitempty"`
 }
 
+// BLSAggregateRequestResponse aggregates n BLS signatures into one signature
+type BLSAggregateRequestResponse struct {
+	Signatures         []*string `json:"signatures,omitempty"`
+	AggregateSignature *string   `json:"aggregate_signature,omitempty"`
+}
+
+// BLSAggregateVerifyRequestResponse verifies an aggregated BLS signature
+// given the aggregates signature, the public keys used to generate the signature
+// and the messages signed by those public keys
+type BLSAggregateVerifyRequestResponse struct {
+	Messages   []*string `json:"messages,omitempty"`
+	PublicKeys []*string `json:"public_keys,omitempty"`
+	Signature  *string   `json:"signature,omitempty"`
+	Verified   *bool     `json:"verified,omitempty"`
+}
+
 // createAES256GCM creates a key using a random seed
 func (k *Key) createAES256GCM() error {
 	privatekey, err := crypto.CreateAES256GCMSeed()

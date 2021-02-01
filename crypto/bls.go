@@ -34,11 +34,11 @@ func CreateBLS12381KeyPair() (*BLS12381KeyPair, error) {
 	BLSKeyPair.PublicKey = &pubkey
 
 	// let's detour from generating keys into some aggregate tests...
-	verified := AggregateTestDifferentMessages()
-	common.Log.Debugf("verification of aggregate signature is: %t", verified)
+	// verified := AggregateTestDifferentMessages()
+	// common.Log.Debugf("verification of aggregate signature is: %t", verified)
 
-	verified = AggregateTestSameMessage()
-	common.Log.Debugf("verification of aggregate signature is: %t", verified)
+	// verified = AggregateTestSameMessage()
+	// common.Log.Debugf("verification of aggregate signature is: %t", verified)
 
 	return &BLSKeyPair, nil
 }
@@ -153,6 +153,68 @@ func AggregateTestDifferentMessages() bool {
 // looking at doing a fast verify of the same signed message
 // in order to run through in debug mode, just to get a working example
 func AggregateTestSameMessage() bool {
+
+	// TODO bls.Init is not threadsafe!
+	bls.Init(bls.BLS12_381)
+
+	bls.SetETHmode(bls.EthModeDraft07)
+
+	// numKeys is the number of keys/signatures we'll aggregate
+	const numKeys = 3
+
+	var blsPubKeys [numKeys]bls.PublicKey
+	var blsPrivKeys [numKeys]*bls.SecretKey
+
+	// create the keys
+	for looper := 0; looper < numKeys; looper++ {
+		var privateKey bls.SecretKey
+		privateKey.SetByCSPRNG()
+		publicKey := privateKey.GetPublicKey()
+
+		// put the key into the relevant key array
+		blsPubKeys[looper] = *publicKey
+		blsPrivKeys[looper] = &privateKey
+	}
+
+	// the payloads to be signed can be the same
+	// if we do a verify with no check flag
+	var aggregatePayload []byte
+	var payloads [numKeys][]byte
+
+	// we'll set up a single message payload for all keys to sign
+	payloadBytes, _ := common.RandomBytes(32)
+
+	// get numKeys payloads
+	for looper := 0; looper < numKeys; looper++ {
+		// put the same payload into the payloads array
+		payloads[looper] = payloadBytes
+	}
+
+	// join the payloads together into a single byte array
+	for looper := 0; looper < numKeys; looper++ {
+		aggregatePayload = append(aggregatePayload, payloads[looper]...)
+	}
+
+	// use the private keys array to create an array of signatures of each payload
+	var blsSigs [numKeys]bls.Sign
+
+	for looper := 0; looper < numKeys; looper++ {
+		blsSig := &bls.Sign{}
+		blsSig = blsPrivKeys[looper].SignByte(payloads[looper])
+		blsSigs[looper] = *blsSig
+	}
+
+	//aggregate the signatures into a single BLS signature
+	aggregateSig := &bls.Sign{}
+	aggregateSig.Aggregate(blsSigs[:])
+
+	// verify the aggregated signature using the combined payload
+	verified := aggregateSig.AggregateVerifyNoCheck(blsPubKeys[:], aggregatePayload)
+	return verified
+}
+
+// AggregateTestThreshold is the WIP for k-of-n threshold signatures
+func AggregateTestThreshold() bool {
 
 	// TODO bls.Init is not threadsafe!
 	bls.Init(bls.BLS12_381)

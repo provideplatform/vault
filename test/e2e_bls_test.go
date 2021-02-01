@@ -4,12 +4,60 @@ package test
 
 import (
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/provideapp/vault/common"
 	cryptovault "github.com/provideapp/vault/vault"
 	provide "github.com/provideservices/provide-go/api/vault"
 )
+
+// placeholder until the params are locked down
+func ProvideGoAggregateSigs(token *string, walletID string, params map[string]interface{}) (*cryptovault.BLSAggregateRequestResponse, error) {
+	uri := fmt.Sprintf("bls/aggregate")
+	status, resp, err := provide.InitVaultService(token).Post(uri, params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if status != 201 {
+		return nil, fmt.Errorf("failed to aggregate bls signatures. status: %v", status)
+	}
+
+	response := &cryptovault.BLSAggregateRequestResponse{}
+	responseRaw, _ := json.Marshal(resp)
+	err = json.Unmarshal(responseRaw, &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get aggregate response. status: %v; %s", status, err.Error())
+	}
+
+	return response, nil
+}
+
+// placeholder until the params are locked down
+func ProvideGoVerifyAggregateSigs(token *string, params map[string]interface{}) (*cryptovault.KeySignVerifyRequestResponse, error) {
+	uri := fmt.Sprintf("bls/verify")
+	status, resp, err := provide.InitVaultService(token).Post(uri, params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if status != 201 {
+		return nil, fmt.Errorf("failed to aggregate bls signatures. status: %v", status)
+	}
+
+	response := &cryptovault.KeySignVerifyRequestResponse{}
+	responseRaw, _ := json.Marshal(resp)
+	err = json.Unmarshal(responseRaw, &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get aggregate signature verification response. status: %v; %s", status, err.Error())
+	}
+
+	return response, nil
+}
 
 func TestCreateBLSKey(t *testing.T) {
 

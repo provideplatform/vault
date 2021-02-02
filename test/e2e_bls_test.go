@@ -14,7 +14,7 @@ import (
 )
 
 // placeholder until the params are locked down
-func ProvideGoAggregateSigs(token *string, walletID string, params map[string]interface{}) (*cryptovault.BLSAggregateRequestResponse, error) {
+func ProvideGoAggregateSigs(token *string, params map[string]interface{}) (*cryptovault.BLSAggregateRequestResponse, error) {
 	uri := fmt.Sprintf("bls/aggregate")
 	status, resp, err := provide.InitVaultService(token).Post(uri, params)
 
@@ -165,163 +165,141 @@ func TestAPIVerifyBLSSignature_ShouldFail(t *testing.T) {
 	}
 }
 
-// func TestAPIVerifyAggregateBLSSignature(t *testing.T) {
-// 	t.Parallel()
-// 	token, err := userTokenFactory()
-// 	if err != nil {
-// 		t.Errorf("failed to create token; %s", err.Error())
-// 		return
-// 	}
+func TestCreateAggregateSignature(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
 
-// 	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
-// 	if err != nil {
-// 		t.Errorf("failed to create vault; %s", err.Error())
-// 		return
-// 	}
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
 
-// 	var publickeys [3]bls.PublicKey
-// 	blsPublicKey := &bls.PublicKey{}
+	// generate n keys
+	const numKeys = 10
 
-// 	key1, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecBLS12381, "namey name", "cute description")
-// 	if err != nil {
-// 		t.Errorf("failed to create key; %s", err.Error())
-// 		return
-// 	}
+	// 	// set up a payload to sign
+	payloadBytes, _ := common.RandomBytes(32)
+	messageToSign := hex.EncodeToString(payloadBytes)
 
-// 	// get the hex public key from the response
-// 	pubkey := *key1.PublicKey
-// 	t.Logf("public key: %s", pubkey)
-// 	pubkey = strings.Replace(pubkey, "0x", "", -1)
-// 	// convert it to bytes
-// 	publickeybytes, err := hex.DecodeString(pubkey)
-// 	if err != nil {
-// 		t.Logf("error decoding public key 1 hex. Error: %s", err.Error())
-// 	}
-// 	t.Logf("public key bytes: %+v", publickeybytes)
-// 	t.Logf("public key length: %d", len(publickeybytes))
-// 	// deserialize it back into a bls public key
-// 	err = blsPublicKey.Deserialize(publickeybytes)
-// 	if err != nil {
-// 		t.Errorf("error deserializing BLS public key. Error: %s", err.Error())
-// 		return
-// 	}
-// 	publickeys[0] = *blsPublicKey
+	// set up the array of hex-encoded signatures
+	var signatures [numKeys]string
+	var publicKeys [numKeys]string
 
-// 	key2, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecBLS12381, "namey name", "cute description")
-// 	if err != nil {
-// 		t.Errorf("failed to create key; %s", err.Error())
-// 		return
-// 	}
-// 	// get the hex public key from the response
-// 	pubkey = *key2.PublicKey
-// 	pubkey = strings.Replace(pubkey, "0x", "", -1)
-// 	// convert it to bytes
-// 	publickeybytes, err = hex.DecodeString(pubkey)
-// 	if err != nil {
-// 		t.Logf("error decoding public key 2 hex. Error: %s", err.Error())
-// 	}
-// 	// deserialize it back into a bls public key
-// 	err = blsPublicKey.Deserialize(publickeybytes)
-// 	if err != nil {
-// 		t.Logf("error deserializing BLS public key 2. Error: %s", err.Error())
-// 	}
-// 	publickeys[1] = *blsPublicKey
+	for looper := 0; looper < numKeys; looper++ {
 
-// 	key3, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecBLS12381, "namey name", "cute description")
-// 	if err != nil {
-// 		t.Errorf("failed to create key; %s", err.Error())
-// 		return
-// 	}
-// 	// get the hex public key from the response
-// 	pubkey = *key3.PublicKey
-// 	pubkey = strings.Replace(pubkey, "0x", "", -1)
-// 	// convert it to bytes
-// 	publickeybytes, err = hex.DecodeString(pubkey)
-// 	if err != nil {
-// 		t.Logf("error decoding public key 3 hex. Error: %s", err.Error())
-// 	}
-// 	// deserialize it back into a bls public key
-// 	err = blsPublicKey.Deserialize(publickeybytes)
-// 	if err != nil {
-// 		t.Logf("error deserializing BLS public key 3. Error: %s", err.Error())
-// 	}
-// 	publickeys[2] = *blsPublicKey
+		// generate a key
+		key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecBLS12381, "namey name", "cute description")
+		if err != nil {
+			t.Errorf("failed to create key; %s", err.Error())
+			return
+		}
+		t.Logf("key generated. %s", key.ID)
+		publicKeys[looper] = *key.PublicKey
+		t.Logf("public key received: %s", *key.PublicKey)
 
-// 	// set up a payload to sign
-// 	payloadBytes, _ := common.RandomBytes(32)
-// 	messageToSign := hex.EncodeToString(payloadBytes)
+		// sign the message
+		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+		t.Logf("signature returned: %s", *sigresponse.Signature)
+		signatures[looper] = *sigresponse.Signature
+	}
 
-// 	// create an array of signatures
-// 	var signatures []bls.Sign
-// 	blsSignature := &bls.Sign{}
+	//ok, so let's try and call aggregate without doing anything
+	aggresponse, err := ProvideGoAggregateSigs(token, map[string]interface{}{
+		"signatures": signatures,
+	})
+	// get an aggregate without throwing an error (little dreams!)
+	t.Logf("response: %+v", *aggresponse.AggregateSignature)
+}
 
-// 	sigresponse1, err := provide.SignMessage(*token, vault.ID.String(), key1.ID.String(), messageToSign, nil)
-// 	if err != nil {
-// 		t.Errorf("failed to sign message %s", err.Error())
-// 		return
-// 	}
-// 	// get the hex signature from the response
-// 	signature := *sigresponse1.Signature
-// 	signature = strings.Replace(signature, "0x", "", -1)
-// 	// convert it to bytes
-// 	signaturebytes, err := hex.DecodeString(signature)
-// 	if err != nil {
-// 		t.Logf("error decoding signature 1 hex. Error: %s", err.Error())
-// 	}
-// 	// deserialize it back into a bls signature
-// 	err = blsSignature.Deserialize(signaturebytes)
-// 	if err != nil {
-// 		t.Logf("error deserializing BLS signature 1. Error: %s", err.Error())
-// 	}
-// 	signatures[0] = *blsSignature
+func TestVerifyAggregateSignature(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
 
-// 	sigresponse2, err := provide.SignMessage(*token, vault.ID.String(), key2.ID.String(), messageToSign, nil)
-// 	if err != nil {
-// 		t.Errorf("failed to sign message %s", err.Error())
-// 		return
-// 	}
-// 	// get the hex signature from the response
-// 	signature = *sigresponse2.Signature
-// 	signature = strings.Replace(signature, "0x", "", -1)
-// 	// convert it to bytes
-// 	signaturebytes, err = hex.DecodeString(signature)
-// 	if err != nil {
-// 		t.Logf("error decoding signature 2 hex. Error: %s", err.Error())
-// 	}
-// 	// deserialize it back into a bls signature
-// 	err = blsSignature.Deserialize(signaturebytes)
-// 	if err != nil {
-// 		t.Logf("error deserializing BLS signature 2. Error: %s", err.Error())
-// 	}
-// 	signatures[1] = *blsSignature
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
 
-// 	sigresponse3, err := provide.SignMessage(*token, vault.ID.String(), key3.ID.String(), messageToSign, nil)
-// 	if err != nil {
-// 		t.Errorf("failed to sign message %s", err.Error())
-// 		return
-// 	}
-// 	// get the hex signature from the response
-// 	signature = *sigresponse3.Signature
-// 	signature = strings.Replace(signature, "0x", "", -1)
-// 	// convert it to bytes
-// 	signaturebytes, err = hex.DecodeString(signature)
-// 	if err != nil {
-// 		t.Logf("error decoding signature hex. Error: %s", err.Error())
-// 	}
-// 	// deserialize it back into a bls signature
-// 	err = blsSignature.Deserialize(signaturebytes)
-// 	if err != nil {
-// 		t.Logf("error deserializing BLS signature 3. Error: %s", err.Error())
-// 	}
-// 	signatures[2] = *blsSignature
+	// generate n keys
+	const numKeys = 10
 
-// 	// now let's aggregate the signatures
-// 	blsAggregateSignature := &bls.Sign{}
-// 	blsAggregateSignature.Aggregate(signatures)
+	// 	// set up a payload to sign
+	payloadBytes, _ := common.RandomBytes(32)
+	messageToSign := hex.EncodeToString(payloadBytes)
 
-// 	// and attempt to verify them
-// 	verified := blsAggregateSignature.FastAggregateVerify(publickeys[:], payloadBytes)
+	// set up the array of hex-encoded signatures
+	var signatures [numKeys]string
+	var publicKeys [numKeys]string
 
-// 	t.Logf("verified is: %t", verified)
+	for looper := 0; looper < numKeys; looper++ {
 
-// }
+		// generate a key
+		key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecBLS12381, "namey name", "cute description")
+		if err != nil {
+			t.Errorf("failed to create key; %s", err.Error())
+			return
+		}
+		t.Logf("key generated. %s", key.ID)
+		publicKeys[looper] = *key.PublicKey
+		t.Logf("public key received: %s", *key.PublicKey)
+
+		// sign the message
+		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+		t.Logf("signature returned: %s", *sigresponse.Signature)
+		signatures[looper] = *sigresponse.Signature
+	}
+
+	//ok, so let's try and call aggregate without doing anything
+	aggresponse, err := ProvideGoAggregateSigs(token, map[string]interface{}{
+		"signatures": signatures,
+	})
+	// get an aggregate without throwing an error (little dreams!)
+	t.Logf("response: %+v", *aggresponse.AggregateSignature)
+
+	//okay so now we have to validate it (otherwise it's just valid hex!)
+	// to verify, we need to provide:
+	// -message (n*32 bytes)
+	// aggregate sig (hex)
+	// public keys (array of hex)
+
+	// set up the array of n hex messages
+	var messages []string
+	for looper := 0; looper < numKeys; looper++ {
+		messages = append(messages, messageToSign)
+	}
+
+	verified, err := ProvideGoVerifyAggregateSigs(token, map[string]interface{}{
+		"messages":    messages,
+		"public_keys": publicKeys,
+		"signature":   *aggresponse.AggregateSignature,
+	})
+	if err != nil {
+		t.Errorf("error verifying bls signature. Error: %s", err.Error())
+		return
+	}
+
+	if *verified.Verified != true {
+		t.Errorf("valid bls signature not verified")
+		return
+	}
+	t.Logf("verified: %t", *verified.Verified)
+
+}

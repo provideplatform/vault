@@ -961,7 +961,11 @@ func blsAggregateVerifyHandler(c *gin.Context) {
 	publicKeys := params.PublicKeys
 	signature := params.Signature
 
-	verified := crypto.AggregateVerify(signature, messages, publicKeys)
+	verified, err := crypto.AggregateVerify(signature, messages, publicKeys)
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
 
 	provide.Render(&KeySignVerifyRequestResponse{
 		Verified: &verified,

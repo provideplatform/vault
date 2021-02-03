@@ -19,8 +19,8 @@ require (
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/provideapp/ident v0.0.0-00010101000000-000000000000
-	github.com/provideservices/provide-go v0.0.0-20201110145856-2a98ad12dc52
-	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
+	github.com/provideservices/provide-go v0.0.0-20210203145430-f0f3f6d4035d
+	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.0.2
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect

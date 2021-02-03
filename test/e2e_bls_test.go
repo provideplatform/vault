@@ -4,60 +4,12 @@ package test
 
 import (
 	"encoding/hex"
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/provideapp/vault/common"
 	cryptovault "github.com/provideapp/vault/vault"
 	provide "github.com/provideservices/provide-go/api/vault"
 )
-
-// placeholder until the params are locked down
-func ProvideGoAggregateSigs(token *string, params map[string]interface{}) (*cryptovault.BLSAggregateRequestResponse, error) {
-	uri := fmt.Sprintf("bls/aggregate")
-	status, resp, err := provide.InitVaultService(token).Post(uri, params)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if status != 201 {
-		return nil, fmt.Errorf("failed to aggregate bls signatures. status: %v", status)
-	}
-
-	response := &cryptovault.BLSAggregateRequestResponse{}
-	responseRaw, _ := json.Marshal(resp)
-	err = json.Unmarshal(responseRaw, &response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get aggregate response. status: %v; %s", status, err.Error())
-	}
-
-	return response, nil
-}
-
-// placeholder until the params are locked down
-func ProvideGoVerifyAggregateSigs(token *string, params map[string]interface{}) (*cryptovault.KeySignVerifyRequestResponse, error) {
-	uri := fmt.Sprintf("bls/verify")
-	status, resp, err := provide.InitVaultService(token).Post(uri, params)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if status != 201 {
-		return nil, fmt.Errorf("failed to aggregate bls signatures. status: %v", status)
-	}
-
-	response := &cryptovault.KeySignVerifyRequestResponse{}
-	responseRaw, _ := json.Marshal(resp)
-	err = json.Unmarshal(responseRaw, &response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get aggregate signature verification response. status: %v; %s", status, err.Error())
-	}
-
-	return response, nil
-}
 
 func TestCreateBLSKey(t *testing.T) {
 
@@ -213,7 +165,7 @@ func TestCreateAggregateSignature(t *testing.T) {
 	}
 
 	//ok, so let's try and call aggregate without doing anything
-	aggresponse, err := ProvideGoAggregateSigs(token, map[string]interface{}{
+	aggresponse, err := provide.AggregateSignatures(token, map[string]interface{}{
 		"signatures": signatures,
 	})
 	// get an aggregate without throwing an error (little dreams!)
@@ -268,7 +220,7 @@ func TestVerifyAggregateSignature(t *testing.T) {
 	}
 
 	//ok, so let's try and call aggregate without doing anything
-	aggresponse, err := ProvideGoAggregateSigs(token, map[string]interface{}{
+	aggresponse, err := provide.AggregateSignatures(token, map[string]interface{}{
 		"signatures": signatures,
 	})
 	// get an aggregate without throwing an error (little dreams!)
@@ -286,7 +238,7 @@ func TestVerifyAggregateSignature(t *testing.T) {
 		messages = append(messages, messageToSign)
 	}
 
-	verified, err := ProvideGoVerifyAggregateSigs(token, map[string]interface{}{
+	verified, err := provide.VerifyAggregateSignatures(token, map[string]interface{}{
 		"messages":    messages,
 		"public_keys": publicKeys,
 		"signature":   *aggresponse.AggregateSignature,
@@ -296,10 +248,10 @@ func TestVerifyAggregateSignature(t *testing.T) {
 		return
 	}
 
-	if *verified.Verified != true {
+	if verified.Verified != true {
 		t.Errorf("valid bls signature not verified")
 		return
 	}
-	t.Logf("verified: %t", *verified.Verified)
+	t.Logf("verified: %t", verified.Verified)
 
 }

@@ -1,6 +1,7 @@
 package common
 
 import (
+	cryptorand "crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -35,6 +36,14 @@ func StringOrNil(str string) *string {
 
 // RandomString generates a random string of the given length
 func RandomString(length int) string {
+
+	// put a mutex around this local source, as it's not concurrent safe
+	// mutex := &sync.Mutex{}
+	// mutex.Lock()
+	// defer mutex.Unlock()
+
+	var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = charset[seededRand.Intn(len(charset))]
@@ -52,7 +61,7 @@ func SHA256(str string) string {
 // RandomBytes generates a cryptographically random byte array
 func RandomBytes(length int) ([]byte, error) {
 	b := make([]byte, length)
-	_, err := rand.Read(b)
+	_, err := cryptorand.Read(b)
 	if err != nil {
 		return nil, fmt.Errorf("error generating random bytes %s", err.Error())
 	}

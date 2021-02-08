@@ -37,7 +37,8 @@ func StringOrNil(str string) *string {
 // RandomString generates a random string of the given length
 func RandomString(length int) string {
 
-	// put a mutex around this local source, as it's not concurrent safe
+	// do we need a mutex around this, as it's now called inside the function?
+	// need to repro the datarace again
 	// mutex := &sync.Mutex{}
 	// mutex.Lock()
 	// defer mutex.Unlock()

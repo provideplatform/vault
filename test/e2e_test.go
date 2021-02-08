@@ -1738,3 +1738,17 @@ func TestArbitrarySignatureEd25519(t *testing.T) {
 		return
 	}
 }
+
+func TestRaceCondition(t *testing.T) {
+	t.Parallel()
+	for looper := 0; looper < 10000; looper++ {
+		_ = common.RandomString(32)
+	}
+}
+
+func TestRaceCondition2(t *testing.T) {
+	t.Parallel()
+	for looper := 0; looper < 10000; looper++ {
+		_ = common.RandomString(32)
+	}
+}

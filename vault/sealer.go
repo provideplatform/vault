@@ -25,6 +25,11 @@ type SealUnsealRequestResponse struct {
 	ValidationHash *string `json:"validation_hash,omitempty"`
 }
 
+// Unsealer interface
+type Unsealer interface {
+	Unseal() error
+}
+
 // ClearUnsealerKey clears the unsealer key - used to seal the vault (handler not implemented)
 func ClearUnsealerKey(passphrase string) error {
 	if passphrase == "" {
@@ -47,7 +52,7 @@ func ClearUnsealerKey(passphrase string) error {
 	// validate the SHA256 hash against the validation hash
 	res := bytes.Compare(incomingKeyHash.Sum(nil), validator[:])
 	if res != 0 {
-		return fmt.Errorf("error sealing vault. unsealer key doesn't match validation hash")
+		return fmt.Errorf("error sealing vault. unsealer key provided doesn't match validation hash")
 	}
 	common.Log.Debugf("Seal vault: valid vault unsealing key received")
 
@@ -210,7 +215,7 @@ func unseal(sealedKey *[]byte) (*[]byte, error) {
 
 // CreateUnsealerKey creates a fresh unsealer key
 func CreateUnsealerKey() (*SealUnsealRequestResponse, error) {
-	key, err := vaultcrypto.CreateHDWalletSeedPhrase()
+	key, err := vaultcrypto.CreateHDWalletSeedPhrase(vaultcrypto.DefaultHDWalletSeedEntropy)
 	if err != nil {
 		return nil, err
 	}

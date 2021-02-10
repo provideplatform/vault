@@ -1,7 +1,7 @@
 on: 
   push:
-    branches:
-      - master
+    tags:
+      - "v*.*.*"
 
 jobs:
   push-to-registry:
@@ -11,10 +11,14 @@ jobs:
       - name: check out repo
         id: checkout
         uses: actions/checkout@v2
+      - name: get latest tag
+        id: latest_tag
+        run: |
+          echo ::set-output name=tags::${GITHUB_REF#refs/*/}
       - name: push to docker hub 
         uses: docker/build-push-action@v1
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PAT }}
           repository: provide/vault
-          tags: "latest"
+          tags: "${{ steps.latest_tag.outputs.tags}}, latest"

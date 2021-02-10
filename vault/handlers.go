@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/miguelmota/go-ethereum-hdwallet"
 	"math/rand"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
@@ -15,28 +17,43 @@ import (
 
 	"github.com/provideapp/ident/token"
 	"github.com/provideapp/vault/common"
+	"github.com/provideapp/vault/crypto"
 	provide "github.com/provideservices/provide-go/common"
 )
 
 // InstallAPI installs the handlers using the given gin Engine
 func InstallAPI(r *gin.Engine) {
+	installSealUnsealAPI(r)
+	installVaultsAPI(r)
+	installKeysAPI(r)
+	installSecretsAPI(r)
+}
+
+func installSealUnsealAPI(r *gin.Engine) {
 	r.POST("/api/v1/unsealerkey", createUnsealerKeyHandler)
 	r.POST("/api/v1/unseal", unsealHandler)
 	r.POST("/api/v1/seal", sealHandler)
+}
 
+func installVaultsAPI(r *gin.Engine) {
 	r.GET("/api/v1/vaults", vaultsListHandler)
 	r.POST("/api/v1/vaults", createVaultHandler)
 	r.DELETE("/api/v1/vaults/:id", deleteVaultHandler)
+}
 
+func installKeysAPI(r *gin.Engine) {
 	r.GET("/api/v1/vaults/:id/keys", vaultKeysListHandler)
 	r.POST("/api/v1/vaults/:id/keys", createVaultKeyHandler)
+	r.GET("api/v1/vaults/:id/keys/:keyId", vaultKeyDetailsHandler)
 	r.POST("api/v1/vaults/:id/keys/:keyId/derive", vaultKeyDeriveHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/encrypt", vaultKeyEncryptHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/decrypt", vaultKeyDecryptHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/sign", vaultKeySignHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/verify", vaultKeyVerifyHandler)
 	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
+}
 
+func installSecretsAPI(r *gin.Engine) {
 	r.GET("/api/v1/vaults/:id/secrets", vaultSecretsListHandler)
 	r.POST("api/v1/vaults/:id/secrets", createVaultSecretHandler)
 	r.GET("api/v1/vaults/:id/secrets/:secretId", vaultSecretDetailsHandler)
@@ -395,15 +412,14 @@ func vaultKeysListHandler(c *gin.Context) {
 	var vault = &Vault{}
 
 	db := dbconf.DatabaseConnection()
-	var query *gorm.DB
+	query := db.Where("id = ?", c.Param("id"))
 
-	query = db.Where("id = ?", c.Param("id"))
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
-		query = query.Where("application_id = ?", bearer.ApplicationID)
+		query = query.Where("id = ? AND application_id = ?", c.Param("id"), bearer.ApplicationID)
 	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
-		query = query.Where("organization_id = ?", bearer.OrganizationID)
+		query = query.Where("id = ? AND organization_id = ?", c.Param("id"), bearer.OrganizationID)
 	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
-		query = query.Where("user_id = ?", bearer.UserID)
+		query = query.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID)
 	}
 	query.Find(&vault)
 
@@ -507,6 +523,45 @@ func deleteVaultKeyHandler(c *gin.Context) {
 	provide.Render(nil, 204, c)
 }
 
+// vaultKeyDetailsHandler fetches details for a specific key
+func vaultKeyDetailsHandler(c *gin.Context) {
+	bearer := token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
+	vault := &Vault{}
+
+	db := dbconf.DatabaseConnection()
+	query := db.Where("id = ?", c.Param("id"))
+
+	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
+		query = query.Where("id = ? AND application_id = ?", c.Param("id"), bearer.ApplicationID)
+	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+		query = query.Where("id = ? AND organization_id = ?", c.Param("id"), bearer.OrganizationID)
+	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+		query = query.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID)
+	}
+	query.Find(&vault)
+
+	if vault.ID == uuid.Nil {
+		provide.RenderError("vault not found", 404, c)
+		return
+	}
+
+	key := &Key{}
+	vault.KeyDetailsQuery(db, c.Param("keyId")).Find(&key)
+	if key == nil || key.ID == uuid.Nil {
+		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	key.Enrich()
+	provide.Render(key, 200, c)
+}
+
 // vaultKeyDeriveHandler derives a new symmetric key from a chacha20 key
 func vaultKeyDeriveHandler(c *gin.Context) {
 	bearer := token.InContext(c)
@@ -536,24 +591,49 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO break this out into a function if we allow derivation from more than ChaCha20
-	if *key.Spec != KeySpecChaCha20 {
+	var derivedKey *Key
+
+	switch *key.Spec {
+	case KeySpecChaCha20:
+		// handle empty nonces - replace with random 32-bit integer
+		// and convert to bigendian 16-byte array
+		nonceAsBytes := make([]byte, 16)
+		if params.Nonce != nil {
+			binary.BigEndian.PutUint32(nonceAsBytes, uint32(*params.Nonce))
+		} else {
+			binary.BigEndian.PutUint32(nonceAsBytes, uint32(rand.Int31()))
+		}
+
+		derivedKey, err = key.DeriveSymmetric(nonceAsBytes, []byte(*params.Context), *params.Name, *params.Description)
+		if err != nil {
+			provide.RenderError(err.Error(), 500, c)
+			return
+		}
+	case KeySpecECCBIP39:
+		var path *accounts.DerivationPath
+		if params.Path != nil {
+			derivationPath, err := hdwallet.ParseDerivationPath(*params.Path)
+			if err != nil {
+				provide.RenderError(err.Error(), 500, c)
+				return
+			}
+			path = &derivationPath
+		} else {
+			path = crypto.DefaultHDDerivationPath()
+		}
+
+		secp256k1Derived, err := key.deriveSecp256k1KeyFromHDWallet(*path)
+		if err != nil {
+			provide.RenderError(err.Error(), 500, c)
+			return
+		}
+
+		key.Address = secp256k1Derived.Address
+		key.DerivationPath = secp256k1Derived.DerivationPath
+		key.Enrich()
+		derivedKey = key
+	default:
 		provide.RenderError("key does not support derivation", 400, c)
-		return
-	}
-
-	// handle empty nonces - replace with random 32-bit integer
-	// and convert to bigendian 16-byte array
-	nonceAsBytes := make([]byte, 16)
-	if params.Nonce != nil {
-		binary.BigEndian.PutUint32(nonceAsBytes, uint32(*params.Nonce))
-	} else {
-		binary.BigEndian.PutUint32(nonceAsBytes, uint32(rand.Int31()))
-	}
-
-	derivedKey, err := key.DeriveSymmetric(nonceAsBytes, []byte(*params.Context), *params.Name, *params.Description)
-	if err != nil {
-		provide.RenderError(err.Error(), 500, c)
 		return
 	}
 

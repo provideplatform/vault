@@ -28,10 +28,11 @@ func CreateSecp256k1KeyPair() (*Secp256k1, error) {
 	privateKey := math.PaddedBigBytes(privkey.D, privkey.Params().BitSize/8)
 	publicKey := elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y)
 
-	secp256k1 := Secp256k1{}
-	secp256k1.PrivateKey = &privateKey
-	secp256k1.PublicKey = &publicKey
-	secp256k1.Address = address //this is added when the key is enriched
+	secp256k1 := Secp256k1{
+		PrivateKey: &privateKey,
+		PublicKey:  &publicKey,
+		Address:    address, //this is added when the key is enriched
+	}
 
 	return &secp256k1, nil
 }
@@ -58,7 +59,6 @@ func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 
 // Verify uses Secp256k1 public key to verify the payload's signature
 func (k *Secp256k1) Verify(payload, sig []byte) error {
-
 	// get the signature's public key
 	sigPublicKey, err := ethcrypto.Ecrecover(payload, sig)
 	if err != nil {

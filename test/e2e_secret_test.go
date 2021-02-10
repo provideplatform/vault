@@ -1,4 +1,4 @@
-// +build integration
+// +build integration vault
 
 package test
 
@@ -11,6 +11,8 @@ import (
 )
 
 func TestAPILIstSecretTypeFilter(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -81,6 +83,8 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 }
 
 func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
+	t.Parallel()
+
 	// add the secrets out of order, and expect to get thte same out of order secrets returned, unfiltered
 	token, err := userTokenFactory()
 	if err != nil {
@@ -153,6 +157,8 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 }
 
 func TestAPIListSecrets(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -205,6 +211,8 @@ func TestAPIListSecrets(t *testing.T) {
 }
 
 func TestAPICreateSecret(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -229,6 +237,8 @@ func TestAPICreateSecret(t *testing.T) {
 }
 
 func TestAPICreateSecretTooLong(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -241,14 +251,57 @@ func TestAPICreateSecretTooLong(t *testing.T) {
 		return
 	}
 
-	secret := common.RandomString(9000)
+	maxSecretLength := 4096 * 32
+	secret := common.RandomString(maxSecretLength + 1)
 	name := "secret name"
 	description := "secret description"
 	secretType := "secret type"
 	_, err = provide.CreateSecret(*token, vault.ID.String(), secret, name, description, secretType)
+	if err == nil {
+		t.Errorf("allowed creation of secret that exceeds max length")
+		return
+	}
+}
+
+func TestAPICreateSecretMaxSize(t *testing.T) {
+	t.Parallel()
+
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	maxSecretLength := 4096 * 32
+	secret := common.RandomString(maxSecretLength)
+	name := "secret name"
+	description := "secret description"
+	secretType := "secret type"
+	createSecretResponse, err := provide.CreateSecret(*token, vault.ID.String(), secret, name, description, secretType)
+	if err != nil {
+		t.Errorf("failed creating max length secret. Error: %s", err.Error())
+		return
+	}
+
+	// now ensure we get the same max length secret back
+	retrieveSecretResponse, err := provide.FetchSecret(*token, vault.ID.String(), createSecretResponse.ID.String(), map[string]interface{}{})
+
+	if *retrieveSecretResponse.Value != secret {
+		t.Errorf("secret returned mismatch.  Expected %s, got %s", secret, *retrieveSecretResponse.Value)
+		return
+	}
+
 }
 
 func TestAPICreateSecretNoName(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -270,6 +323,8 @@ func TestAPICreateSecretNoName(t *testing.T) {
 }
 
 func TestAPICreateSecretNoType(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -291,6 +346,8 @@ func TestAPICreateSecretNoType(t *testing.T) {
 }
 
 func TestAPICreateSecretNoData(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -312,6 +369,8 @@ func TestAPICreateSecretNoData(t *testing.T) {
 }
 
 func TestAPICreateAndRetrieveSecret(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -344,6 +403,8 @@ func TestAPICreateAndRetrieveSecret(t *testing.T) {
 }
 
 func TestAPIDeleteSecret(t *testing.T) {
+	t.Parallel()
+
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())

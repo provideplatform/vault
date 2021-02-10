@@ -17,4 +17,4 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PAT }}
           repository: provide/vault
-          tags: development
+          tags: dev

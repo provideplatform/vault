@@ -1,4 +1,4 @@
-// +build integration
+// +build integration vault
 
 package test
 
@@ -18,7 +18,6 @@ import (
 )
 
 func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
-
 	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
 		"type":        keyType,
 		"usage":       keyUsage,
@@ -42,7 +41,6 @@ func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, ke
 }
 
 func keyFactory(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
-
 	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
 		"type":        keyType,
 		"usage":       keyUsage,
@@ -131,7 +129,7 @@ func init() {
 	log.Printf("newly generated unsealer key %s", *newkeyresp.UnsealerKey)
 	log.Printf("newly generated unsealer key hash %s", *newkeyresp.ValidationHash)
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -140,7 +138,7 @@ func init() {
 	}
 
 	// now try it again, and we expect a 204 (no response) when trying to unseal a sealed vault
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -157,7 +155,7 @@ func unsealVault() error {
 
 	}
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -182,7 +180,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -210,7 +208,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err != nil {
@@ -254,7 +252,7 @@ func TestSealUnsealer(t *testing.T) {
 		return
 	}
 
-	_, err = provide.Unseal(*token, map[string]interface{}{
+	_, err = provide.Unseal(token, map[string]interface{}{
 		"key": "raffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
 	})
 	if err == nil {
@@ -271,6 +269,7 @@ func TestSealUnsealer(t *testing.T) {
 }
 
 func TestAPICreateVault(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -286,6 +285,7 @@ func TestAPICreateVault(t *testing.T) {
 }
 
 func TestAPICreateKey(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -313,6 +313,7 @@ func TestAPICreateKey(t *testing.T) {
 }
 
 func TestAPIDeleteKey(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -339,7 +340,7 @@ func TestAPIDeleteKey(t *testing.T) {
 }
 
 func TestAPISign(t *testing.T) {
-
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -370,6 +371,7 @@ func TestAPISign(t *testing.T) {
 }
 
 func TestAPIVerifySecp256k1Signature(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -423,6 +425,7 @@ func TestAPIVerifySecp256k1Signature(t *testing.T) {
 }
 
 func TestAPIVerifyEd25519Signature(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -462,6 +465,7 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 }
 
 func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -506,6 +510,7 @@ func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
 }
 
 func TestAPIEncrypt(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -536,6 +541,7 @@ func TestAPIEncrypt(t *testing.T) {
 }
 
 func TestAPIChachaDecrypt(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -575,6 +581,7 @@ func TestAPIChachaDecrypt(t *testing.T) {
 }
 
 func TestAPIDecrypt(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -614,6 +621,7 @@ func TestAPIDecrypt(t *testing.T) {
 }
 
 func TestAPIDecryptNoNonce(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -652,6 +660,7 @@ func TestAPIDecryptNoNonce(t *testing.T) {
 }
 
 func TestCreateHDWallet(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -664,14 +673,115 @@ func TestCreateHDWallet(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "hdwallet", "EthHdWallet", "BIP39", "hdwallet", "integration test hd wallet")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
 	}
 
+	if key.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key.ID)
+		return
+	}
+
 	opts := map[string]interface{}{}
-	json.Unmarshal([]byte(`{"hdwallet":{"coin":"ETH", "index":0}}`), &opts)
+	json.Unmarshal([]byte(`{"hdwallet":{"coin":60, "index":0}}`), &opts)
+
+	payloadBytes, _ := common.RandomBytes(32)
+	messageToSign := hex.EncodeToString(payloadBytes)
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+	if err != nil {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+
+	if verifyresponse.Verified != true {
+		t.Errorf("failed to verify signature for vault")
+		return
+	}
+}
+
+func TestCreateHDWalletFailsWithInvalidCoin(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	if key.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key.ID)
+		return
+	}
+
+	opts := map[string]interface{}{}
+	json.Unmarshal([]byte(`{"hdwallet":{"coin":61, "index":0}}`), &opts) // coin: 61 <-- this is not supported
+
+	payloadBytes, _ := common.RandomBytes(32)
+	messageToSign := hex.EncodeToString(payloadBytes)
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+	if err != nil {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+
+	if verifyresponse.Verified != true {
+		t.Errorf("failed to verify signature for vault")
+		return
+	}
+}
+
+func TestCreateHDWalletCoinAbbr(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	if key.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key.ID)
+		return
+	}
+
+	opts := map[string]interface{}{}
+	json.Unmarshal([]byte(`{"hdwallet":{"coin_abbr":"ETH", "index":0}}`), &opts)
 
 	payloadBytes, _ := common.RandomBytes(32)
 	messageToSign := hex.EncodeToString(payloadBytes)
@@ -694,6 +804,7 @@ func TestCreateHDWallet(t *testing.T) {
 }
 
 func TestHDWalletAutoSign(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -706,7 +817,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "hdwallet", "EthHdWallet", "BIP39", "hdwallet", "integration test hd wallet")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -735,7 +846,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 
 		// set up the verification options
 		opts := map[string]interface{}{}
-		options := fmt.Sprintf(`{"hdwallet":{"coin":"ETH", "index":%d}}`, iteration)
+		options := fmt.Sprintf(`{"hdwallet":{"coin_abbr":"ETH", "index":%d}}`, iteration)
 		json.Unmarshal([]byte(options), &opts)
 
 		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
@@ -752,6 +863,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 }
 
 func TestListKeys(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -848,6 +960,7 @@ func TestListKeys(t *testing.T) {
 }
 
 func TestListKeys_Filtered(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1022,6 +1135,7 @@ func TestListKeys_Filtered(t *testing.T) {
 }
 
 func TestAPIDerivedChachaDecrypt(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1045,7 +1159,7 @@ func TestAPIDerivedChachaDecrypt(t *testing.T) {
 	name := "derived key 01"
 	description := "derived key 01 description"
 
-	derivedKey, err := provide.DeriveVaultKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
+	derivedKey, err := provide.DeriveKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"nonce":       nonce,
 		"context":     context,
 		"name":        name,
@@ -1087,6 +1201,7 @@ func TestAPIDerivedChachaDecrypt(t *testing.T) {
 }
 
 func TestAPIDerivedChachaDecryptNoNonce(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1109,7 +1224,7 @@ func TestAPIDerivedChachaDecryptNoNonce(t *testing.T) {
 	name := "derived key 01"
 	description := "derived key 01 description"
 
-	derivedKey, err := provide.DeriveVaultKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
+	derivedKey, err := provide.DeriveKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"context":     context,
 		"name":        name,
 		"description": description,
@@ -1150,6 +1265,7 @@ func TestAPIDerivedChachaDecryptNoNonce(t *testing.T) {
 }
 
 func TestAPIDerivedNonChachaDecryptNoNonce(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1172,14 +1288,14 @@ func TestAPIDerivedNonChachaDecryptNoNonce(t *testing.T) {
 	name := "derived key 01"
 	description := "derived key 01 description"
 
-	_, err = provide.DeriveVaultKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
+	_, err = provide.DeriveKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{
 		"context":     context,
 		"name":        name,
 		"description": description,
 	})
 
 	if err == nil {
-		t.Errorf("incorrectly derived non-chacha20 key for vault: %s", vault.ID)
+		t.Errorf("incorrectly derived non-chacha20 key for vault: %s.", vault.ID)
 		return
 	}
 
@@ -1188,7 +1304,51 @@ func TestAPIDerivedNonChachaDecryptNoNonce(t *testing.T) {
 	}
 }
 
+func TestAPIDeriveBIP39(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	derivedKey, err := provide.DeriveKey(*token, vault.ID.String(), key.ID.String(), map[string]interface{}{})
+
+	if err != nil {
+		t.Errorf("failed to derive key for vault: %s", vault.ID)
+		return
+	}
+
+	if derivedKey.Address == nil {
+		t.Errorf("address should be non-nil for derived secp256k1 BIP39 HD wallet key")
+		return
+	}
+
+	if derivedKey.HDDerivationPath == nil {
+		t.Errorf("derivation path should be non-nil for derived secp256k1 BIP39 HD wallet key")
+		return
+	}
+
+	if derivedKey.PublicKey == nil {
+		t.Errorf("public key should be non-nil for derived secp256k1 BIP39 HD wallet key")
+		return
+	}
+}
+
 func TestEphemeralCreation(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1212,7 +1372,7 @@ func TestEphemeralCreation(t *testing.T) {
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Ed25519"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "secp256k1"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "babyJubJub"},
-		{"ephemeral key", "ephemeral key description", "hdwallet", "EthHdWallet", "BIP39"},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "BIP39"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-2048"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-3072"},
 		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-4096"},
@@ -1324,6 +1484,7 @@ func TestEphemeralCreation(t *testing.T) {
 }
 
 func TestNonEphemeralCreation(t *testing.T) {
+	t.Parallel()
 	token, err := userTokenFactory()
 	if err != nil {
 		t.Errorf("failed to create token; %s", err.Error())
@@ -1347,7 +1508,7 @@ func TestNonEphemeralCreation(t *testing.T) {
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "Ed25519"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "secp256k1"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "babyJubJub"},
-		{"regular key", "regular key description", "hdwallet", "EthHdWallet", "BIP39"},
+		{"regular key", "regular key description", "asymmetric", "sign/verify", "BIP39"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "RSA-2048"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "RSA-3072"},
 		{"regular key", "regular key description", "asymmetric", "sign/verify", "RSA-4096"},
@@ -1455,5 +1616,125 @@ func TestNonEphemeralCreation(t *testing.T) {
 			t.Errorf("unknown key spec generated: %s", tc.Spec)
 			return
 		}
+	}
+}
+
+func TestArbitrarySignatureSecp256k1(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecECCSecp256k1, "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	payloadBytes, _ := common.RandomBytes(32)
+	messageToSign := hex.EncodeToString(payloadBytes)
+
+	opts := map[string]interface{}{}
+	//json.Unmarshal([]byte(`{"algorithm":"PS256"}`), &opts)
+
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+	if err != nil {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+
+	if verifyresponse.Verified != true {
+		t.Error("failed to verify signature for vault")
+		return
+	}
+}
+
+func TestArbitrarySignatureSecp256k1_ShouldFail(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecECCSecp256k1, "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	payloadBytes, _ := common.RandomBytes(33)
+	messageToSign := hex.EncodeToString(payloadBytes)
+
+	opts := map[string]interface{}{}
+	//json.Unmarshal([]byte(`{"algorithm":"PS256"}`), &opts)
+
+	_, err = provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err == nil {
+		t.Errorf("signed 33-byte message with secp256k1 - should only sign 32-byte messages")
+		return
+	}
+}
+
+func TestArbitrarySignatureEd25519(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecECCEd25519, "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	payloadBytes, _ := common.RandomBytes(1000)
+	messageToSign := hex.EncodeToString(payloadBytes)
+
+	opts := map[string]interface{}{}
+
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+	if err != nil {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+
+	if verifyresponse.Verified != true {
+		t.Error("failed to verify signature for vault")
+		return
 	}
 }

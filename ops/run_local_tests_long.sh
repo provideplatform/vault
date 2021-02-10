@@ -1,28 +1,41 @@
 #!/bin/bash
 
-if [[ -z "${API_ACCOUNTING_ADDRESS}" ]]; then
-  API_ACCOUNTING_ADDRESS=
+set -e
+echo "" > coverage.txt
+
+if [[ -z "${DATABASE_NAME}" ]]; then
+  export DATABASE_NAME=nchain_dev
 fi
 
-if [[ -z "${JWT_SIGNER_PUBLIC_KEY}" ]]; then
-  JWT_SIGNER_PUBLIC_KEY='-----BEGIN PUBLIC KEY-----
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAullT/WoZnxecxKwQFlwE
-9lpQrekSD+txCgtb9T3JvvX/YkZTYkerf0rssQtrwkBlDQtm2cB5mHlRt4lRDKQy
-EA2qNJGM1Yu379abVObQ9ZXI2q7jTBZzL/Yl9AgUKlDIAXYFVfJ8XWVTi0l32Vsx
-tJSd97hiRXO+RqQu5UEr3jJ5tL73iNLp5BitRBwa4KbDCbicWKfSH5hK5DM75EyM
-R/SzR3oCLPFNLs+fyc7zH98S1atglbelkZsMk/mSIKJJl1fZFVCUxA+8CaPiKbpD
-QLpzydqyrk/y275aSU/tFHidoewvtWorNyFWRnefoWOsJFlfq1crgMu2YHTMBVtU
-SJ+4MS5D9fuk0queOqsVUgT7BVRSFHgDH7IpBZ8s9WRrpE6XOE+feTUyyWMjkVgn
-gLm5RSbHpB8Wt/Wssy3VMPV3T5uojPvX+ITmf1utz0y41gU+iZ/YFKeNN8WysLxX
-AP3Bbgo+zNLfpcrH1Y27WGBWPtHtzqiafhdfX6LQ3/zXXlNuruagjUohXaMltH+S
-K8zK4j7n+BYl+7y1dzOQw4CadsDi5whgNcg2QUxuTlW+TQ5VBvdUl9wpTSygD88H
-xH2b0OBcVjYsgRnQ9OZpQ+kIPaFhaWChnfEArCmhrOEgOnhfkr6YGDHFenfT3/RA
-PUl1cxrvY7BHh4obNa6Bf8ECAwEAAQ==
------END PUBLIC KEY-----'
+if [[ -z "${DATABASE_USER}" ]]; then
+  export DATABASE_USER=nchain
 fi
 
-if [[ -z "${PGP_PUBLIC_KEY}" ]]; then
-  PGP_PUBLIC_KEY='-----BEGIN PGP PUBLIC KEY BLOCK-----
+if [[ -z "${DATABASE_PASSWORD}" ]]; then
+  export DATABASE_PASSWORD=nchain
+fi
+
+if [[ -z "${NATS_SERVER_PORT}" ]]; then
+  export NATS_SERVER_PORT=4221
+fi
+
+if [[ -z "${NATS_STREAMING_SERVER_PORT}" ]]; then
+  export NATS_STREAMING_SERVER_PORT=4222
+fi
+
+if [[ -z "${REDIS_SERVER_PORT}" ]]; then
+  export REDIS_SERVER_PORT=6379
+fi
+
+if [[ -z "${RACE}" ]]; then
+  export RACE=true
+fi
+
+if [[ -z "${TAGS}" ]]; then
+  export TAGS=integration
+fi
+
+export PGP_PUBLIC_KEY='-----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQINBF1Db+IBEAC0nRf3s6rls6jhWeWWTAJY8Nn4+qPUbSu0ZOx1DAqOHHxYAek1
 TOuogsXaFPRtRL5mO+0aRIDjqo6GKp9IC8k6XFlJ/+LU1C09O5XOkbzhVoHtTHOY
@@ -74,10 +87,8 @@ jNfRxN+DUEJNER0oZUTEeEno3BfRYkpQ/EZjtQ9muVh2S8UVL06OV0f5deOxicP4
 96kKxfZ6
 =HwI4
 -----END PGP PUBLIC KEY BLOCK-----'
-fi
 
-if [[ -z "${PGP_PRIVATE_KEY}" ]]; then
-  PGP_PRIVATE_KEY='-----BEGIN PGP PRIVATE KEY BLOCK-----
+export PGP_PRIVATE_KEY='-----BEGIN PGP PRIVATE KEY BLOCK-----
 
 lQdGBF1Db+IBEAC0nRf3s6rls6jhWeWWTAJY8Nn4+qPUbSu0ZOx1DAqOHHxYAek1
 TOuogsXaFPRtRL5mO+0aRIDjqo6GKp9IC8k6XFlJ/+LU1C09O5XOkbzhVoHtTHOY
@@ -184,79 +195,52 @@ xHhJ6NwX0WJKUPxGY7UPZrlYdkvFFS9OjldH+XXjsYnD+OuSqKyIEHnMwoPIl9z7
 dWaI2DVuGDp6xMrNtmWiOvoZry3/WceLuIqfrUyGhJCaIvepCsX2eg==
 =1A2t
 -----END PGP PRIVATE KEY BLOCK-----'
-fi
 
-if [[ -z "${PGP_PASSPHRASE}" ]]; then
-  PGP_PASSPHRASE=password
-fi
+export PGP_PASSPHRASE=password
 
-if [[ -z "${LOG_LEVEL}" ]]; then
-  LOG_LEVEL=debug
-fi
+export PAYMENTS_REFRESH_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6ImU2OmY3OmQ1OjI0OmUyOjU5OjA2OjJiOmJjOmEyOjhjOjM1OjlkOmNhOjBhOjg3IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMvYXBpL3YxIiwiaWF0IjoxNjAwNzA5NzU0LCJpc3MiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMiLCJqdGkiOiJjN2I2YzI2ZS00OTkwLTQ4YWYtYmMwYy05YWRiY2E5ZmRmNzYiLCJuYXRzIjp7InBlcm1pc3Npb25zIjp7InN1YnNjcmliZSI6eyJhbGxvdyI6WyJhcHBsaWNhdGlvbi4wMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJuZXR3b3JrLiouY29ubmVjdG9yLioiLCJuZXR3b3JrLiouc3RhdHVzIiwicGxhdGZvcm0uXHUwMDNlIl19fX0sInBydmQiOnsiYXBwbGljYXRpb25faWQiOiIwMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJleHRlbmRlZCI6eyJwZXJtaXNzaW9ucyI6eyIqIjo1MTB9fSwicGVybWlzc2lvbnMiOjUxMH0sInN1YiI6ImFwcGxpY2F0aW9uOjAxNTU0ZTIyLTNkN2EtNDRhMy05YzY1LTZiY2FiYWEwOGMzOCJ9.iPYYSS0hHNYLUXcgpBfQbo6goMGDHF5Oxv1OvkB-WAzRgZSAm2HFroOUsmPlCQwO5eNeTfMqRaQMDdl6idTCip99y-zYTu8ys7dahyk4P1lhh4BB8vTCl3AHQuyUTGloMrY2JytpkmXMZTsxu-UhQxaaQN0IlSotSIFAYPT3jHH5nYy2MJbcfxePt8xKmXzwvpjTEVJRmUfAfEXjJF34S3hAuw9S7WncKucZfuP1WwP65h53HbLB69DR6KFZ76eiRavke5RpT40r9UKC6zPP-UZhTAuWQjOSmBhkd_IUg4T2a8r4W9CJT6aLgtwE0i1OUrPDVj_EzQV9tsjlwIOv5y9r_p-sfdxXdHFfoT8nAs5uIcWTw45J2Ycc0b4vqs-sYDr2qn7TS5DvJbPQSnRBS9YZ8CJq9mFpc5GjunCzEqO6JkvEWaN1mqPJbcvMGmLRQt5zA-2D0fFq1mvIUCUcg3EQ5J5lAZqudGf9mnYf4xRIMacCssF5VsP36xXg7pnscqh3u3JdQ-Fon3nB5vbIXn2fxaJjYl4ggNr-IgLxK7_h9KlDkiv7I7EKWGl2Np0q3-mVvuTIk7M-GqT3Dx9TtpR6MsK6EX0frUH3bZH8RHBHnxx67oxNMamviT-XUNudUU7Wan1PfnaPSsqfrn6OT5Abep-BbewKJn3ErY0Z-oU
 
-if [[ -z "${DATABASE_HOST}" ]]; then
-  DATABASE_HOST=localhost
-fi
+export NCHAIN_API_HOST=localhost:8080
+export NCHAIN_API_PATH=api/v1
+export NCHAIN_API_SCHEME=http
 
-if [[ -z "${DATABASE_NAME}" ]]; then
-  DATABASE_NAME=vault_dev
-fi
+export IDENT_API_HOST=localhost:8081
+export IDENT_API_PATH=api/v1
+export IDENT_API_SCHEME=http
 
-if [[ -z "${DATABASE_PORT}" ]]; then
-  DATABASE_PORT=5432
-fi
+export VAULT_API_HOST=localhost:8082
+export VAULT_API_PATH=api/v1
+export VAULT_API_SCHEME=http
 
-if [[ -z "${DATABASE_USER}" ]]; then
-  DATABASE_USER=vault
-fi
+export VAULT_SEAL_UNSEAL_KEY='traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day'
+export VAULT_REFRESH_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6IjEwOjJlOmQ5OmUxOmI4OmEyOjM0OjM3Ojk5OjNhOjI0OmZjOmFhOmQxOmM4OjU5IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL3Byb3ZpZGUuc2VydmljZXMvYXBpL3YxIiwiaWF0IjoxNjA1NzkxMjQ4LCJpc3MiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMiLCJqdGkiOiI5YjUxNGIxNS01NTdlLTRhYWQtYTcwOC0wMTcwZTAwZWE1ZmIiLCJuYXRzIjp7InBlcm1pc3Npb25zIjp7InN1YnNjcmliZSI6eyJhbGxvdyI6WyJhcHBsaWNhdGlvbi4zNjAxNTdmOC1kNWExLTQ0NDAtOTE4Yi1mNjhiYjM5YzBkODAiLCJ1c2VyLjIzY2MwN2UwLTM4NTEtNDBkZC1iNjc1LWRmNzY4MDY3MmY3ZCIsIm5ldHdvcmsuKi5jb25uZWN0b3IuKiIsIm5ldHdvcmsuKi5zdGF0dXMiLCJwbGF0Zm9ybS5cdTAwM2UiXX19fSwicHJ2ZCI6eyJhcHBsaWNhdGlvbl9pZCI6IjM2MDE1N2Y4LWQ1YTEtNDQ0MC05MThiLWY2OGJiMzljMGQ4MCIsImV4dGVuZGVkIjp7InBlcm1pc3Npb25zIjp7IioiOjUxMH19LCJwZXJtaXNzaW9ucyI6NTEwLCJ1c2VyX2lkIjoiMjNjYzA3ZTAtMzg1MS00MGRkLWI2NzUtZGY3NjgwNjcyZjdkIn0sInN1YiI6ImFwcGxpY2F0aW9uOjM2MDE1N2Y4LWQ1YTEtNDQ0MC05MThiLWY2OGJiMzljMGQ4MCJ9.SUh84MKBNstdu3KFu1zEAQq03xbPw1D0lLXeogz1HfBJy77bIGf7HLvCuc6bjkh0xj3cEuEus1dC1Dj3BvlZoSXsvz_biTzSapkXzJjpkwOL6qkYDmqTPZvXwqmk-mUNrHTPkqdiIJL7xA46tzHW3E_hjSA9HjEk1kXjPdJQ6_ifkgWNoAaSD--kudIrhZ7vLnfy0H1JEAOsXzSAMoc5_pNG2n79m0ywvb_4l9BqdsHW8N3xSQOFjcp9gD_tqo6ffug3pkpoy-RSguM_OaMR2lj_CHhYxAt0phtjUceDD3K1h5iZ38kSl7izhOdULMmGBhVpBMoSy6_R6ZzpCL3pj8FcReX9RXR5oYpm8PDtlmWqblQzjwY00-uYLfOX0_iS4MGfEsjadZPfTmJLcOTYC7H4PL9ZRu_XtMDUrGBQQz5b_ad2ZzMXbBNeU6vbxVKDG8VFKWOHAemqHTcvuOAsOCLIqOu-eJpZHlXbx-FXPTYledd-GBDe7IjaC9ll_JK3utCOnCq0qUs6lnXIrQ_Sp1LcTKJJ7aY5f9TxeoAuL-ghDbQ3Xkw6huKyPCz2evOwVLwrB9ZRMlQXgmTnB1OeQvWii1WbmkyV1Zhbz_RPB8ckK7_mFxuPvsXK8wTFiWFmj96sRX470kV-ooSfM5CzKZhSLqgyyaUNC0VaCPq0uuE
 
-if [[ -z "${DATABASE_PASSWORD}" ]]; then
-  DATABASE_PASSWORD=vault
-fi
+echo waiting for vault to be ready
+timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' '${VAULT_API_SCHEME}"://"${VAULT_API_HOST}'/status)" != "204" ]]; do sleep 5; done' || false
+echo vault ready
 
-if [[ -z "${DATABASE_SUPERUSER}" ]]; then
-  DATABASE_SUPERUSER=prvd
-fi
+echo waiting for ident to be ready
+timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' '${IDENT_API_SCHEME}"://"${IDENT_API_HOST}'/status)" != "200" ]]; do sleep 5; done' || false
+echo ident ready
 
-if [[ -z "${DATABASE_SUPERUSER_PASSWORD}" ]]; then
-  DATABASE_SUPERUSER_PASSWORD=prvdp455
-fi
 
-if [[ -z "${DATABASE_SSL_MODE}" ]]; then
-  DATABASE_SSL_MODE=disable
-fi
+echo waiting for nchain to be ready
+timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' '${NCHAIN_API_SCHEME}"://"${NCHAIN_API_HOST}'/status)" != "204" ]]; do sleep 5; done' || false
+echo nchain ready
 
-if [[ -z "${DATABASE_LOGGING}" ]]; then
-  DATABASE_LOGGING=false
-fi
+export NATS_TOKEN=testtoken
+export NATS_URL=nats://localhost:${NATS_SERVER_PORT}
+export NATS_STREAMING_URL=nats://localhost:${NATS_STREAMING_SERVER_PORT}
+export NATS_CLUSTER_ID=provide
+export DATABASE_HOST=localhost
+export LOG_LEVEL=DEBUG
 
-if [[ -z "${GIN_MODE}" ]]; then
-  GIN_MODE=debug
-fi
+# go get gotest.tools/gotestsum
 
-if [[ -z "${PORT}" ]]; then
-  PORT=8083
-fi
+go test "./test/..." -v \
+                    -race \
+                    -timeout 1800s \
+                    -parallel 1 \
+                    -tags="$TAGS"
+ 
 
-if [[ -z "${REQUIRE_TLS}" ]]; then
-  REQUIRE_TLS=false
-fi
-
-DATABASE_HOST=$DATABASE_HOST DATABASE_USER=$DATABASE_USER DATABASE_PASSWORD=$DATABASE_PASSWORD DATABASE_NAME=$DATABASE_NAME DATABASE_SUPERUSER=$DATABASE_SUPERUSER DATABASE_SUPERUSER_PASSWORD=$DATABASE_SUPERUSER_PASSWORD ./ops/migrate.sh
-
-API_ACCOUNTING_ADDRESS=$API_ACCOUNTING_ADDRESS \
-JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
-JWT_SIGNER_PUBLIC_KEY=$JWT_SIGNER_PUBLIC_KEY \
-PGP_PUBLIC_KEY=$PGP_PUBLIC_KEY \
-PGP_PRIVATE_KEY=$PGP_PRIVATE_KEY \
-PGP_PASSPHRASE=$PGP_PASSPHRASE \
-DATABASE_HOST=$DATABASE_HOST \
-DATABASE_NAME=$DATABASE_NAME \
-DATABASE_LOGGING=$DATABSE_LOGGING \
-DATABASE_USER=$DATABASE_USER \
-DATABASE_PASSWORD=$DATABASE_PASSWORD \
-GIN_MODE=$GIN_MODE \
-LOG_LEVEL=$LOG_LEVEL \
-PORT=$PORT \
-REQUIRE_TLS=$REQUIRE_TLS \
-./.bin/vault_api

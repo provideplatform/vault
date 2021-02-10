@@ -7,11 +7,24 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    steps:
+    steps:                                                                                       
       - name: Checkout vault
         uses: actions/checkout@v2
         with:
           path: 'vaultyvault'
+      - run: echo "LOG_LEVEL=info" >> $GITHUB_ENV
+      - run: echo "DATABASE_HOST=localhost" >> $GITHUB_ENV
+      - run: echo "DATABASE_NAME=vault_dev" >> $GITHUB_ENV
+      - run: echo "DATABASE_PORT=5432" >> $GITHUB_ENV
+      - run: echo "DATABASE_USER=vault" >> $GITHUB_ENV
+      - run: echo "DATABASE_PASSWORD=vault" >> $GITHUB_ENV
+      - run: echo "DATABASE_SUPERUSER=prvd" >> $GITHUB_ENV
+      - run: echo "DATABASE_SUPERUSER_PASSWORD=prvdp455" >> $GITHUB_ENV
+      - run: echo "DATABASE_SSL_MODE=disable" >> $GITHUB_ENV
+      - run: echo "DATABASE_LOGGING=false" >> $GITHUB_ENV
+      - run: echo "SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309" >> $GITHUB_ENV
+      - run: echo "TAGS=unit" >> $GITHUB_ENV
+      - run: echo "JWT_SIGNER_PUBLIC_KEY=${{ secrets.DEV_JWT }}" >> $GITHUB_ENV                 
       - name: Setup go
         uses: actions/setup-go@v2
         with:
@@ -21,23 +34,10 @@ jobs:
         with:
           repository: provideapp/ident
           path: 'ident'
-          ref: minified
-          token: ${{ secrets.PAT }}
+          ref: master
+          token: ${{ secrets.DEPLOY_GITHUB_PAT }}
       - run: docker-compose -f ./ops/docker-compose-db.yml up -d
         working-directory: vaultyvault
-      - run: echo '::set-env name=LOG_LEVEL::info'
-      - run: echo '::set-env name=DATABASE_HOST::localhost'
-      - run: echo '::set-env name=DATABASE_NAME::vault_dev'  
-      - run: echo '::set-env name=DATABSE_PORT::5432'  
-      - run: echo '::set-env name=DATABASE_USER::vault' 
-      - run: echo '::set-env name=DATABASE_PASSWORD::vault' 
-      - run: echo '::set-env name=DATABASE_SUPERUSER::prvd'
-      - run: echo '::set-env name=DATABASE_SUPERUSER_PASSWORD::prvdp455'
-      - run: echo '::set-env name=DATABASE_SSL_MODE::disable'
-      - run: echo '::set-env name=DATABASE_LOGGING::false'
-      - run: echo '::set-env name=SEAL_UNSEAL_VALIDATION_HASH::0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309'
-      - run: echo '::set-env name=TAGS::unit'
-      - run: echo '::set-env name=JWT_SIGNER_PUBLIC_KEY::${{ secrets.DEV_JWT }}'
       - run: go mod tidy
         working-directory: vaultyvault
       - run: go mod vendor

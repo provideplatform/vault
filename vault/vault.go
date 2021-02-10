@@ -26,6 +26,11 @@ type Vault struct {
 	MasterKeyID *uuid.UUID `sql:"type:uuid" json:"-"`
 }
 
+// KeyDetailsQuery returns the fields to SELECT from vault keys table
+func (v *Vault) KeyDetailsQuery(db *gorm.DB, keyID string) *gorm.DB {
+	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.seed, keys.private_key, keys.public_key, keys.vault_id").Where("keys.vault_id = ? AND keys.id = ?", v.ID, keyID)
+}
+
 // ListKeysQuery returns the fields to SELECT from vault keys table
 func (v *Vault) ListKeysQuery(db *gorm.DB) *gorm.DB {
 	return db.Select("keys.id, keys.created_at, keys.name, keys.description, keys.type, keys.usage, keys.spec, keys.seed, keys.private_key, keys.public_key, keys.vault_id").Where("keys.vault_id = ?", v.ID)
@@ -211,21 +216,18 @@ func GetVaults(applicationID, organizationID, userID *uuid.UUID) []*Vault {
 
 // GetVault returns a vault for the specified parameters
 func GetVault(db *gorm.DB, vaultID string, applicationID, organizationID, userID *uuid.UUID) *Vault {
-
-	var query *gorm.DB
-
 	var vault = &Vault{}
+	query := db.Where("vaults.id = ?", vaultID)
 
-	query = db.Where("id = ?", vaultID)
 	if applicationID != nil && *applicationID != uuid.Nil {
-		query = query.Where("vaults.application_id = ?", applicationID)
+		query = query.Where("vaults.id = ? AND vaults.application_id = ?", vaultID, applicationID)
 	} else if organizationID != nil && *organizationID != uuid.Nil {
-		query = query.Where("vaults.organization_id = ?", organizationID)
+		query = query.Where("vaults.id = ? AND vaults.organization_id = ?", vaultID, organizationID)
 	} else if userID != nil && *userID != uuid.Nil {
-		query = query.Where("vaults.user_id = ?", userID)
+		query = query.Where("vaults.id = ? AND vaults.user_id = ?", vaultID, userID)
 	}
-	query.Find(&vault)
 
+	query.Find(&vault)
 	return vault
 }
 

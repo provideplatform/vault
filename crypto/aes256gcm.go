@@ -21,16 +21,12 @@ type AES256GCM struct {
 
 // CreateAES256GCMSeed creates a seed for a new AES256GCM key
 func CreateAES256GCMSeed() ([]byte, error) {
-	keypair, err := CreatePair(PrefixByteSeed)
+	_, privateKey, err := CreateEd25519KeyPair()
 	if err != nil {
 		return nil, ErrCannotGenerateSeed
 	}
 
-	seed, err := keypair.Seed()
-	if err != nil {
-		return nil, ErrCannotReadSeed
-	}
-
+	seed := privateKey.Seed()
 	slicedSeed := seed[0:AES256GCMSeedSize]
 
 	return slicedSeed, nil

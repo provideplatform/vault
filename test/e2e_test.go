@@ -62,6 +62,30 @@ func keyFactory(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescript
 	return key, nil
 }
 
+func keyFactoryWithSeed(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription, seedPhrase string) (*provide.Key, error) {
+
+	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
+		"type":        keyType,
+		"usage":       keyUsage,
+		"spec":        keySpec,
+		"name":        keyName,
+		"description": keyDescription,
+		"mnemonic":    seedPhrase,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create key error: %s", err.Error())
+	}
+
+	key := &provide.Key{}
+	respRaw, err := json.Marshal(resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshall key data: %s", err.Error())
+	}
+	json.Unmarshal(respRaw, &key)
+	return key, nil
+}
+
 func vaultFactory(token, name, desc string) (*provide.Vault, error) {
 	resp, err := provide.CreateVault(token, map[string]interface{}{
 		"name":        name,
@@ -1643,7 +1667,6 @@ func TestArbitrarySignatureSecp256k1(t *testing.T) {
 	messageToSign := hex.EncodeToString(payloadBytes)
 
 	opts := map[string]interface{}{}
-	//json.Unmarshal([]byte(`{"algorithm":"PS256"}`), &opts)
 
 	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
 	if err != nil {
@@ -1735,6 +1758,437 @@ func TestArbitrarySignatureEd25519(t *testing.T) {
 
 	if verifyresponse.Verified != true {
 		t.Error("failed to verify signature for vault")
+		return
+	}
+}
+
+func TestDetachedSignatureVerification(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	tt := []struct {
+		Name        string
+		Description string
+		Type        string
+		Usage       string
+		Spec        string
+		Options     string
+	}{
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecECCEd25519, ""},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecECCBabyJubJub, ""},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"RS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"RS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"RS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"RS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"RS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"RS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"RS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"RS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"RS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecECCSecp256k1, ""},
+	}
+
+	for _, tc := range tt {
+
+		key, err := keyFactory(*token, vault.ID.String(), tc.Type, tc.Usage, tc.Spec, "namey name", "cute description")
+		if err != nil {
+			t.Errorf("failed to create key; %s", err.Error())
+			return
+		}
+
+		payloadBytes, _ := common.RandomBytes(32)
+		messageToSign := hex.EncodeToString(payloadBytes)
+
+		opts := map[string]interface{}{}
+		if tc.Options != "" {
+			json.Unmarshal([]byte(tc.Options), &opts)
+		}
+
+		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+
+		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+		if err != nil {
+			t.Errorf("failed to verify signature for vault: %s", err.Error())
+			return
+		}
+
+		if verifyresponse.Verified != true {
+			t.Error("failed to verify signature for vault")
+			return
+		}
+
+		detachedverifyresponse, err := provide.VerifyDetachedSignature(*token, tc.Spec, messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
+		if err != nil {
+			t.Errorf("failed to verify detached signature: %s", err.Error())
+			return
+		}
+
+		if detachedverifyresponse.Verified != true {
+			t.Errorf("failed to verify detached signature for %s key type", tc.Spec)
+			return
+		}
+	}
+}
+
+func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	tt := []struct {
+		Name        string
+		Description string
+		Type        string
+		Usage       string
+		Spec        string
+		Options     string
+	}{
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS512"}`},
+	}
+
+	for _, tc := range tt {
+
+		key, err := keyFactory(*token, vault.ID.String(), tc.Type, tc.Usage, tc.Spec, "namey name", "cute description")
+		if err != nil {
+			t.Errorf("failed to create key; %s", err.Error())
+			return
+		}
+
+		payloadBytes, _ := common.RandomBytes(32)
+		messageToSign := hex.EncodeToString(payloadBytes)
+
+		opts := map[string]interface{}{}
+		if tc.Options != "" {
+			json.Unmarshal([]byte(tc.Options), &opts)
+		}
+
+		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+
+		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+		if err != nil {
+			t.Errorf("failed to verify signature for vault: %s", err.Error())
+			return
+		}
+
+		if verifyresponse.Verified != true {
+			t.Error("failed to verify signature for vault")
+			return
+		}
+
+		// now we will run the detached verification with invalid parameters for each of the test keys
+		// testing no spec, expect 422
+		_, err = provide.VerifyDetachedSignature(*token, "", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
+		if err == nil {
+			t.Errorf("verified invalid detached signature with no spec")
+		}
+
+		// testing no message, expecting 422
+		_, err = provide.VerifyDetachedSignature(*token, tc.Spec, "", *sigresponse.Signature, *key.PublicKey, opts)
+		if err == nil {
+			t.Errorf("verified invalid detached signature with no message")
+		}
+
+		// testing no signature, expecting 422
+		_, err = provide.VerifyDetachedSignature(*token, tc.Spec, messageToSign, "", *key.PublicKey, opts)
+		if err == nil {
+			t.Errorf("verified invalid detached signature with no signature")
+		}
+
+		// testing no pubkey, expecting 422
+		_, err = provide.VerifyDetachedSignature(*token, tc.Spec, messageToSign, *sigresponse.Signature, "", opts)
+		if err == nil {
+			t.Errorf("verified invalid detached signature with no public key")
+		}
+
+		// testing no algorithm (for RSA), expecting 422
+		_, err = provide.VerifyDetachedSignature(*token, tc.Spec, messageToSign, *sigresponse.Signature, *key.PublicKey, map[string]interface{}{})
+		if err == nil {
+			t.Errorf("verified invalid detached RSA signature with no options")
+			return
+		}
+
+		// testing invalid spec, will return verified false, but TODO change to ensure it returns an error with the input issue
+		verifyresponse, err = provide.VerifyDetachedSignature(*token, "invalid_spec", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
+		if verifyresponse.Verified != false {
+			t.Errorf("verified signature with invalid spec")
+			return
+		}
+
+		invalidPayload, _ := common.RandomBytes(32)
+		invalidMessage := hex.EncodeToString(invalidPayload)
+
+		// CHECKME testing invalid signature, expecting 500
+		// but this should really be a 201 with verified false (for consistency)
+		// because the only thing that has gone wrong is the signature is invalid
+		// as opposed to a parameter error
+		verifyresponse, err = provide.VerifyDetachedSignature(*token, tc.Spec, invalidMessage, *sigresponse.Signature, *key.PublicKey, opts)
+		if verifyresponse.Verified != false {
+			t.Errorf("verified signature with invalid message")
+			return
+		}
+
+	}
+}
+
+func TestCreateHDWalletWithSeed(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	seed := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	//
+	if key.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key.ID)
+		return
+	}
+
+	t.Logf("publickeyhex: %s", *key.PublicKey)
+	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	if key2.PublicKey == nil {
+		t.Errorf("failed to assign xpub key on hd wallet; %s", key2.ID)
+		return
+	}
+
+	if *key.PublicKey != *key2.PublicKey {
+		t.Errorf("deterministic wallet with seed did not create the same key")
+		return
+	}
+}
+
+func TestCreateHDWalletWithInvalidSeed(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	seed := "kraffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+	_, err = keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err == nil {
+		t.Errorf("created HD wallet with invalid seed")
+		return
+	}
+
+	if err != nil {
+		t.Logf("error received: %s", err.Error())
+	}
+}
+
+func TestHDWalletSeedAutoSign(t *testing.T) {
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	seed := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	for iteration := 0; iteration < 10; iteration++ {
+		payloadBytes, _ := common.RandomBytes(32)
+		messageToSign := hex.EncodeToString(payloadBytes)
+
+		sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+
+		sigresponse2, err := provide.SignMessage(*token, vault.ID.String(), key2.ID.String(), messageToSign, nil)
+		if err != nil {
+			t.Errorf("failed to sign message %s", err.Error())
+			return
+		}
+
+		if *sigresponse.Signature != *sigresponse2.Signature {
+			t.Errorf("mismatch in signatures from key with provided seed")
+			return
+		}
+
+		// set up the verification options
+		opts := map[string]interface{}{}
+		options := fmt.Sprintf(`{"hdwallet":{"coin_abbr":"ETH", "index":%d}}`, iteration)
+		json.Unmarshal([]byte(options), &opts)
+
+		verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, opts)
+		if err != nil {
+			t.Errorf("failed to verify signature for vault: %s", err.Error())
+			return
+		}
+
+		verifyresponse2, err := provide.VerifySignature(*token, vault.ID.String(), key2.ID.String(), messageToSign, *sigresponse2.Signature, opts)
+		if err != nil {
+			t.Errorf("failed to verify signature 2 for vault: %s", err.Error())
+			return
+		}
+
+		if verifyresponse.Verified != true {
+			t.Errorf("failed to verify signature for vault!")
+			return
+		}
+
+		if verifyresponse2.Verified != true {
+			t.Errorf("failed to verify signature 2 for vault!")
+			return
+		}
+
+	}
+}
+
+func TestHDWalletSeedLedgerDerivationPath(t *testing.T) {
+
+	// this test will generate an ethereum address using a particular derivation path
+	// using the mechanism that the ledger wallet uses to create new ethereum addresses
+	// we will then confirm that repeating this process
+	// for two different keys using the same seed phrase
+	// generates the same ETH address
+
+	t.Parallel()
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	seed := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+
+	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	// set up the verification options using a ledger-style Account path
+	opts := map[string]interface{}{}
+	path := `m/44'/60'/2'/0/0`
+	options := fmt.Sprintf(`{"hdwallet":{"hd_derivation_path":"%s"}}`, path)
+	json.Unmarshal([]byte(options), &opts)
+
+	payloadBytes, _ := common.RandomBytes(32)
+	messageToSign := hex.EncodeToString(payloadBytes)
+
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	sigresponse2, err := provide.SignMessage(*token, vault.ID.String(), key2.ID.String(), messageToSign, opts)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	if *sigresponse.Signature != *sigresponse2.Signature {
+		t.Errorf("mismatch in signatures from derived key with provided seed")
+		return
+	}
+
+	if *sigresponse.Address != *sigresponse2.Address {
+		t.Errorf("mismatch in generated address from derived key and seed")
+		return
+	}
+	if *sigresponse.DerivationPath != *sigresponse2.DerivationPath {
+		t.Errorf("mismatch in derivation path")
+		return
+	}
+
+	if *sigresponse.DerivationPath != path {
+		t.Errorf("returned derivation path does not correspond to provided derivation path. Expected: %s, received %s", path, *sigresponse.DerivationPath)
 		return
 	}
 }

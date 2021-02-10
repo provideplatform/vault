@@ -99,6 +99,7 @@ type Key struct {
 	PublicKey               *[]byte    `sql:"type:bytea" json:"-"`
 	PrivateKey              *[]byte    `sql:"type:bytea" json:"-"`
 	IterativeDerivationPath *string    `gorm:"column:iterative_hd_derivation_path" json:"-"`
+	Mnemonic                *string    `sql:"-" json:"mnemonic,omitempty"`
 
 	Address             *string `sql:"-" json:"address,omitempty"`
 	Ephemeral           *bool   `sql:"-" json:"ephemeral,omitempty"`
@@ -153,6 +154,17 @@ type KeySignVerifyRequestResponse struct {
 	Verified       *bool           `json:"verified,omitempty"`
 	Address        *string         `json:"address,omitempty"`
 	DerivationPath *string         `json:"hd_derivation_path,omitempty"`
+}
+
+// DetachedVerifyRequestResponse represents the API request/response parameters
+// needed to verify a provided signature created outside of vault
+type DetachedVerifyRequestResponse struct {
+	Spec         *string         `json:"spec,omitempty"`
+	Message      *string         `json:"message,omitempty"`
+	Signature    *string         `json:"signature,omitempty"`
+	Options      *SigningOptions `json:"options,omitempty"`
+	Verified     *bool           `json:"verified,omitempty"`
+	PublicKeyHex *string         `json:"pubkeyhex,omitempty"`
 }
 
 // createAES256GCM creates a key using a random seed
@@ -308,7 +320,28 @@ func (k *Key) createSecp256k1Keypair() error {
 }
 
 func (k *Key) createHDWallet() error {
-	hdwllt, err := crypto.CreateHDWalletSeedPhrase(crypto.DefaultHDWalletSeedEntropy)
+	hdwllt, err := crypto.CreateHDWalletWithEntropy(crypto.DefaultHDWalletSeedEntropy)
+	if err != nil {
+		return fmt.Errorf("unable to create HD wallet; %s", err.Error())
+	}
+
+	k.Seed = hdwllt.Seed
+	*k.Type = KeyTypeAsymmetric
+	k.IterativeDerivationPath = common.StringOrNil(crypto.DefaultHDDerivationPath().String())
+	k.PublicKey = hdwllt.PublicKey
+	k.PublicKeyHex = common.StringOrNil(string(*hdwllt.PublicKey))
+
+	if k.Description == nil {
+		desc := fmt.Sprint("BIP39 HD Wallet")
+		k.Description = common.StringOrNil(desc)
+	}
+
+	common.Log.Debugf("created HD wallet for vault: %s;", k.VaultID)
+	return nil
+}
+
+func (k *Key) createHDWalletFromSeedPhrase(mnemonic []byte) error {
+	hdwllt, err := crypto.CreateHDWalletFromSeedPhrase(string(mnemonic))
 	if err != nil {
 		return fmt.Errorf("unable to create HD wallet; %s", err.Error())
 	}
@@ -558,16 +591,32 @@ func (k *Key) create() error {
 		return fmt.Errorf("failed to validate key; %s", *k.Errors[0].Message)
 	}
 
-	hasKeyMaterial := k.Seed != nil || k.PrivateKey != nil
+	hasKeyMaterial := k.Seed != nil || k.PrivateKey != nil || k.Mnemonic != nil
 
-	if k.ID != uuid.Nil && hasKeyMaterial {
+	if *k.Spec == KeySpecECCBIP39 && hasKeyMaterial {
+
+		// first check that we only have the mnemonic phrase, not a seed or private key
+		if k.Mnemonic == nil {
+			return fmt.Errorf("mnemonic required to create BIP39 key from existing seed phrase")
+		}
+
+		// attempt to create a hd wallet from the provided mnemonic
+		err := k.createHDWalletFromSeedPhrase([]byte(*k.Mnemonic))
+		if err != nil {
+			return fmt.Errorf("failed to create hd wallet; %s", err.Error())
+		}
+	}
+
+	// if we have a provided seed/private key and it's not a BIP39 key,
+	// then append an error
+	if k.ID != uuid.Nil && hasKeyMaterial && *k.Spec != KeySpecECCBIP39 {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("attempted to regenerate key material for key: %s", k.ID)),
 		})
 		return nil
 	}
 
-	if !hasKeyMaterial { // FIXME? this sucks :D
+	if !hasKeyMaterial {
 		switch *k.Spec {
 		case KeySpecAES256GCM:
 			err := k.createAES256GCM()
@@ -1196,11 +1245,8 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 		return providecrypto.TECVerify(decodedPubKey, payload, sig)
 
 	case KeySpecECCEd25519:
-		ec25519Key := crypto.FromSeed(*k.Seed).Public().(ed25519.PublicKey)
-		if ec25519Key == nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s", len(payload), k.ID)
-		}
-		return crypto.Ed25519Verify(ec25519Key, payload, sig)
+		decodedPubKey := *k.PublicKey
+		return crypto.Ed25519Verify(decodedPubKey, payload, sig)
 
 	case KeySpecECCBIP39:
 		var path *accounts.DerivationPath

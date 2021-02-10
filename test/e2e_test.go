@@ -1945,10 +1945,10 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 			return
 		}
 
-		// testing invalid spec, expecting 500
-		_, err = provide.VerifyDetachedSignature(*token, "invalid_spec", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
-		if err == nil {
-			t.Errorf("verified invalid spec")
+		// testing invalid spec, will return verified false, but TODO change to ensure it returns an error with the input issue
+		verifyresponse, err = provide.VerifyDetachedSignature(*token, "invalid_spec", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
+		if verifyresponse.Verified != false {
+			t.Errorf("verified signature with invalid spec")
 			return
 		}
 
@@ -1959,9 +1959,9 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 		// but this should really be a 201 with verified false (for consistency)
 		// because the only thing that has gone wrong is the signature is invalid
 		// as opposed to a parameter error
-		_, err = provide.VerifyDetachedSignature(*token, "invalid_spec", invalidMessage, *sigresponse.Signature, *key.PublicKey, opts)
-		if err == nil {
-			t.Errorf("verified invalid spec")
+		verifyresponse, err = provide.VerifyDetachedSignature(*token, tc.Spec, invalidMessage, *sigresponse.Signature, *key.PublicKey, opts)
+		if verifyresponse.Verified != false {
+			t.Errorf("verified signature with invalid message")
 			return
 		}
 

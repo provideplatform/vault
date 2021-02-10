@@ -923,12 +923,6 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	// // first confirm we have the required input parameters
-	// if params.Spec == nil || *params.Spec == "" {
-	// 	provide.RenderError("key spec is required", 422, c)
-	// 	return
-	// }
-
 	// first confirm we have the required input parameters
 	if common.StringOrNil(*params.Spec) == nil {
 		provide.RenderError("key spec is required", 422, c)
@@ -993,13 +987,6 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	verifyError := key.Verify(message, signature, opts)
 	if verifyError == nil {
 		verified = true
-	}
-
-	// slight change from the regular verify so the error doesn't get swallowed
-	// note that key ID in this case is always nil UUID
-	if verifyError != nil {
-		provide.RenderError(verifyError.Error(), 500, c)
-		return
 	}
 
 	provide.Render(&DetachedVerifyRequestResponse{

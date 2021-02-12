@@ -1391,17 +1391,18 @@ func TestEphemeralCreation(t *testing.T) {
 		Type        string
 		Usage       string
 		Spec        string
+		KSpec       string
 	}{
-		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "C25519"},
-		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Ed25519"},
-		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "secp256k1"},
-		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "babyJubJub"},
-		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "BIP39"},
-		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-2048"},
-		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-3072"},
-		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "RSA-4096"},
-		{"ephemeral key", "ephemeral key description", "symmetric", "encrypt/decrypt", "AES-256-GCM"},
-		{"ephemeral key", "ephemeral key description", "symmetric", "encrypt/decrypt", "ChaCha20"},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "c25519", cryptovault.KeySpecECCC25519},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "ed25519", cryptovault.KeySpecECCEd25519},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Secp256k1", cryptovault.KeySpecECCSecp256k1},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "BabyJubJub", cryptovault.KeySpecECCBabyJubJub},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Bip39", cryptovault.KeySpecECCBIP39},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Rsa-2048", cryptovault.KeySpecRSA2048},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Rsa-3072", cryptovault.KeySpecRSA3072},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Rsa-4096", cryptovault.KeySpecRSA4096},
+		{"ephemeral key", "ephemeral key description", "symmetric", "encrypt/decrypt", "Aes-256-Gcm", cryptovault.KeySpecAES256GCM},
+		{"ephemeral key", "ephemeral key description", "symmetric", "encrypt/decrypt", "chacha20", cryptovault.KeySpecChaCha20},
 	}
 
 	for _, tc := range tt {
@@ -1430,27 +1431,27 @@ func TestEphemeralCreation(t *testing.T) {
 			t.Errorf("usage mismatch. expected %s, got %s", tc.Usage, *key.Usage)
 			return
 		}
-		if *key.Spec != tc.Spec {
+		if *key.Spec != tc.KSpec {
 			t.Errorf("spec mismatch. expected %s, got %s", tc.Spec, *key.Spec)
 			return
 		}
 
-		switch tc.Spec {
-		case "C25519":
+		switch *key.Spec {
+		case cryptovault.KeySpecECCC25519:
 			if key.PrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
-		case "Ed25519":
+		case cryptovault.KeySpecECCEd25519:
 			if key.Seed == nil {
 				t.Errorf("no seed returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
-		case "secp256k1":
+		case cryptovault.KeySpecECCSecp256k1:
 			if key.PrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
@@ -1460,43 +1461,43 @@ func TestEphemeralCreation(t *testing.T) {
 			if key.Address == nil {
 				t.Errorf("no address returned for ephemeral %s key", tc.Spec)
 			}
-		case "babyJubJub":
+		case cryptovault.KeySpecECCBabyJubJub:
 			if key.PrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
-		case "BIP39":
+		case cryptovault.KeySpecECCBIP39:
 			if key.Seed == nil {
 				t.Errorf("no seed returned for ephemeral %s key", tc.Spec)
 			}
-		case "RSA-2048":
+		case cryptovault.KeySpecRSA2048:
 			if key.PrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
-		case "RSA-3072":
+		case cryptovault.KeySpecRSA3072:
 			if key.PrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
-		case "RSA-4096":
+		case cryptovault.KeySpecRSA4096:
 			if key.PrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no public key returned for ephemeral %s key", tc.Spec)
 			}
-		case "AES-256-GCM":
+		case cryptovault.KeySpecAES256GCM:
 			if key.PrivateKey == nil {
 				t.Errorf("no private key returned for ephemeral %s key", tc.Spec)
 			}
-		case "ChaCha20":
+		case cryptovault.KeySpecChaCha20:
 			if key.Seed == nil {
 				t.Errorf("no seed returned for ephemeral %s key", tc.Spec)
 			}
@@ -1527,17 +1528,18 @@ func TestNonEphemeralCreation(t *testing.T) {
 		Type        string
 		Usage       string
 		Spec        string
+		KSpec       string
 	}{
-		{"regular key", "regular key description", "asymmetric", "sign/verify", "C25519"},
-		{"regular key", "regular key description", "asymmetric", "sign/verify", "Ed25519"},
-		{"regular key", "regular key description", "asymmetric", "sign/verify", "secp256k1"},
-		{"regular key", "regular key description", "asymmetric", "sign/verify", "babyJubJub"},
-		{"regular key", "regular key description", "asymmetric", "sign/verify", "BIP39"},
-		{"regular key", "regular key description", "asymmetric", "sign/verify", "RSA-2048"},
-		{"regular key", "regular key description", "asymmetric", "sign/verify", "RSA-3072"},
-		{"regular key", "regular key description", "asymmetric", "sign/verify", "RSA-4096"},
-		{"regular key", "regular key description", "symmetric", "encrypt/decrypt", "AES-256-GCM"},
-		{"regular key", "regular key description", "symmetric", "encrypt/decrypt", "ChaCha20"},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "c25519", cryptovault.KeySpecECCC25519},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "ed25519", cryptovault.KeySpecECCEd25519},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Secp256k1", cryptovault.KeySpecECCSecp256k1},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "BabyJubJub", cryptovault.KeySpecECCBabyJubJub},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Bip39", cryptovault.KeySpecECCBIP39},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Rsa-2048", cryptovault.KeySpecRSA2048},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Rsa-3072", cryptovault.KeySpecRSA3072},
+		{"ephemeral key", "ephemeral key description", "asymmetric", "sign/verify", "Rsa-4096", cryptovault.KeySpecRSA4096},
+		{"ephemeral key", "ephemeral key description", "symmetric", "encrypt/decrypt", "Aes-256-Gcm", cryptovault.KeySpecAES256GCM},
+		{"ephemeral key", "ephemeral key description", "symmetric", "encrypt/decrypt", "chacha20", cryptovault.KeySpecChaCha20},
 	}
 
 	for _, tc := range tt {
@@ -1566,27 +1568,27 @@ func TestNonEphemeralCreation(t *testing.T) {
 			t.Errorf("usage mismatch. expected %s, got %s", tc.Usage, *key.Usage)
 			return
 		}
-		if *key.Spec != tc.Spec {
+		if *key.Spec != tc.KSpec {
 			t.Errorf("spec mismatch. expected %s, got %s", tc.Spec, *key.Spec)
 			return
 		}
 
-		switch tc.Spec {
-		case "C25519":
+		switch *key.Spec {
+		case cryptovault.KeySpecECCC25519:
 			if key.PrivateKey != nil {
 				t.Errorf("private key returned for regular %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for regular %s key", tc.Spec)
 			}
-		case "Ed25519":
+		case cryptovault.KeySpecECCEd25519:
 			if key.Seed != nil {
 				t.Errorf("seed returned for regular %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no private key returned for regular %s key", tc.Spec)
 			}
-		case "secp256k1":
+		case cryptovault.KeySpecECCSecp256k1:
 			if key.PrivateKey != nil {
 				t.Errorf("private key returned for regular %s key", tc.Spec)
 			}
@@ -1596,43 +1598,43 @@ func TestNonEphemeralCreation(t *testing.T) {
 			if key.Address == nil {
 				t.Errorf("no address returned for regular %s key", tc.Spec)
 			}
-		case "babyJubJub":
+		case cryptovault.KeySpecECCBabyJubJub:
 			if key.PrivateKey != nil {
 				t.Errorf("private key returned for regular %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no public key returned for regular %s key", tc.Spec)
 			}
-		case "BIP39":
+		case cryptovault.KeySpecECCBIP39:
 			if key.Seed != nil {
 				t.Errorf("seed returned for regular %s key", tc.Spec)
 			}
-		case "RSA-2048":
+		case cryptovault.KeySpecRSA2048:
 			if key.PrivateKey != nil {
 				t.Errorf("private key returned for regular %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no public key returned for regular %s key", tc.Spec)
 			}
-		case "RSA-3072":
+		case cryptovault.KeySpecRSA3072:
 			if key.PrivateKey != nil {
 				t.Errorf("private key returned for regular %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no public key returned for regular %s key", tc.Spec)
 			}
-		case "RSA-4096":
+		case cryptovault.KeySpecRSA4096:
 			if key.PrivateKey != nil {
 				t.Errorf("private key returned for regular %s key", tc.Spec)
 			}
 			if key.PublicKey == nil {
 				t.Errorf("no public key returned for regular %s key", tc.Spec)
 			}
-		case "AES-256-GCM":
+		case cryptovault.KeySpecAES256GCM:
 			if key.PrivateKey != nil {
 				t.Errorf("private key returned for regular %s key", tc.Spec)
 			}
-		case "ChaCha20":
+		case cryptovault.KeySpecChaCha20:
 			if key.Seed != nil {
 				t.Errorf("seed returned for regular %s key", tc.Spec)
 			}

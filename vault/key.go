@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -175,7 +176,8 @@ func (k *Key) createAES256GCM() error {
 	}
 
 	k.PrivateKey = &privatekey
-	*k.Type = KeyTypeSymmetric
+	k.Type = common.StringOrNil(KeyTypeSymmetric)
+	k.Spec = common.StringOrNil(KeySpecAES256GCM)
 
 	common.Log.Debugf("created AES256GCM key for vault: %s;", k.VaultID)
 	return nil
@@ -192,7 +194,8 @@ func (k *Key) createBabyJubJubKeypair() error {
 
 	k.PrivateKey = &privateKey
 	k.PublicKey = &publicKey
-	*k.Type = KeyTypeAsymmetric
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.Spec = common.StringOrNil(KeySpecECCBabyJubJub)
 
 	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
 	return nil
@@ -207,7 +210,8 @@ func (k *Key) createC25519Keypair() error {
 
 	k.PrivateKey = c25519KeyPair.PrivateKey
 	k.PublicKey = c25519KeyPair.PublicKey
-	*k.Type = KeyTypeAsymmetric
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.Spec = common.StringOrNil(KeySpecECCC25519)
 
 	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, hex.EncodeToString(*c25519KeyPair.PublicKey))
 	return nil
@@ -221,7 +225,8 @@ func (k *Key) createChaCha20() error {
 	}
 
 	k.Seed = &seed
-	*k.Type = KeyTypeSymmetric
+	k.Type = common.StringOrNil(KeyTypeSymmetric)
+	k.Spec = common.StringOrNil(KeySpecChaCha20)
 
 	common.Log.Debugf("created chacha20 key for vault: %s;", k.VaultID)
 	return nil
@@ -293,7 +298,8 @@ func (k *Key) createEd25519Keypair() error {
 	seed := privateKey.Seed()
 	k.Seed = &seed
 	k.PublicKey = &publicKeyBytes
-	*k.Type = KeyTypeAsymmetric
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.Spec = common.StringOrNil(KeySpecECCEd25519)
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, hex.EncodeToString(*k.PublicKey))
 	return nil
@@ -308,7 +314,8 @@ func (k *Key) createSecp256k1Keypair() error {
 
 	k.PrivateKey = secp256k1KeyPair.PrivateKey
 	k.PublicKey = secp256k1KeyPair.PublicKey
-	*k.Type = KeyTypeAsymmetric
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.Spec = common.StringOrNil(KeySpecECCSecp256k1)
 
 	if k.Description == nil {
 		desc := fmt.Sprintf("secp256k1 keypair; address: %s", *secp256k1KeyPair.Address)
@@ -326,10 +333,11 @@ func (k *Key) createHDWallet() error {
 	}
 
 	k.Seed = hdwllt.Seed
-	*k.Type = KeyTypeAsymmetric
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.IterativeDerivationPath = common.StringOrNil(crypto.DefaultHDDerivationPath().String())
 	k.PublicKey = hdwllt.PublicKey
 	k.PublicKeyHex = common.StringOrNil(string(*hdwllt.PublicKey))
+	k.Spec = common.StringOrNil(KeySpecECCBIP39)
 
 	if k.Description == nil {
 		desc := fmt.Sprint("BIP39 HD Wallet")
@@ -347,10 +355,11 @@ func (k *Key) createHDWalletFromSeedPhrase(mnemonic []byte) error {
 	}
 
 	k.Seed = hdwllt.Seed
-	*k.Type = KeyTypeAsymmetric
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.IterativeDerivationPath = common.StringOrNil(crypto.DefaultHDDerivationPath().String())
 	k.PublicKey = hdwllt.PublicKey
 	k.PublicKeyHex = common.StringOrNil(string(*hdwllt.PublicKey))
+	k.Spec = common.StringOrNil(KeySpecECCBIP39)
 
 	if k.Description == nil {
 		desc := fmt.Sprint("BIP39 HD Wallet")
@@ -371,6 +380,15 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 	k.PrivateKey = rsaKeyPair.PrivateKey
 	k.PublicKey = rsaKeyPair.PublicKey
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+
+	switch bitsize {
+	case 2048:
+		k.Spec = common.StringOrNil(KeySpecRSA2048)
+	case 3072:
+		k.Spec = common.StringOrNil(KeySpecRSA3072)
+	case 4096:
+		k.Spec = common.StringOrNil(KeySpecRSA4096)
+	}
 
 	common.Log.Debugf("created rsa%d key for vault: %s; public key: 0x%s", bitsize, k.VaultID, *k.PublicKey)
 	return nil
@@ -593,7 +611,7 @@ func (k *Key) create() error {
 
 	hasKeyMaterial := k.Seed != nil || k.PrivateKey != nil || k.Mnemonic != nil
 
-	if *k.Spec == KeySpecECCBIP39 && hasKeyMaterial {
+	if strings.EqualFold(*k.Spec, KeySpecECCBIP39) && hasKeyMaterial {
 
 		// first check that we only have the mnemonic phrase, not a seed or private key
 		if k.Mnemonic == nil {
@@ -609,7 +627,7 @@ func (k *Key) create() error {
 
 	// if we have a provided seed/private key and it's not a BIP39 key,
 	// then append an error
-	if k.ID != uuid.Nil && hasKeyMaterial && *k.Spec != KeySpecECCBIP39 {
+	if k.ID != uuid.Nil && hasKeyMaterial && !strings.EqualFold(*k.Spec, KeySpecECCBIP39) {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("attempted to regenerate key material for key: %s", k.ID)),
 		})
@@ -617,53 +635,53 @@ func (k *Key) create() error {
 	}
 
 	if !hasKeyMaterial {
-		switch *k.Spec {
-		case KeySpecAES256GCM:
+		switch strings.ToUpper(*k.Spec) {
+		case strings.ToUpper(KeySpecAES256GCM):
 			err := k.createAES256GCM()
 			if err != nil {
 				return fmt.Errorf("failed to create AES-256-GCM key; %s", err.Error())
 			}
-		case KeySpecChaCha20:
+		case strings.ToUpper(KeySpecChaCha20):
 			err := k.createChaCha20()
 			if err != nil {
 				return fmt.Errorf("failed to create ChaCha20 key; %s", err.Error())
 			}
-		case KeySpecECCBabyJubJub:
+		case strings.ToUpper(KeySpecECCBabyJubJub):
 			err := k.createBabyJubJubKeypair()
 			if err != nil {
 				return fmt.Errorf("failed to create babyjubjub keypair; %s", err.Error())
 			}
-		case KeySpecECCC25519:
+		case strings.ToUpper(KeySpecECCC25519):
 			err := k.createC25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
 			}
-		case KeySpecECCEd25519:
+		case strings.ToUpper(KeySpecECCEd25519):
 			err := k.createEd25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
 			}
-		case KeySpecECCBIP39:
+		case strings.ToUpper(KeySpecECCBIP39):
 			err := k.createHDWallet()
 			if err != nil {
 				return fmt.Errorf("failed to create hd wallet; %s", err.Error())
 			}
-		case KeySpecECCSecp256k1:
+		case strings.ToUpper(KeySpecECCSecp256k1):
 			err := k.createSecp256k1Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
 			}
-		case KeySpecRSA4096:
+		case strings.ToUpper(KeySpecRSA4096):
 			err := k.createRSAKeypair(KeyBits4096)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
 			}
-		case KeySpecRSA3072:
+		case strings.ToUpper(KeySpecRSA3072):
 			err := k.createRSAKeypair(KeyBits3072)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
 			}
-		case KeySpecRSA2048:
+		case strings.ToUpper(KeySpecRSA2048):
 			err := k.createRSAKeypair(KeyBits2048)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())

@@ -1915,7 +1915,6 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 			return
 		}
 
-		t.Log("beginning detached verification")
 		// now we will run the detached verification with invalid parameters for each of the test keys
 		// testing no spec, expect 422
 		_, err = provide.VerifyDetachedSignature(*token, "", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)

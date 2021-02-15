@@ -333,11 +333,18 @@ func (k *Key) createHDWallet() error {
 	}
 
 	k.Seed = hdwllt.Seed
+<<<<<<< HEAD
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.IterativeDerivationPath = common.StringOrNil(crypto.DefaultHDDerivationPath().String())
 	k.PublicKey = hdwllt.PublicKey
 	k.PublicKeyHex = common.StringOrNil(string(*hdwllt.PublicKey))
 	k.Spec = common.StringOrNil(KeySpecECCBIP39)
+=======
+	*k.Type = KeyTypeAsymmetric
+	k.IterativeDerivationPath = common.StringOrNil(crypto.DefaultHDDerivationPath().String())
+	k.PublicKey = hdwllt.PublicKey
+	k.PublicKeyHex = common.StringOrNil(string(*hdwllt.PublicKey))
+>>>>>>> 8afe8bf49dcfda6125ee85b53bc003693a670276
 
 	if k.Description == nil {
 		desc := fmt.Sprint("BIP39 HD Wallet")
@@ -610,6 +617,7 @@ func (k *Key) create() error {
 	}
 
 	hasKeyMaterial := k.Seed != nil || k.PrivateKey != nil || k.Mnemonic != nil
+<<<<<<< HEAD
 
 	if *k.Spec == KeySpecECCBIP39 && hasKeyMaterial {
 
@@ -618,6 +626,16 @@ func (k *Key) create() error {
 			return fmt.Errorf("mnemonic required to create BIP39 key from existing seed phrase")
 		}
 
+=======
+
+	if *k.Spec == KeySpecECCBIP39 && hasKeyMaterial {
+
+		// first check that we only have the mnemonic phrase, not a seed or private key
+		if k.Mnemonic == nil {
+			return fmt.Errorf("mnemonic required to create BIP39 key from existing seed phrase")
+		}
+
+>>>>>>> 8afe8bf49dcfda6125ee85b53bc003693a670276
 		// attempt to create a hd wallet from the provided mnemonic
 		err := k.createHDWalletFromSeedPhrase([]byte(*k.Mnemonic))
 		if err != nil {

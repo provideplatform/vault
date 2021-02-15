@@ -939,7 +939,6 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		return
 	}
 
-<<<<<<< HEAD
 	// ensure the key spec is valid and correct the case
 	keySpec, err := ValidateKeySpec(params.Spec)
 	if err != nil {
@@ -950,8 +949,6 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		params.Spec = keySpec
 	}
 
-=======
->>>>>>> 8afe8bf49dcfda6125ee85b53bc003693a670276
 	if common.StringOrNil(*params.Message) == nil {
 		provide.RenderError("message is required", 422, c)
 		return

@@ -215,7 +215,7 @@ func unseal(sealedKey *[]byte) (*[]byte, error) {
 
 // CreateUnsealerKey creates a fresh unsealer key
 func CreateUnsealerKey() (*SealUnsealRequestResponse, error) {
-	key, err := vaultcrypto.CreateHDWalletSeedPhrase(vaultcrypto.DefaultHDWalletSeedEntropy)
+	key, err := vaultcrypto.CreateHDWalletWithEntropy(vaultcrypto.DefaultHDWalletSeedEntropy)
 	if err != nil {
 		return nil, err
 	}

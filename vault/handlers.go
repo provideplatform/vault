@@ -479,6 +479,16 @@ func createVaultKeyHandler(c *gin.Context) {
 		return
 	}
 
+	// ensure the key spec is valid and correct the case
+	keySpec, err := ValidateKeySpec(key.Spec)
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+	if err == nil {
+		key.Spec = keySpec
+	}
+
 	db := dbconf.DatabaseConnection()
 	vault := &Vault{}
 	vault = GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
@@ -927,6 +937,16 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	if common.StringOrNil(*params.Spec) == nil {
 		provide.RenderError("key spec is required", 422, c)
 		return
+	}
+
+	// ensure the key spec is valid and correct the case
+	keySpec, err := ValidateKeySpec(params.Spec)
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+	if err == nil {
+		params.Spec = keySpec
 	}
 
 	if common.StringOrNil(*params.Message) == nil {

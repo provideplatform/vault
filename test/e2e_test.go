@@ -350,7 +350,7 @@ func TestAPIDeleteKey(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "secp256k1", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "secp256K1", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -377,7 +377,7 @@ func TestAPISign(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "secp256k1", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "SECP256K1", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -547,7 +547,7 @@ func TestAPIEncrypt(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "AES-256-GCM", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "aes-256-GCM", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -578,7 +578,7 @@ func TestAPIChachaDecrypt(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "ChaCha20", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "chaCha20", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -618,7 +618,7 @@ func TestAPIDecrypt(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "AES-256-GCM", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "aes-256-GCM", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -658,7 +658,7 @@ func TestAPIDecryptNoNonce(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "AES-256-GCM", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "aes-256-GCM", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -697,7 +697,7 @@ func TestCreateHDWallet(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -745,7 +745,7 @@ func TestCreateHDWalletFailsWithInvalidCoin(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -793,7 +793,7 @@ func TestCreateHDWalletCoinAbbr(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -841,7 +841,7 @@ func TestHDWalletAutoSign(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -910,7 +910,7 @@ func TestListKeys(t *testing.T) {
 		key, err := provide.CreateKey(*token, vault.ID.String(), map[string]interface{}{
 			"type":        "asymmetric",
 			"usage":       "sign/verify",
-			"spec":        "secp256k1",
+			"spec":        "secp256K1",
 			"name":        keyName,
 			"description": "organization eth/stablecoin wallet",
 		})
@@ -1001,7 +1001,7 @@ func TestListKeys_Filtered(t *testing.T) {
 	_, err = provide.CreateKey(*token, vault.ID.String(), map[string]interface{}{
 		"type":        "asymmetric",
 		"usage":       "sign/verify",
-		"spec":        "babyJubJub",
+		"spec":        "babyjubjub",
 		"name":        "babyjubjub key to be filtered out",
 		"description": "baseline babyjubjub key",
 	})
@@ -1020,7 +1020,7 @@ func TestListKeys_Filtered(t *testing.T) {
 		key, err := provide.CreateKey(*token, vault.ID.String(), map[string]interface{}{
 			"type":        "asymmetric",
 			"usage":       "sign/verify",
-			"spec":        "secp256k1",
+			"spec":        "SECP256k1",
 			"name":        keyName,
 			"description": "organization eth/stablecoin wallet",
 		})
@@ -1172,7 +1172,7 @@ func TestAPIDerivedChachaDecrypt(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "ChaCha20", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "chacha20", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -1238,7 +1238,7 @@ func TestAPIDerivedChachaDecryptNoNonce(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "ChaCha20", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "chacha20", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -1302,7 +1302,7 @@ func TestAPIDerivedNonChachaDecryptNoNonce(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "AES-256-GCM", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "symmetric", "encrypt/decrypt", "aes-256-gcm", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -1342,7 +1342,7 @@ func TestAPIDeriveBIP39(t *testing.T) {
 		return
 	}
 
-	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "namey name", "cute description")
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "namey name", "cute description")
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -1786,27 +1786,27 @@ func TestDetachedSignatureVerification(t *testing.T) {
 		Spec        string
 		Options     string
 	}{
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecECCEd25519, ""},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecECCBabyJubJub, ""},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS256"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS256"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS256"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS384"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS384"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS384"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"PS512"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"PS512"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"PS512"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"RS256"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"RS256"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"RS256"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"RS384"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"RS384"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"RS384"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA2048, `{"algorithm":"RS512"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA3072, `{"algorithm":"RS512"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecRSA4096, `{"algorithm":"RS512"}`},
-		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, cryptovault.KeySpecECCSecp256k1, ""},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "ed25519", ""},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "babyjubjub", ""},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-2048", `{"algorithm":"PS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-3072", `{"algorithm":"PS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-4096", `{"algorithm":"PS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-2048", `{"algorithm":"PS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-3072", `{"algorithm":"PS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-4096", `{"algorithm":"PS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-2048", `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-3072", `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-4096", `{"algorithm":"PS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-2048", `{"algorithm":"RS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-3072", `{"algorithm":"RS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-4096", `{"algorithm":"RS256"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-2048", `{"algorithm":"RS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-3072", `{"algorithm":"RS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-4096", `{"algorithm":"RS384"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-2048", `{"algorithm":"RS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-3072", `{"algorithm":"RS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "rsa-4096", `{"algorithm":"RS512"}`},
+		{"regular key", "regular key description", cryptovault.KeyTypeAsymmetric, cryptovault.KeyUsageSignVerify, "secp256K1", ""},
 	}
 
 	for _, tc := range tt {
@@ -1915,6 +1915,7 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 			return
 		}
 
+		t.Log("beginning detached verification")
 		// now we will run the detached verification with invalid parameters for each of the test keys
 		// testing no spec, expect 422
 		_, err = provide.VerifyDetachedSignature(*token, "", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
@@ -1947,18 +1948,18 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 			return
 		}
 
-		// testing invalid spec, will return verified false, but TODO change to ensure it returns an error with the input issue
-		verifyresponse, err = provide.VerifyDetachedSignature(*token, "invalid_spec", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
-		if verifyresponse.Verified != false {
-			t.Errorf("verified signature with invalid spec")
+		// testing invalid spec, will return an error with the input issue
+		_, err = provide.VerifyDetachedSignature(*token, "invalid_spec", messageToSign, *sigresponse.Signature, *key.PublicKey, opts)
+		if err == nil {
+			t.Errorf("verified invalid spec signature")
 			return
 		}
 
 		invalidPayload, _ := common.RandomBytes(32)
 		invalidMessage := hex.EncodeToString(invalidPayload)
 
-		// CHECKME testing invalid signature, expecting 500
-		// but this should really be a 201 with verified false (for consistency)
+		// CHECKME testing invalid signature
+		// returns a 201 with verified false (for consistency)
 		// because the only thing that has gone wrong is the signature is invalid
 		// as opposed to a parameter error
 		verifyresponse, err = provide.VerifyDetachedSignature(*token, tc.Spec, invalidMessage, *sigresponse.Signature, *key.PublicKey, opts)
@@ -1985,7 +1986,7 @@ func TestCreateHDWalletWithSeed(t *testing.T) {
 	}
 
 	seed := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
-	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet", seed)
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -1998,7 +1999,7 @@ func TestCreateHDWalletWithSeed(t *testing.T) {
 	}
 
 	t.Logf("publickeyhex: %s", *key.PublicKey)
-	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet", seed)
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -2030,7 +2031,7 @@ func TestCreateHDWalletWithInvalidSeed(t *testing.T) {
 	}
 
 	seed := "kraffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
-	_, err = keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	_, err = keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet", seed)
 	if err == nil {
 		t.Errorf("created HD wallet with invalid seed")
 		return
@@ -2056,13 +2057,13 @@ func TestHDWalletSeedAutoSign(t *testing.T) {
 	}
 
 	seed := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
-	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet", seed)
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
 	}
 
-	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet", seed)
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
@@ -2142,13 +2143,13 @@ func TestHDWalletSeedLedgerDerivationPath(t *testing.T) {
 
 	seed := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
 
-	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	key, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet", seed)
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return
 	}
 
-	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "BIP39", "hdwallet", "integration test hd wallet", seed)
+	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet", seed)
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())
 		return

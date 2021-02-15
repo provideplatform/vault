@@ -611,7 +611,7 @@ func (k *Key) create() error {
 
 	hasKeyMaterial := k.Seed != nil || k.PrivateKey != nil || k.Mnemonic != nil
 
-	if strings.EqualFold(*k.Spec, KeySpecECCBIP39) && hasKeyMaterial {
+	if *k.Spec == KeySpecECCBIP39 && hasKeyMaterial {
 
 		// first check that we only have the mnemonic phrase, not a seed or private key
 		if k.Mnemonic == nil {
@@ -627,7 +627,7 @@ func (k *Key) create() error {
 
 	// if we have a provided seed/private key and it's not a BIP39 key,
 	// then append an error
-	if k.ID != uuid.Nil && hasKeyMaterial && !strings.EqualFold(*k.Spec, KeySpecECCBIP39) {
+	if k.ID != uuid.Nil && hasKeyMaterial && *k.Spec != KeySpecECCBIP39 {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("attempted to regenerate key material for key: %s", k.ID)),
 		})
@@ -635,53 +635,53 @@ func (k *Key) create() error {
 	}
 
 	if !hasKeyMaterial {
-		switch strings.ToUpper(*k.Spec) {
-		case strings.ToUpper(KeySpecAES256GCM):
+		switch *k.Spec {
+		case KeySpecAES256GCM:
 			err := k.createAES256GCM()
 			if err != nil {
 				return fmt.Errorf("failed to create AES-256-GCM key; %s", err.Error())
 			}
-		case strings.ToUpper(KeySpecChaCha20):
+		case KeySpecChaCha20:
 			err := k.createChaCha20()
 			if err != nil {
 				return fmt.Errorf("failed to create ChaCha20 key; %s", err.Error())
 			}
-		case strings.ToUpper(KeySpecECCBabyJubJub):
+		case KeySpecECCBabyJubJub:
 			err := k.createBabyJubJubKeypair()
 			if err != nil {
 				return fmt.Errorf("failed to create babyjubjub keypair; %s", err.Error())
 			}
-		case strings.ToUpper(KeySpecECCC25519):
+		case KeySpecECCC25519:
 			err := k.createC25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create C25519 keypair; %s", err.Error())
 			}
-		case strings.ToUpper(KeySpecECCEd25519):
+		case KeySpecECCEd25519:
 			err := k.createEd25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
 			}
-		case strings.ToUpper(KeySpecECCBIP39):
+		case KeySpecECCBIP39:
 			err := k.createHDWallet()
 			if err != nil {
 				return fmt.Errorf("failed to create hd wallet; %s", err.Error())
 			}
-		case strings.ToUpper(KeySpecECCSecp256k1):
+		case KeySpecECCSecp256k1:
 			err := k.createSecp256k1Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create secp256k1 keypair; %s", err.Error())
 			}
-		case strings.ToUpper(KeySpecRSA4096):
+		case KeySpecRSA4096:
 			err := k.createRSAKeypair(KeyBits4096)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
 			}
-		case strings.ToUpper(KeySpecRSA3072):
+		case KeySpecRSA3072:
 			err := k.createRSAKeypair(KeyBits3072)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
 			}
-		case strings.ToUpper(KeySpecRSA2048):
+		case KeySpecRSA2048:
 			err := k.createRSAKeypair(KeyBits2048)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
@@ -1439,4 +1439,43 @@ func (o *SigningOptions) validateHDWalletOpts() (*accounts.DerivationPath, error
 	}
 
 	return path, nil
+}
+
+// ValidateKeySpec performs a case-insensitive key spec validation
+// and returns the correctly case keyspec
+func ValidateKeySpec(keySpec *string) (*string, error) {
+	switch strings.ToUpper(*keySpec) {
+	case strings.ToUpper(KeySpecAES256GCM):
+		return common.StringOrNil(KeySpecAES256GCM), nil
+
+	case strings.ToUpper(KeySpecChaCha20):
+		return common.StringOrNil(KeySpecChaCha20), nil
+
+	case strings.ToUpper(KeySpecECCBIP39):
+		return common.StringOrNil(KeySpecECCBIP39), nil
+
+	case strings.ToUpper(KeySpecECCBabyJubJub):
+		return common.StringOrNil(KeySpecECCBabyJubJub), nil
+
+	case strings.ToUpper(KeySpecECCC25519):
+		return common.StringOrNil(KeySpecECCC25519), nil
+
+	case strings.ToUpper(KeySpecECCEd25519):
+		return common.StringOrNil(KeySpecECCEd25519), nil
+
+	case strings.ToUpper(KeySpecECCSecp256k1):
+		return common.StringOrNil(KeySpecECCSecp256k1), nil
+
+	case strings.ToUpper(KeySpecRSA2048):
+		return common.StringOrNil(KeySpecRSA2048), nil
+
+	case strings.ToUpper(KeySpecRSA3072):
+		return common.StringOrNil(KeySpecRSA3072), nil
+
+	case strings.ToUpper(KeySpecRSA4096):
+		return common.StringOrNil(KeySpecRSA4096), nil
+
+	default:
+		return nil, fmt.Errorf("invalid key spec: %s", *keySpec)
+	}
 }

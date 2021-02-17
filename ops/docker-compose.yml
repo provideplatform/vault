@@ -165,8 +165,6 @@ services:
     container_name: vault
     depends_on:
       - postgres
-    secrets:
-      - unsealerkey
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_NAME=vault_dev
@@ -176,9 +174,17 @@ services:
       - DATABASE_SUPERUSER_PASSWORD=prvdp455
       - LOG_LEVEL=DEBUG
       - PORT=8080
-      # the run/secrets is more secure, but requires the unsealerkey.txt to be present in the folder
-      - VAULT_SEAL_UNSEAL_KEY=/run/secrets/unsealerkey
-      #- VAULT_SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
+      # Azure Key Vault seal/unseal key provider
+      - SEAL_UNSEAL_PROVIDER=azure_key_vault # azure_key_vault/aws_kms/docker/environment
+      - SEAL_UNSEAL_VAULT_TENANT_ID=
+      - SEAL_UNSEAL_VAULT_SUBSCRIPTION_ID=
+      - SEAL_UNSEAL_VAULT_REGION=eastus
+      - SEAL_UNSEAL_VAULT_NAME=provide
+      - SEAL_UNSEAL_SECRET_NAME=_unsealerkey
+      # Docker secret seal/unseal key provider
+      - SEAL_UNSEAL_KEY_SECRET_PATH=/run/secrets/unsealerkey
+      # Only set SEAL_UNSEAL_KEY in the environment for auto-unseal during testing...
+      - SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
       - SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
     healthcheck:
       test: ["CMD", "curl", "-f", "http://vault:8080/status"]

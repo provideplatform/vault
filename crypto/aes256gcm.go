@@ -16,7 +16,7 @@ const AES256GCMSeedSize = 32
 
 // AES256GCM is the internal struct for a AES256GCM keypair using private key
 type AES256GCM struct {
-	PrivateKey *[]byte
+	PrivateKey []byte
 }
 
 // CreateAES256GCMSeed creates a seed for a new AES256GCM key
@@ -37,7 +37,7 @@ func CreateAES256GCMSeed() ([]byte, error) {
 // never use more than 2^32 random nonces with a given key because of the risk of a repeat.
 func (k *AES256GCM) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 
-	block, err := aes.NewCipher(*k.PrivateKey)
+	block, err := aes.NewCipher(k.PrivateKey)
 	if err != nil {
 		return nil, ErrCannotEncrypt
 	}
@@ -76,7 +76,7 @@ func (k *AES256GCM) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 // Decrypt decrypts byte array using AES256GCM key and input nonce
 func (k *AES256GCM) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) {
 
-	block, err := aes.NewCipher(*k.PrivateKey)
+	block, err := aes.NewCipher(k.PrivateKey)
 	if err != nil {
 		return nil, ErrCannotDecrypt
 	}
@@ -96,6 +96,6 @@ func (k *AES256GCM) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) {
 
 // Wipe will randomize the contents of the seed key
 func (k *AES256GCM) Wipe() {
-	io.ReadFull(rand.Reader, *k.PrivateKey)
+	io.ReadFull(rand.Reader, k.PrivateKey)
 	k.PrivateKey = nil
 }

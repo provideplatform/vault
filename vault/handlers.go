@@ -997,7 +997,7 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 
 	// generate a vault key from the parameters
 	key := &Key{}
-	key.PublicKey = &publicKey
+	key.PublicKey = publicKey
 	key.Spec = params.Spec
 	key.Usage = common.StringOrNil(KeyUsageSignVerify)
 	key.Type = common.StringOrNil(KeyTypeAsymmetric)

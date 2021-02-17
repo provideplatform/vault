@@ -47,9 +47,9 @@ type HDWallet struct {
 	Change   *uint32 `json:"change,omitempty"`
 	Index    *uint32 `json:"index,omitempty"`
 
-	Seed       *[]byte `json:"-"` // contains the mnemonic seed phrase in bytes
-	PublicKey  *[]byte `json:"-"` // contains the extended public key; in general it is safest NOT to share this
-	PrivateKey *[]byte `json:"-"` // contains the extended private key; NEVER share this! it exists here to support ephemeral wallet creation...
+	Seed       []byte `json:"-"` // contains the mnemonic seed phrase in bytes
+	PublicKey  []byte `json:"-"` // contains the extended public key; in general it is safest NOT to share this
+	PrivateKey []byte `json:"-"` // contains the extended private key; NEVER share this! it exists here to support ephemeral wallet creation...
 }
 
 // DefaultHDDerivationPath returns the default hd derivation path
@@ -130,7 +130,7 @@ func (o *HDWallet) DeriveKey(path accounts.DerivationPath) (*Secp256k1, error) {
 	}()
 
 	// first recreate the hd wallet from the mnemonic
-	wallet, err := hdwallet.NewFromMnemonic(string(*o.Seed))
+	wallet, err := hdwallet.NewFromMnemonic(string(o.Seed))
 	if err != nil {
 		return nil, fmt.Errorf("error generating wallet from mnemonic %s", err.Error())
 	}
@@ -159,8 +159,8 @@ func (o *HDWallet) DeriveKey(path accounts.DerivationPath) (*Secp256k1, error) {
 
 	secp256k1 := Secp256k1{
 		Address:        &address,
-		PrivateKey:     &privatekey,
-		PublicKey:      &publickey,
+		PrivateKey:     privatekey,
+		PublicKey:      publickey,
 		DerivationPath: &pathstr,
 	}
 
@@ -210,8 +210,8 @@ func CreateHDWalletWithEntropy(bitsize int) (*HDWallet, error) {
 
 	// return a new HDWallet and store the generated mnemonic as the `Seed`
 	return &HDWallet{
-		Seed:      &mnemonicBytes, // FIXME -- see https://github.com/provideapp/vault/issues/3
-		PublicKey: &xpubBytes,
+		Seed:      mnemonicBytes, // FIXME -- see https://github.com/provideapp/vault/issues/3
+		PublicKey: xpubBytes,
 	}, nil
 }
 
@@ -239,8 +239,8 @@ func CreateHDWalletFromSeedPhrase(mnemonic string) (*HDWallet, error) {
 
 	// return a new HDWallet and store the provided mnemonic as the `Seed`
 	return &HDWallet{
-		Seed:      &mnemonicBytes, // FIXME -- see https://github.com/provideapp/vault/issues/3
-		PublicKey: &xpubBytes,
+		Seed:      mnemonicBytes, // FIXME -- see https://github.com/provideapp/vault/issues/3
+		PublicKey: xpubBytes,
 	}, nil
 }
 

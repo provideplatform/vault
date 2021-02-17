@@ -274,8 +274,9 @@ func unseal(sealedKey []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error unsealing vault %s", err.Error())
 	}
 
-	encryptedData := sealedKey
-	unsealedKey, err := unsealerKey.Decrypt(encryptedData[NonceSizeSymmetric:], encryptedData[0:NonceSizeSymmetric])
+	common.Log.Debugf("sealed key: %d", len(sealedKey))
+
+	unsealedKey, err := unsealerKey.Decrypt(sealedKey[NonceSizeSymmetric:], sealedKey[0:NonceSizeSymmetric])
 	if err != nil {
 		return nil, fmt.Errorf("error unsealing vault; %s", err.Error())
 	}

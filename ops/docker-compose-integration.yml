@@ -293,7 +293,7 @@ services:
     networks:
       - provide
     ports:
-      - 8084:8080      
+      - 8087:8080      
     restart: always
 
 networks:

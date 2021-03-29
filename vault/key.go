@@ -588,7 +588,7 @@ func (k *Key) Enrich() {
 			var rsaPublicKey rsa.PublicKey
 			json.Unmarshal(*k.PublicKey, &rsaPublicKey)
 			pubKeyBlock := &pem.Block{
-				Type:  "RSA PUBLIC KEY",
+				Type:  "PUBLIC KEY",
 				Bytes: x509.MarshalPKCS1PublicKey(&rsaPublicKey),
 			}
 			k.PublicKeyHex = common.StringOrNil(string(pem.EncodeToMemory(pubKeyBlock)))

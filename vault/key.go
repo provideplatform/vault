@@ -587,11 +587,11 @@ func (k *Key) Enrich() {
 		} else if k.Spec != nil && (*k.Spec == KeySpecRSA2048 || *k.Spec == KeySpecRSA3072 || *k.Spec == KeySpecRSA4096) {
 			var rsaPublicKey rsa.PublicKey
 			json.Unmarshal(*k.PublicKey, &rsaPublicKey)
-			pubKeyBlock := &pem.Block{
+			publicKeyBytes, _ := x509.MarshalPKIXPublicKey(&rsaPublicKey)
+			k.PublicKeyHex = common.StringOrNil(string(pem.EncodeToMemory(&pem.Block{
 				Type:  "PUBLIC KEY",
-				Bytes: x509.MarshalPKIXPublicKey(&rsaPublicKey),
-			}
-			k.PublicKeyHex = common.StringOrNil(string(pem.EncodeToMemory(pubKeyBlock)))
+				Bytes: publicKeyBytes,
+			})))
 		} else {
 			k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 		}

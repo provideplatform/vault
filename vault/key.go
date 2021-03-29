@@ -4,7 +4,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -390,7 +393,7 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 		k.Spec = common.StringOrNil(KeySpecRSA4096)
 	}
 
-	common.Log.Debugf("created rsa%d key for vault: %s; public key: 0x%s", bitsize, k.VaultID, *k.PublicKey)
+	common.Log.Debugf("created rsa-%d key for vault: %s; public key: %s", bitsize, k.VaultID, *k.PublicKey)
 	return nil
 }
 
@@ -580,6 +583,10 @@ func (k *Key) Enrich() {
 
 		if k.Spec != nil && *k.Spec == KeySpecECCBIP39 {
 			k.PublicKeyHex = common.StringOrNil(string(*k.PublicKey))
+		} else if k.Spec != nil && (*k.Spec == KeySpecRSA2048 || *k.Spec == KeySpecRSA3072 || *k.Spec == KeySpecRSA4096) {
+			var rsaPublicKey rsa.PublicKey
+			json.Unmarshal(*k.PublicKey, &rsaPublicKey)
+			k.PublicKeyHex = common.StringOrNil(string(x509.MarshalPKCS1PublicKey(&rsaPublicKey)))
 		} else {
 			k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 		}

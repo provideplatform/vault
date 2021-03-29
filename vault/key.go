@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
@@ -586,7 +587,11 @@ func (k *Key) Enrich() {
 		} else if k.Spec != nil && (*k.Spec == KeySpecRSA2048 || *k.Spec == KeySpecRSA3072 || *k.Spec == KeySpecRSA4096) {
 			var rsaPublicKey rsa.PublicKey
 			json.Unmarshal(*k.PublicKey, &rsaPublicKey)
-			k.PublicKeyHex = common.StringOrNil(string(x509.MarshalPKCS1PublicKey(&rsaPublicKey)))
+			pubKeyBlock := &pem.Block{
+				Type:  "RSA PUBLIC KEY",
+				Bytes: x509.MarshalPKCS1PublicKey(&rsaPublicKey),
+			}
+			k.PublicKeyHex = common.StringOrNil(string(pem.EncodeToMemory(pubKeyBlock)))
 		} else {
 			k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 		}

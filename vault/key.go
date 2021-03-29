@@ -1151,7 +1151,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 
 	case KeySpecECCBIP39:
 		if k.Seed == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil seed phrase", len(payload), k.ID)
+			return nil, fmt.Errorf("failed to sign %d-byte payload using HD wallet key: %s; nil seed phrase", len(payload), k.ID)
 		}
 
 		var path *accounts.DerivationPath
@@ -1210,7 +1210,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 
 	case KeySpecRSA4096:
 		if opts == nil || opts.Algorithm == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil signing options", len(payload), k.ID)
 		}
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
@@ -1221,7 +1221,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 
 	case KeySpecRSA3072:
 		if opts == nil || opts.Algorithm == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil signing options", len(payload), k.ID)
 		}
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
@@ -1232,7 +1232,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 
 	case KeySpecRSA2048:
 		if opts == nil || opts.Algorithm == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil signing options", len(payload), k.ID)
 		}
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)

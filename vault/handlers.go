@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
+	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 
@@ -912,7 +913,6 @@ func deleteVaultSecretHandler(c *gin.Context) {
 }
 
 func verifyDetachedVerifyHandler(c *gin.Context) {
-
 	// path is protected by valid ident token, but no bearer parameters are required
 	_ = token.InContext(c)
 
@@ -961,11 +961,12 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	}
 
 	if common.StringOrNil(*params.PublicKey) == nil {
-		provide.RenderError("public key (hex) is required", 422, c)
+		provide.RenderError("public key is required", 422, c)
 		return
 	}
 
-	if *params.Spec == KeySpecRSA2048 || *params.Spec == KeySpecRSA3072 || *params.Spec == KeySpecRSA4096 {
+	isRSAKeySpec := *params.Spec == KeySpecRSA2048 || *params.Spec == KeySpecRSA3072 || *params.Spec == KeySpecRSA4096
+	if isRSAKeySpec {
 		if params.Options.Algorithm == nil {
 			provide.RenderError("algorithm option required for RSA key spec", 422, c)
 			return
@@ -980,6 +981,15 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	if err != nil {
 		common.Log.Debugf("attempt to converting public key (hex) to bytes failed; %s", err.Error())
 		publicKey = []byte(pubkey)
+
+		if isRSAKeySpec {
+			rsaPublicKey, err := pgputil.DecodeRSAPublicKeyFromPEM([]byte(*params.PublicKey))
+			if err != nil {
+				provide.RenderError("failed to decode RSA public key", 422, c)
+				return
+			}
+			publicKey, _ = json.Marshal(*rsaPublicKey)
+		}
 	}
 
 	messagehex := strings.Replace(*params.Message, "0x", "", -1)

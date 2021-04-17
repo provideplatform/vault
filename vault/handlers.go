@@ -971,13 +971,16 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		}
 	}
 
+	var publicKey []byte
+
 	// next confirm that the public key provided is in hex format
 	pubkey := strings.Replace(*params.PublicKey, "0x", "", -1)
-	publicKey, err := hex.DecodeString(pubkey)
+	publicKey, err = hex.DecodeString(pubkey)
 	if err != nil {
 		common.Log.Debugf("attempt to converting public key (hex) to bytes failed; %s", err.Error())
+	} else {
+		publicKey = []byte(pubkey)
 	}
-	publicKey = []byte(pubkey)
 
 	messagehex := strings.Replace(*params.Message, "0x", "", -1)
 	message, err := hex.DecodeString(messagehex)

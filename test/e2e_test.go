@@ -1958,7 +1958,7 @@ func TestDetachedSignatureVerification_ShouldFail(t *testing.T) {
 		invalidMessage := hex.EncodeToString(invalidPayload)
 
 		// CHECKME testing invalid signature
-		// returns a 201 with verified false (for consistency)
+		// returns a 200 with verified false (for consistency)
 		// because the only thing that has gone wrong is the signature is invalid
 		// as opposed to a parameter error
 		verifyresponse, err = provide.VerifyDetachedSignature(*token, tc.Spec, invalidMessage, *sigresponse.Signature, *key.PublicKey, opts)
@@ -1997,7 +1997,7 @@ func TestCreateHDWalletWithSeed(t *testing.T) {
 		return
 	}
 
-	t.Logf("publickeyhex: %s", *key.PublicKey)
+	t.Logf("publickey:\n\t%s\n", *key.PublicKey)
 	key2, err := keyFactoryWithSeed(*token, vault.ID.String(), "asymmetric", "sign/verify", "bip39", "hdwallet", "integration test hd wallet", seed)
 	if err != nil {
 		t.Errorf("failed to create key; %s", err.Error())

@@ -775,7 +775,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 
 	provide.Render(&KeySignVerifyRequestResponse{
 		Verified: &verified,
-	}, 201, c)
+	}, 200, c)
 }
 
 func vaultSecretsListHandler(c *gin.Context) {
@@ -959,7 +959,7 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	if common.StringOrNil(*params.PublicKeyHex) == nil {
+	if common.StringOrNil(*params.PublicKey) == nil {
 		provide.RenderError("public key (hex) is required", 422, c)
 		return
 	}
@@ -972,12 +972,12 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	}
 
 	// next confirm that the public key provided is in hex format
-	pubkeyhex := strings.Replace(*params.PublicKeyHex, "0x", "", -1)
-	publicKey, err := hex.DecodeString(pubkeyhex)
+	pubkey := strings.Replace(*params.PublicKey, "0x", "", -1)
+	publicKey, err := hex.DecodeString(pubkey)
 	if err != nil {
-		provide.RenderError("error converting public key (hex) to bytes", 422, c)
-		return
+		common.Log.Debugf("attempt to converting public key (hex) to bytes failed; %s", err.Error())
 	}
+	publicKey = []byte(pubkey)
 
 	messagehex := strings.Replace(*params.Message, "0x", "", -1)
 	message, err := hex.DecodeString(messagehex)
@@ -1011,6 +1011,5 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 
 	provide.Render(&DetachedVerifyRequestResponse{
 		Verified: &verified,
-	}, 201, c)
-
+	}, 200, c)
 }

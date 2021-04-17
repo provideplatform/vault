@@ -164,12 +164,12 @@ type KeySignVerifyRequestResponse struct {
 // DetachedVerifyRequestResponse represents the API request/response parameters
 // needed to verify a provided signature created outside of vault
 type DetachedVerifyRequestResponse struct {
-	Spec         *string         `json:"spec,omitempty"`
-	Message      *string         `json:"message,omitempty"`
-	Signature    *string         `json:"signature,omitempty"`
-	Options      *SigningOptions `json:"options,omitempty"`
-	Verified     *bool           `json:"verified,omitempty"`
-	PublicKeyHex *string         `json:"pubkeyhex,omitempty"`
+	Spec      *string         `json:"spec,omitempty"`
+	Message   *string         `json:"message,omitempty"`
+	Signature *string         `json:"signature,omitempty"`
+	Options   *SigningOptions `json:"options,omitempty"`
+	Verified  *bool           `json:"verified,omitempty"`
+	PublicKey *string         `json:"public_key,omitempty"`
 }
 
 // createAES256GCM creates a key using a random seed

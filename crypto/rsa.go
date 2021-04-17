@@ -6,6 +6,8 @@ import (
 	rsa "crypto/rsa"
 	"crypto/sha256"
 	"encoding/json"
+
+	"github.com/kthomas/go-pgputil"
 )
 
 // RSAKeyPair is the internal struct for an asymmetric keypair
@@ -239,7 +241,15 @@ func (k *RSAKeyPair) Verify(payload, sig []byte, algo string) error {
 
 	// get the rsa public key struct from the publickey bytes
 	var rsaKey rsa.PrivateKey
-	json.Unmarshal(*k.PublicKey, &rsaKey.PublicKey)
+	err = json.Unmarshal(*k.PublicKey, &rsaKey.PublicKey)
+
+	if err != nil {
+		publicKey, err := pgputil.DecodeRSAPublicKeyFromPEM([]byte(*k.PublicKey))
+		if err != nil {
+			return err
+		}
+		rsaKey.PublicKey = *publicKey
+	}
 
 	// verify the signature using the signature algorithm
 	err = signingMethod.Verify(payload, sig, &rsaKey.PublicKey)

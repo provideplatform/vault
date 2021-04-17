@@ -596,6 +596,7 @@ func (k *Key) Enrich() {
 				}
 				addr := ethcrypto.PubkeyToAddress(*publicKey)
 				k.Address = common.StringOrNil(addr.Hex())
+				k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 			}
 		case KeySpecRSA2048:
 			enrichRSA()

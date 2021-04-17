@@ -52,6 +52,7 @@ func installKeysAPI(r *gin.Engine) {
 	r.POST("/api/v1/vaults/:id/keys/:keyId/sign", vaultKeySignHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/verify", vaultKeyVerifyHandler)
 	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
+
 	r.POST("/api/v1/verify", verifyDetachedVerifyHandler)
 }
 

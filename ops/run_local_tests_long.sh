@@ -200,10 +200,6 @@ export PGP_PASSPHRASE=password
 
 export PAYMENTS_REFRESH_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6ImU2OmY3OmQ1OjI0OmUyOjU5OjA2OjJiOmJjOmEyOjhjOjM1OjlkOmNhOjBhOjg3IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMvYXBpL3YxIiwiaWF0IjoxNjAwNzA5NzU0LCJpc3MiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMiLCJqdGkiOiJjN2I2YzI2ZS00OTkwLTQ4YWYtYmMwYy05YWRiY2E5ZmRmNzYiLCJuYXRzIjp7InBlcm1pc3Npb25zIjp7InN1YnNjcmliZSI6eyJhbGxvdyI6WyJhcHBsaWNhdGlvbi4wMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJuZXR3b3JrLiouY29ubmVjdG9yLioiLCJuZXR3b3JrLiouc3RhdHVzIiwicGxhdGZvcm0uXHUwMDNlIl19fX0sInBydmQiOnsiYXBwbGljYXRpb25faWQiOiIwMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJleHRlbmRlZCI6eyJwZXJtaXNzaW9ucyI6eyIqIjo1MTB9fSwicGVybWlzc2lvbnMiOjUxMH0sInN1YiI6ImFwcGxpY2F0aW9uOjAxNTU0ZTIyLTNkN2EtNDRhMy05YzY1LTZiY2FiYWEwOGMzOCJ9.iPYYSS0hHNYLUXcgpBfQbo6goMGDHF5Oxv1OvkB-WAzRgZSAm2HFroOUsmPlCQwO5eNeTfMqRaQMDdl6idTCip99y-zYTu8ys7dahyk4P1lhh4BB8vTCl3AHQuyUTGloMrY2JytpkmXMZTsxu-UhQxaaQN0IlSotSIFAYPT3jHH5nYy2MJbcfxePt8xKmXzwvpjTEVJRmUfAfEXjJF34S3hAuw9S7WncKucZfuP1WwP65h53HbLB69DR6KFZ76eiRavke5RpT40r9UKC6zPP-UZhTAuWQjOSmBhkd_IUg4T2a8r4W9CJT6aLgtwE0i1OUrPDVj_EzQV9tsjlwIOv5y9r_p-sfdxXdHFfoT8nAs5uIcWTw45J2Ycc0b4vqs-sYDr2qn7TS5DvJbPQSnRBS9YZ8CJq9mFpc5GjunCzEqO6JkvEWaN1mqPJbcvMGmLRQt5zA-2D0fFq1mvIUCUcg3EQ5J5lAZqudGf9mnYf4xRIMacCssF5VsP36xXg7pnscqh3u3JdQ-Fon3nB5vbIXn2fxaJjYl4ggNr-IgLxK7_h9KlDkiv7I7EKWGl2Np0q3-mVvuTIk7M-GqT3Dx9TtpR6MsK6EX0frUH3bZH8RHBHnxx67oxNMamviT-XUNudUU7Wan1PfnaPSsqfrn6OT5Abep-BbewKJn3ErY0Z-oU
 
-export NCHAIN_API_HOST=localhost:8080
-export NCHAIN_API_PATH=api/v1
-export NCHAIN_API_SCHEME=http
-
 export IDENT_API_HOST=localhost:8081
 export IDENT_API_PATH=api/v1
 export IDENT_API_SCHEME=http
@@ -222,11 +218,6 @@ echo vault ready
 echo waiting for ident to be ready
 timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' '${IDENT_API_SCHEME}"://"${IDENT_API_HOST}'/status)" != "200" ]]; do sleep 5; done' || false
 echo ident ready
-
-
-echo waiting for nchain to be ready
-timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' '${NCHAIN_API_SCHEME}"://"${NCHAIN_API_HOST}'/status)" != "204" ]]; do sleep 5; done' || false
-echo nchain ready
 
 export NATS_TOKEN=testtoken
 export NATS_URL=nats://localhost:${NATS_SERVER_PORT}

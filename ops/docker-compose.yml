@@ -114,6 +114,9 @@ services:
       - REDIS_HOSTS=redis:6379
       - LOG_LEVEL=DEBUG
       - PORT=8080
+      - VAULT_API_HOST=vault:8080
+      - VAULT_API_PATH=api/v1
+      - VAULT_API_SCHEME=http
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ident:8080/status"]
       interval: 1m
@@ -149,6 +152,9 @@ services:
       - REDIS_HOSTS=redis:6379
       - LOG_LEVEL=DEBUG
       - PORT=8080
+      - VAULT_API_HOST=vault:8080
+      - VAULT_API_PATH=api/v1
+      - VAULT_API_SCHEME=http
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ident:8080/status"]
       interval: 1m
@@ -176,6 +182,9 @@ services:
       - DATABASE_SUPERUSER_PASSWORD=prvdp455
       - LOG_LEVEL=DEBUG
       - PORT=8080
+      - IDENT_API_HOST=vault:8080
+      - IDENT_API_PATH=api/v1
+      - IDENT_API_SCHEME=http
       # the run/secrets is more secure, but requires the unsealerkey.txt to be present in the folder
       - VAULT_SEAL_UNSEAL_KEY=/run/secrets/unsealerkey
       #- VAULT_SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day

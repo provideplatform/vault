@@ -194,14 +194,12 @@ func (k *Key) createBabyJubJubKeypair() error {
 		return fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
 	}
 
-	publicKeyHex := hex.EncodeToString(publicKey)
-
 	k.PrivateKey = &privateKey
 	k.PublicKey = &publicKey
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.Spec = common.StringOrNil(KeySpecECCBabyJubJub)
 
-	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
+	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, hex.EncodeToString(publicKey))
 	return nil
 }
 
@@ -326,7 +324,7 @@ func (k *Key) createSecp256k1Keypair() error {
 		k.Description = common.StringOrNil(desc)
 	}
 
-	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, *k.PublicKey)
+	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, hex.EncodeToString(*k.PublicKey))
 	return nil
 }
 
@@ -394,7 +392,9 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 		k.Spec = common.StringOrNil(KeySpecRSA4096)
 	}
 
-	common.Log.Debugf("created rsa-%d key for vault: %s; public key: %s", bitsize, k.VaultID, *k.PublicKey)
+	k.Enrich()
+
+	common.Log.Debugf("created rsa-%d key for vault: %s; public key:\n%s", bitsize, k.VaultID, *k.PublicKeyHex)
 	return nil
 }
 
@@ -1271,12 +1271,10 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 
 	switch *k.Spec {
 	case KeySpecECCBabyJubJub:
-		decodedPubKey := *k.PublicKey
-		return providecrypto.TECVerify(decodedPubKey, payload, sig)
+		return providecrypto.TECVerify(*k.PublicKey, payload, sig)
 
 	case KeySpecECCEd25519:
-		decodedPubKey := *k.PublicKey
-		return crypto.Ed25519Verify(decodedPubKey, payload, sig)
+		return crypto.Ed25519Verify(*k.PublicKey, payload, sig)
 
 	case KeySpecECCBIP39:
 		var path *accounts.DerivationPath

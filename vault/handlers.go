@@ -978,7 +978,6 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	publicKey, err = hex.DecodeString(pubkey)
 	if err != nil {
 		common.Log.Debugf("attempt to converting public key (hex) to bytes failed; %s", err.Error())
-	} else {
 		publicKey = []byte(pubkey)
 	}
 

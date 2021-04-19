@@ -101,6 +101,7 @@ services:
       - nats-streaming
       - postgres
       - redis
+      - vault
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_NAME=ident_dev
@@ -135,6 +136,7 @@ services:
     entrypoint: ./ops/run_consumer.sh
     container_name: ident-consumer
     depends_on:
+      - ident
       - nats-streaming
       - postgres
       - redis

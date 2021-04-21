@@ -23,6 +23,7 @@ jobs:
       - name: Checkout vault
         uses: actions/checkout@v2
         with:
+          ref: dev
           path: 'vault'                      
       - run: docker-compose -f ./ops/docker-compose-integration.yml build --no-cache vault
         working-directory: vault

@@ -571,28 +571,40 @@ func (k *Key) encryptFields() error {
 // Enrich the key; typically a no-op; useful for public keys which
 // have a compressed representation (i.e., crypto address)
 func (k *Key) Enrich() {
+	enrichRSA := func() {
+		var rsaPublicKey rsa.PublicKey
+		json.Unmarshal(*k.PublicKey, &rsaPublicKey)
+		publicKeyBytes, _ := x509.MarshalPKIXPublicKey(&rsaPublicKey)
+		k.PublicKeyHex = common.StringOrNil(string(pem.EncodeToMemory(&pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: publicKeyBytes,
+		})))
+	}
+
 	if k.PublicKey != nil {
-		if k.Spec != nil && *k.Spec == KeySpecECCSecp256k1 {
+		switch *k.Spec {
+		case KeySpecECCBIP39:
+			k.PublicKeyHex = common.StringOrNil(string(*k.PublicKey))
+		case KeySpecECCSecp256k1:
 			pubkey := *k.PublicKey
 			x, y := elliptic.Unmarshal(secp256k1.S256(), pubkey)
 			if x != nil {
-				publicKey := &ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
+				publicKey := &ecdsa.PublicKey{
+					Curve: secp256k1.S256(),
+					X:     x,
+					Y:     y,
+				}
 				addr := ethcrypto.PubkeyToAddress(*publicKey)
 				k.Address = common.StringOrNil(addr.Hex())
+				k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 			}
-		}
-
-		if k.Spec != nil && *k.Spec == KeySpecECCBIP39 {
-			k.PublicKeyHex = common.StringOrNil(string(*k.PublicKey))
-		} else if k.Spec != nil && (*k.Spec == KeySpecRSA2048 || *k.Spec == KeySpecRSA3072 || *k.Spec == KeySpecRSA4096) {
-			var rsaPublicKey rsa.PublicKey
-			json.Unmarshal(*k.PublicKey, &rsaPublicKey)
-			publicKeyBytes, _ := x509.MarshalPKIXPublicKey(&rsaPublicKey)
-			k.PublicKeyHex = common.StringOrNil(string(pem.EncodeToMemory(&pem.Block{
-				Type:  "PUBLIC KEY",
-				Bytes: publicKeyBytes,
-			})))
-		} else {
+		case KeySpecRSA2048:
+			enrichRSA()
+		case KeySpecRSA3072:
+			enrichRSA()
+		case KeySpecRSA4096:
+			enrichRSA()
+		default:
 			k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 		}
 	}
@@ -825,6 +837,7 @@ func (k *Key) save(db *gorm.DB) bool {
 			success := rowsAffected > 0
 			if success {
 				common.Log.Debugf("created key %s (%s) in vault %s", *k.Name, k.ID.String(), k.VaultID.String())
+				k.Enrich()
 				return success
 			}
 		}

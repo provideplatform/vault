@@ -1154,6 +1154,16 @@ func TestListKeys_Filtered(t *testing.T) {
 			t.Errorf("public_key mismatch. expected %s, got %s", *inputKey[looper].PublicKey, *outputKey[looper].PublicKey)
 		}
 
+		if *inputKey[looper].Spec == "secp256k1" {
+			if outputKey[looper].Address == nil {
+				t.Errorf("output address non-nil for %s key %s", *inputKey[looper].Spec, inputKey[looper].ID.String())
+			}
+		} else {
+			if inputKey[looper].Address != nil {
+				t.Errorf("input address was non-nil for %s key %s", *inputKey[looper].Spec, inputKey[looper].ID.String())
+			}
+		}
+
 		t.Logf("key %d of %d validated", looper+1, numberOfKeys)
 	}
 }

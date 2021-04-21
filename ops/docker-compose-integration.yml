@@ -156,6 +156,9 @@ services:
       - IDENT_API_HOST=ident:8080
       - IDENT_API_PATH=api/v1
       - IDENT_API_SCHEME=http
+      - VAULT_API_HOST=vault:8080
+      - VAULT_API_PATH=api/v1
+      - VAULT_API_SCHEME=http
     healthcheck:
       test: ["CMD", "curl", "-f", "http://ident:8080/status"]
       interval: 1m

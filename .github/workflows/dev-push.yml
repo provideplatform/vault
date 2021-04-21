@@ -4,7 +4,7 @@ on:
       - dev
 
 jobs:
-  push_to_branch:
+  push_to_dev_branch:
     runs-on: ubuntu-latest
     timeout-minutes: 10    
     env:

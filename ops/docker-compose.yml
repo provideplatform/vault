@@ -3,7 +3,7 @@ version: '3.5'
 services:
   postgres:
     image: postgres
-    container_name: postgres
+    container_name: postgres-local
     environment:
       - POSTGRES_DB=prvd
       - POSTGRES_USER=prvd
@@ -16,11 +16,45 @@ services:
       start_period: 10s
     hostname: postgres
     volumes:
-      - vault-db:/var/lib/postgresql/data
+      - provide-db:/var/lib/postgresql/data
     networks:
-      - vault
+      - provide
     ports:
       - 5432:5432
+    restart: always
+
+  vault:
+    build: ../
+    container_name: vault
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_NAME=vault_dev
+      - DATABASE_USER=vault
+      - DATABASE_PASSWORD=vault
+      - DATABASE_SUPERUSER=prvd
+      - DATABASE_SUPERUSER_PASSWORD=prvdp455
+      - LOG_LEVEL=DEBUG
+      - PORT=8080
+      - SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
+      - IDENT_API_HOST=ident:8080
+      - IDENT_API_PATH=api/v1
+      - IDENT_API_SCHEME=http
+      - VAULT_API_HOST=vault:8080
+      - VAULT_API_PATH=api/v1
+      - VAULT_API_SCHEME=http
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://vault:8080/status"]
+      interval: 1m
+      timeout: 1s
+      retries: 2
+      start_period: 10s
+    hostname: vault
+    networks:
+      - provide
+    ports:
+      - 8082:8080
     restart: always
 
   redis:
@@ -34,7 +68,7 @@ services:
       start_period: 10s
     hostname: redis
     networks:
-      - vault
+      - provide
     ports:
       - 6379:6379
     restart: always
@@ -67,7 +101,7 @@ services:
       start_period: 10s
     hostname: nats
     networks:
-      - vault
+      - provide
     ports:
       - 4221:4221
       - 4222:4222
@@ -82,26 +116,27 @@ services:
     depends_on:
       - nats
     healthcheck:
-      test: ["CMD", "/usr/local/bin/await_tcp.sh", "localhost:4222"]
+      test: ["CMD", "/usr/local/bin/await_tcp.sh", "localhost:4224"]
       interval: 1m
       timeout: 1s
       retries: 2
       start_period: 10s
     hostname: nats-streaming
     networks:
-      - vault
+      - provide
+    ports:
+      - 4224:4224
     restart: always
     volumes:
       - ./ops/await_tcp.sh:/usr/local/bin/await_tcp.sh:cached
-
+ 
   ident:
-    image: provide/ident
+    image: provide/ident:dev
     container_name: ident
     depends_on:
       - nats-streaming
       - postgres
       - redis
-      - vault
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_NAME=ident_dev
@@ -109,12 +144,18 @@ services:
       - DATABASE_PASSWORD=ident
       - DATABASE_SUPERUSER=prvd
       - DATABASE_SUPERUSER_PASSWORD=prvdp455
+      - DATABASE_PORT=5432
       - NATS_CLIENT_PREFIX=ident
+      - NATS_CLUSTER_ID=provide
+      - NATS_TOKEN=testtoken
       - NATS_URL=nats://nats:4222
       - NATS_STREAMING_URL=nats://nats-streaming:4222
       - REDIS_HOSTS=redis:6379
       - LOG_LEVEL=DEBUG
       - PORT=8080
+      - IDENT_API_HOST=ident:8080
+      - IDENT_API_PATH=api/v1
+      - IDENT_API_SCHEME=http
       - VAULT_API_HOST=vault:8080
       - VAULT_API_PATH=api/v1
       - VAULT_API_SCHEME=http
@@ -126,93 +167,144 @@ services:
       start_period: 10s
     hostname: ident
     networks:
-      - vault
+      - provide
     ports:
       - 8081:8080
     restart: always
 
-  ident-consumer:
-    image: provide/ident
-    entrypoint: ./ops/run_consumer.sh
-    container_name: ident-consumer
+  nchain:
+    image: provide/nchain:dev
+    entrypoint: ./ops/run_api.sh
+    container_name: nchain
     depends_on:
-      - ident
+      - nats-streaming
+      - postgres
+      - redis
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_NAME=nchain_dev
+      - DATABASE_USER=nchain
+      - DATABASE_PASSWORD=nchain
+      - LOG_LEVEL=DEBUG
+      - NATS_CLIENT_PREFIX=nchain
+      - NATS_CLUSTER_ID=provide
+      - NATS_TOKEN=testtoken
+      - NATS_URL=nats://nats:4222
+      - NATS_STREAMING_URL=nats://nats-streaming:4222
+      - PORT=8080
+      - REDIS_HOSTS=redis:6379
+      - VAULT_API_HOST=vault:8080
+      - VAULT_API_PATH=api/v1
+      - VAULT_API_SCHEME=http
+      - IDENT_API_HOST=ident:8080
+      - IDENT_API_PATH=api/v1
+      - IDENT_API_SCHEME=http
+      - PAYMENTS_REFRESH_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6ImU2OmY3OmQ1OjI0OmUyOjU5OjA2OjJiOmJjOmEyOjhjOjM1OjlkOmNhOjBhOjg3IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMvYXBpL3YxIiwiaWF0IjoxNjAwNzA5NzU0LCJpc3MiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMiLCJqdGkiOiJjN2I2YzI2ZS00OTkwLTQ4YWYtYmMwYy05YWRiY2E5ZmRmNzYiLCJuYXRzIjp7InBlcm1pc3Npb25zIjp7InN1YnNjcmliZSI6eyJhbGxvdyI6WyJhcHBsaWNhdGlvbi4wMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJuZXR3b3JrLiouY29ubmVjdG9yLioiLCJuZXR3b3JrLiouc3RhdHVzIiwicGxhdGZvcm0uXHUwMDNlIl19fX0sInBydmQiOnsiYXBwbGljYXRpb25faWQiOiIwMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJleHRlbmRlZCI6eyJwZXJtaXNzaW9ucyI6eyIqIjo1MTB9fSwicGVybWlzc2lvbnMiOjUxMH0sInN1YiI6ImFwcGxpY2F0aW9uOjAxNTU0ZTIyLTNkN2EtNDRhMy05YzY1LTZiY2FiYWEwOGMzOCJ9.iPYYSS0hHNYLUXcgpBfQbo6goMGDHF5Oxv1OvkB-WAzRgZSAm2HFroOUsmPlCQwO5eNeTfMqRaQMDdl6idTCip99y-zYTu8ys7dahyk4P1lhh4BB8vTCl3AHQuyUTGloMrY2JytpkmXMZTsxu-UhQxaaQN0IlSotSIFAYPT3jHH5nYy2MJbcfxePt8xKmXzwvpjTEVJRmUfAfEXjJF34S3hAuw9S7WncKucZfuP1WwP65h53HbLB69DR6KFZ76eiRavke5RpT40r9UKC6zPP-UZhTAuWQjOSmBhkd_IUg4T2a8r4W9CJT6aLgtwE0i1OUrPDVj_EzQV9tsjlwIOv5y9r_p-sfdxXdHFfoT8nAs5uIcWTw45J2Ycc0b4vqs-sYDr2qn7TS5DvJbPQSnRBS9YZ8CJq9mFpc5GjunCzEqO6JkvEWaN1mqPJbcvMGmLRQt5zA-2D0fFq1mvIUCUcg3EQ5J5lAZqudGf9mnYf4xRIMacCssF5VsP36xXg7pnscqh3u3JdQ-Fon3nB5vbIXn2fxaJjYl4ggNr-IgLxK7_h9KlDkiv7I7EKWGl2Np0q3-mVvuTIk7M-GqT3Dx9TtpR6MsK6EX0frUH3bZH8RHBHnxx67oxNMamviT-XUNudUU7Wan1PfnaPSsqfrn6OT5Abep-BbewKJn3ErY0Z-oU
+      - VAULT_REFRESH_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6IjEwOjJlOmQ5OmUxOmI4OmEyOjM0OjM3Ojk5OjNhOjI0OmZjOmFhOmQxOmM4OjU5IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL3Byb3ZpZGUuc2VydmljZXMvYXBpL3YxIiwiaWF0IjoxNjA1NzkxMjQ4LCJpc3MiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMiLCJqdGkiOiI5YjUxNGIxNS01NTdlLTRhYWQtYTcwOC0wMTcwZTAwZWE1ZmIiLCJuYXRzIjp7InBlcm1pc3Npb25zIjp7InN1YnNjcmliZSI6eyJhbGxvdyI6WyJhcHBsaWNhdGlvbi4zNjAxNTdmOC1kNWExLTQ0NDAtOTE4Yi1mNjhiYjM5YzBkODAiLCJ1c2VyLjIzY2MwN2UwLTM4NTEtNDBkZC1iNjc1LWRmNzY4MDY3MmY3ZCIsIm5ldHdvcmsuKi5jb25uZWN0b3IuKiIsIm5ldHdvcmsuKi5zdGF0dXMiLCJwbGF0Zm9ybS5cdTAwM2UiXX19fSwicHJ2ZCI6eyJhcHBsaWNhdGlvbl9pZCI6IjM2MDE1N2Y4LWQ1YTEtNDQ0MC05MThiLWY2OGJiMzljMGQ4MCIsImV4dGVuZGVkIjp7InBlcm1pc3Npb25zIjp7IioiOjUxMH19LCJwZXJtaXNzaW9ucyI6NTEwLCJ1c2VyX2lkIjoiMjNjYzA3ZTAtMzg1MS00MGRkLWI2NzUtZGY3NjgwNjcyZjdkIn0sInN1YiI6ImFwcGxpY2F0aW9uOjM2MDE1N2Y4LWQ1YTEtNDQ0MC05MThiLWY2OGJiMzljMGQ4MCJ9.SUh84MKBNstdu3KFu1zEAQq03xbPw1D0lLXeogz1HfBJy77bIGf7HLvCuc6bjkh0xj3cEuEus1dC1Dj3BvlZoSXsvz_biTzSapkXzJjpkwOL6qkYDmqTPZvXwqmk-mUNrHTPkqdiIJL7xA46tzHW3E_hjSA9HjEk1kXjPdJQ6_ifkgWNoAaSD--kudIrhZ7vLnfy0H1JEAOsXzSAMoc5_pNG2n79m0ywvb_4l9BqdsHW8N3xSQOFjcp9gD_tqo6ffug3pkpoy-RSguM_OaMR2lj_CHhYxAt0phtjUceDD3K1h5iZ38kSl7izhOdULMmGBhVpBMoSy6_R6ZzpCL3pj8FcReX9RXR5oYpm8PDtlmWqblQzjwY00-uYLfOX0_iS4MGfEsjadZPfTmJLcOTYC7H4PL9ZRu_XtMDUrGBQQz5b_ad2ZzMXbBNeU6vbxVKDG8VFKWOHAemqHTcvuOAsOCLIqOu-eJpZHlXbx-FXPTYledd-GBDe7IjaC9ll_JK3utCOnCq0qUs6lnXIrQ_Sp1LcTKJJ7aY5f9TxeoAuL-ghDbQ3Xkw6huKyPCz2evOwVLwrB9ZRMlQXgmTnB1OeQvWii1WbmkyV1Zhbz_RPB8ckK7_mFxuPvsXK8wTFiWFmj96sRX470kV-ooSfM5CzKZhSLqgyyaUNC0VaCPq0uuE
+      - VAULT_SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://nchain:8080/status"]
+      interval: 1m
+      timeout: 1s
+      retries: 2
+      start_period: 10s
+    hostname: nchain
+    networks:
+      - provide
+    ports:
+      - 8080:8080
+    restart: always
+
+  nchain-consumer:
+    image: provide/nchain:dev
+    entrypoint: ./ops/run_consumer.sh
+    container_name: nchain-consumer
+    depends_on:
       - nats-streaming
       - postgres
       - redis
     environment:
       - CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true
       - DATABASE_HOST=postgres
-      - DATABASE_NAME=ident_dev
-      - DATABASE_USER=ident
-      - DATABASE_PASSWORD=ident
-      - DATABASE_SUPERUSER=prvd
-      - DATABASE_SUPERUSER_PASSWORD=prvdp455
-      - NATS_CLIENT_PREFIX=ident-consumer
+      - DATABASE_NAME=nchain_dev
+      - DATABASE_USER=nchain
+      - DATABASE_PASSWORD=nchain
+      - LOG_LEVEL=DEBUG
+      - NATS_CLUSTER_ID=provide   
+      - NATS_CLIENT_PREFIX=nchain-consumer
       - NATS_URL=nats://nats:4222
       - NATS_STREAMING_URL=nats://nats-streaming:4222
+      - NATS_TOKEN=testtoken
       - REDIS_HOSTS=redis:6379
-      - LOG_LEVEL=DEBUG
-      - PORT=8080
+      - IDENT_API_HOST=ident:8080
+      - IDENT_API_PATH=api/v1
+      - IDENT_API_SCHEME=http
       - VAULT_API_HOST=vault:8080
       - VAULT_API_PATH=api/v1
       - VAULT_API_SCHEME=http
+      - PAYMENTS_REFRESH_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6ImU2OmY3OmQ1OjI0OmUyOjU5OjA2OjJiOmJjOmEyOjhjOjM1OjlkOmNhOjBhOjg3IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMvYXBpL3YxIiwiaWF0IjoxNjAwNzA5NzU0LCJpc3MiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMiLCJqdGkiOiJjN2I2YzI2ZS00OTkwLTQ4YWYtYmMwYy05YWRiY2E5ZmRmNzYiLCJuYXRzIjp7InBlcm1pc3Npb25zIjp7InN1YnNjcmliZSI6eyJhbGxvdyI6WyJhcHBsaWNhdGlvbi4wMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJuZXR3b3JrLiouY29ubmVjdG9yLioiLCJuZXR3b3JrLiouc3RhdHVzIiwicGxhdGZvcm0uXHUwMDNlIl19fX0sInBydmQiOnsiYXBwbGljYXRpb25faWQiOiIwMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJleHRlbmRlZCI6eyJwZXJtaXNzaW9ucyI6eyIqIjo1MTB9fSwicGVybWlzc2lvbnMiOjUxMH0sInN1YiI6ImFwcGxpY2F0aW9uOjAxNTU0ZTIyLTNkN2EtNDRhMy05YzY1LTZiY2FiYWEwOGMzOCJ9.iPYYSS0hHNYLUXcgpBfQbo6goMGDHF5Oxv1OvkB-WAzRgZSAm2HFroOUsmPlCQwO5eNeTfMqRaQMDdl6idTCip99y-zYTu8ys7dahyk4P1lhh4BB8vTCl3AHQuyUTGloMrY2JytpkmXMZTsxu-UhQxaaQN0IlSotSIFAYPT3jHH5nYy2MJbcfxePt8xKmXzwvpjTEVJRmUfAfEXjJF34S3hAuw9S7WncKucZfuP1WwP65h53HbLB69DR6KFZ76eiRavke5RpT40r9UKC6zPP-UZhTAuWQjOSmBhkd_IUg4T2a8r4W9CJT6aLgtwE0i1OUrPDVj_EzQV9tsjlwIOv5y9r_p-sfdxXdHFfoT8nAs5uIcWTw45J2Ycc0b4vqs-sYDr2qn7TS5DvJbPQSnRBS9YZ8CJq9mFpc5GjunCzEqO6JkvEWaN1mqPJbcvMGmLRQt5zA-2D0fFq1mvIUCUcg3EQ5J5lAZqudGf9mnYf4xRIMacCssF5VsP36xXg7pnscqh3u3JdQ-Fon3nB5vbIXn2fxaJjYl4ggNr-IgLxK7_h9KlDkiv7I7EKWGl2Np0q3-mVvuTIk7M-GqT3Dx9TtpR6MsK6EX0frUH3bZH8RHBHnxx67oxNMamviT-XUNudUU7Wan1PfnaPSsqfrn6OT5Abep-BbewKJn3ErY0Z-oU
+      - VAULT_SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
+      - VAULT_REFRESH_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6IjEwOjJlOmQ5OmUxOmI4OmEyOjM0OjM3Ojk5OjNhOjI0OmZjOmFhOmQxOmM4OjU5IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL3Byb3ZpZGUuc2VydmljZXMvYXBpL3YxIiwiaWF0IjoxNjA1NzkxMjQ4LCJpc3MiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMiLCJqdGkiOiI5YjUxNGIxNS01NTdlLTRhYWQtYTcwOC0wMTcwZTAwZWE1ZmIiLCJuYXRzIjp7InBlcm1pc3Npb25zIjp7InN1YnNjcmliZSI6eyJhbGxvdyI6WyJhcHBsaWNhdGlvbi4zNjAxNTdmOC1kNWExLTQ0NDAtOTE4Yi1mNjhiYjM5YzBkODAiLCJ1c2VyLjIzY2MwN2UwLTM4NTEtNDBkZC1iNjc1LWRmNzY4MDY3MmY3ZCIsIm5ldHdvcmsuKi5jb25uZWN0b3IuKiIsIm5ldHdvcmsuKi5zdGF0dXMiLCJwbGF0Zm9ybS5cdTAwM2UiXX19fSwicHJ2ZCI6eyJhcHBsaWNhdGlvbl9pZCI6IjM2MDE1N2Y4LWQ1YTEtNDQ0MC05MThiLWY2OGJiMzljMGQ4MCIsImV4dGVuZGVkIjp7InBlcm1pc3Npb25zIjp7IioiOjUxMH19LCJwZXJtaXNzaW9ucyI6NTEwLCJ1c2VyX2lkIjoiMjNjYzA3ZTAtMzg1MS00MGRkLWI2NzUtZGY3NjgwNjcyZjdkIn0sInN1YiI6ImFwcGxpY2F0aW9uOjM2MDE1N2Y4LWQ1YTEtNDQ0MC05MThiLWY2OGJiMzljMGQ4MCJ9.SUh84MKBNstdu3KFu1zEAQq03xbPw1D0lLXeogz1HfBJy77bIGf7HLvCuc6bjkh0xj3cEuEus1dC1Dj3BvlZoSXsvz_biTzSapkXzJjpkwOL6qkYDmqTPZvXwqmk-mUNrHTPkqdiIJL7xA46tzHW3E_hjSA9HjEk1kXjPdJQ6_ifkgWNoAaSD--kudIrhZ7vLnfy0H1JEAOsXzSAMoc5_pNG2n79m0ywvb_4l9BqdsHW8N3xSQOFjcp9gD_tqo6ffug3pkpoy-RSguM_OaMR2lj_CHhYxAt0phtjUceDD3K1h5iZ38kSl7izhOdULMmGBhVpBMoSy6_R6ZzpCL3pj8FcReX9RXR5oYpm8PDtlmWqblQzjwY00-uYLfOX0_iS4MGfEsjadZPfTmJLcOTYC7H4PL9ZRu_XtMDUrGBQQz5b_ad2ZzMXbBNeU6vbxVKDG8VFKWOHAemqHTcvuOAsOCLIqOu-eJpZHlXbx-FXPTYledd-GBDe7IjaC9ll_JK3utCOnCq0qUs6lnXIrQ_Sp1LcTKJJ7aY5f9TxeoAuL-ghDbQ3Xkw6huKyPCz2evOwVLwrB9ZRMlQXgmTnB1OeQvWii1WbmkyV1Zhbz_RPB8ckK7_mFxuPvsXK8wTFiWFmj96sRX470kV-ooSfM5CzKZhSLqgyyaUNC0VaCPq0uuE
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://ident:8080/status"]
+      test: ["CMD", "curl", "-f", "http://nchain-consumer:8080/status"] # FIXME
       interval: 1m
       timeout: 1s
       retries: 2
       start_period: 10s
-    hostname: ident-consumer
+    hostname: nchain-consumer
     networks:
-      - vault
+      - provide
+    ports:
+      - 8083:8080
     restart: always
 
-  vault:
-    build: ../
-    container_name: vault
+  statsdaemon:
+    image: provide/nchain:dev
+    entrypoint: ./ops/run_statsdaemon.sh
+    container_name: statsdaemon
     depends_on:
+      - nats-streaming
       - postgres
-    secrets:
-      - unsealerkey
+      - redis
     environment:
       - DATABASE_HOST=postgres
-      - DATABASE_NAME=vault_dev
-      - DATABASE_USER=vault
-      - DATABASE_PASSWORD=vault
-      - DATABASE_SUPERUSER=prvd
-      - DATABASE_SUPERUSER_PASSWORD=prvdp455
+      - DATABASE_NAME=nchain_dev
+      - DATABASE_USER=nchain
+      - DATABASE_PASSWORD=nchain
       - LOG_LEVEL=DEBUG
-      - PORT=8080
-      - IDENT_API_HOST=vault:8080
+      - NATS_CLIENT_PREFIX=statsdaemon
+      - NATS_URL=nats://nats:4222
+      - NATS_CLUSTER_ID=provide   
+      - NATS_STREAMING_URL=nats://nats-streaming:4222
+      - REDIS_HOSTS=redis:6379
+      - IDENT_API_HOST=ident:8080
       - IDENT_API_PATH=api/v1
       - IDENT_API_SCHEME=http
-      # the run/secrets is more secure, but requires the unsealerkey.txt to be present in the folder
-      - VAULT_SEAL_UNSEAL_KEY=/run/secrets/unsealerkey
-      #- VAULT_SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
-      - SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
+      - VAULT_API_HOST=vault:8080
+      - VAULT_API_PATH=api/v1
+      - VAULT_API_SCHEME=http
+      - PAYMENTS_REFRESH_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6ImU2OmY3OmQ1OjI0OmUyOjU5OjA2OjJiOmJjOmEyOjhjOjM1OjlkOmNhOjBhOjg3IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMvYXBpL3YxIiwiaWF0IjoxNjAwNzA5NzU0LCJpc3MiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMiLCJqdGkiOiJjN2I2YzI2ZS00OTkwLTQ4YWYtYmMwYy05YWRiY2E5ZmRmNzYiLCJuYXRzIjp7InBlcm1pc3Npb25zIjp7InN1YnNjcmliZSI6eyJhbGxvdyI6WyJhcHBsaWNhdGlvbi4wMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJuZXR3b3JrLiouY29ubmVjdG9yLioiLCJuZXR3b3JrLiouc3RhdHVzIiwicGxhdGZvcm0uXHUwMDNlIl19fX0sInBydmQiOnsiYXBwbGljYXRpb25faWQiOiIwMTU1NGUyMi0zZDdhLTQ0YTMtOWM2NS02YmNhYmFhMDhjMzgiLCJleHRlbmRlZCI6eyJwZXJtaXNzaW9ucyI6eyIqIjo1MTB9fSwicGVybWlzc2lvbnMiOjUxMH0sInN1YiI6ImFwcGxpY2F0aW9uOjAxNTU0ZTIyLTNkN2EtNDRhMy05YzY1LTZiY2FiYWEwOGMzOCJ9.iPYYSS0hHNYLUXcgpBfQbo6goMGDHF5Oxv1OvkB-WAzRgZSAm2HFroOUsmPlCQwO5eNeTfMqRaQMDdl6idTCip99y-zYTu8ys7dahyk4P1lhh4BB8vTCl3AHQuyUTGloMrY2JytpkmXMZTsxu-UhQxaaQN0IlSotSIFAYPT3jHH5nYy2MJbcfxePt8xKmXzwvpjTEVJRmUfAfEXjJF34S3hAuw9S7WncKucZfuP1WwP65h53HbLB69DR6KFZ76eiRavke5RpT40r9UKC6zPP-UZhTAuWQjOSmBhkd_IUg4T2a8r4W9CJT6aLgtwE0i1OUrPDVj_EzQV9tsjlwIOv5y9r_p-sfdxXdHFfoT8nAs5uIcWTw45J2Ycc0b4vqs-sYDr2qn7TS5DvJbPQSnRBS9YZ8CJq9mFpc5GjunCzEqO6JkvEWaN1mqPJbcvMGmLRQt5zA-2D0fFq1mvIUCUcg3EQ5J5lAZqudGf9mnYf4xRIMacCssF5VsP36xXg7pnscqh3u3JdQ-Fon3nB5vbIXn2fxaJjYl4ggNr-IgLxK7_h9KlDkiv7I7EKWGl2Np0q3-mVvuTIk7M-GqT3Dx9TtpR6MsK6EX0frUH3bZH8RHBHnxx67oxNMamviT-XUNudUU7Wan1PfnaPSsqfrn6OT5Abep-BbewKJn3ErY0Z-oU
+      - VAULT_SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
+      - VAULT_REFRESH_TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6IjEwOjJlOmQ5OmUxOmI4OmEyOjM0OjM3Ojk5OjNhOjI0OmZjOmFhOmQxOmM4OjU5IiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL3Byb3ZpZGUuc2VydmljZXMvYXBpL3YxIiwiaWF0IjoxNjA1NzkxMjQ4LCJpc3MiOiJodHRwczovL2lkZW50LnByb3ZpZGUuc2VydmljZXMiLCJqdGkiOiI5YjUxNGIxNS01NTdlLTRhYWQtYTcwOC0wMTcwZTAwZWE1ZmIiLCJuYXRzIjp7InBlcm1pc3Npb25zIjp7InN1YnNjcmliZSI6eyJhbGxvdyI6WyJhcHBsaWNhdGlvbi4zNjAxNTdmOC1kNWExLTQ0NDAtOTE4Yi1mNjhiYjM5YzBkODAiLCJ1c2VyLjIzY2MwN2UwLTM4NTEtNDBkZC1iNjc1LWRmNzY4MDY3MmY3ZCIsIm5ldHdvcmsuKi5jb25uZWN0b3IuKiIsIm5ldHdvcmsuKi5zdGF0dXMiLCJwbGF0Zm9ybS5cdTAwM2UiXX19fSwicHJ2ZCI6eyJhcHBsaWNhdGlvbl9pZCI6IjM2MDE1N2Y4LWQ1YTEtNDQ0MC05MThiLWY2OGJiMzljMGQ4MCIsImV4dGVuZGVkIjp7InBlcm1pc3Npb25zIjp7IioiOjUxMH19LCJwZXJtaXNzaW9ucyI6NTEwLCJ1c2VyX2lkIjoiMjNjYzA3ZTAtMzg1MS00MGRkLWI2NzUtZGY3NjgwNjcyZjdkIn0sInN1YiI6ImFwcGxpY2F0aW9uOjM2MDE1N2Y4LWQ1YTEtNDQ0MC05MThiLWY2OGJiMzljMGQ4MCJ9.SUh84MKBNstdu3KFu1zEAQq03xbPw1D0lLXeogz1HfBJy77bIGf7HLvCuc6bjkh0xj3cEuEus1dC1Dj3BvlZoSXsvz_biTzSapkXzJjpkwOL6qkYDmqTPZvXwqmk-mUNrHTPkqdiIJL7xA46tzHW3E_hjSA9HjEk1kXjPdJQ6_ifkgWNoAaSD--kudIrhZ7vLnfy0H1JEAOsXzSAMoc5_pNG2n79m0ywvb_4l9BqdsHW8N3xSQOFjcp9gD_tqo6ffug3pkpoy-RSguM_OaMR2lj_CHhYxAt0phtjUceDD3K1h5iZ38kSl7izhOdULMmGBhVpBMoSy6_R6ZzpCL3pj8FcReX9RXR5oYpm8PDtlmWqblQzjwY00-uYLfOX0_iS4MGfEsjadZPfTmJLcOTYC7H4PL9ZRu_XtMDUrGBQQz5b_ad2ZzMXbBNeU6vbxVKDG8VFKWOHAemqHTcvuOAsOCLIqOu-eJpZHlXbx-FXPTYledd-GBDe7IjaC9ll_JK3utCOnCq0qUs6lnXIrQ_Sp1LcTKJJ7aY5f9TxeoAuL-ghDbQ3Xkw6huKyPCz2evOwVLwrB9ZRMlQXgmTnB1OeQvWii1WbmkyV1Zhbz_RPB8ckK7_mFxuPvsXK8wTFiWFmj96sRX470kV-ooSfM5CzKZhSLqgyyaUNC0VaCPq0uuE
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://vault:8080/status"]
+      test: ["CMD", "curl", "-f", "http://statsdaemon:8080/status"]
       interval: 1m
       timeout: 1s
       retries: 2
       start_period: 10s
-    hostname: vault
+    hostname: statsdaemon
     networks:
-      - vault
+      - provide
     ports:
-      - 8082:8080
+      - 8087:8080      
     restart: always
 
 networks:
-  vault:
+  provide:
     driver: bridge
     ipam:
       config:
-      - subnet: 172.40.0.0/24
+      - subnet: 172.30.0.0/24
 
 volumes:
-  vault-db:
-secrets:
-  unsealerkey:
-    file: unsealerkey.txt
+  provide-db:

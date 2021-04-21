@@ -1,4 +1,4 @@
-name: dev-integration-test-scheduled
+name: VAULT-s
 on:
   schedule:
     - cron: '0 * * * *'  # every hour on the hour
@@ -23,22 +23,19 @@ jobs:
       - name: Checkout vault
         uses: actions/checkout@v2
         with:
+          ref: dev
           path: 'vault'                      
-      - run: docker-compose -f ./ops/docker-compose-integration.yml build --no-cache vault
+      - run: docker-compose -f ./ops/docker-compose.yml build --no-cache vault
         working-directory: vault
-      - run: docker-compose -f ./ops/docker-compose-integration.yml up -d
+      - run: docker-compose -f ./ops/docker-compose.yml up -d
         working-directory: vault
       - run: TAGS=integration ./ops/run_local_tests_long.sh
         working-directory: vault
       - run: docker-compose -f ./ops/docker-compose.yml logs
-        working-directory: vault
-      - run: docker-compose -f ./ops/docker-compose-integration.yml down
-        working-directory: vault
-      - run: docker volume rm ops_provide-db
-        working-directory: vault                                        
+        working-directory: vault                                      
       - name: slack channel update
         uses: act10ns/slack@v1
         with:
           status: ${{ job.status }}
           steps: ${{ toJson(steps) }}
-        if: always()  
+        if: failure()  

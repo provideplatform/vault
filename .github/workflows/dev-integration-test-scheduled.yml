@@ -1,4 +1,4 @@
-name: dev-integration-test-scheduled
+name: VAULT-s
 on:
   schedule:
     - cron: '0 * * * *'  # every hour on the hour

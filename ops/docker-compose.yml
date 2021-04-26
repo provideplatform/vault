@@ -28,6 +28,7 @@ services:
     container_name: vault
     depends_on:
       - postgres
+      - ident
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_NAME=vault_dev
@@ -139,7 +140,6 @@ services:
       - nats-streaming
       - postgres
       - redis
-      - vault
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_NAME=ident_dev

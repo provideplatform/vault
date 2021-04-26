@@ -18,8 +18,8 @@ require (
 	github.com/provideapp/ident v0.0.0-00010101000000-000000000000
 	github.com/provideservices/provide-go v0.0.0-20210417103803-b68bfa257e1d
 	github.com/tyler-smith/go-bip32 v1.0.0
-	github.com/tyler-smith/go-bip39 v1.0.2
-	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
+	github.com/tyler-smith/go-bip39 v1.1.0
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 )
 
 replace github.com/provideapp/ident => ../ident

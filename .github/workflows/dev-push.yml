@@ -34,7 +34,9 @@ jobs:
         working-directory: vault
       - name: log_on_failure
         if: failure()
-        run: docker-compose -f ./ops/docker-compose.yml logs
+        run: docker logs ident
+        working-directory: vault
+        run: docker logs vault
         working-directory: vault  
       - name: push_to_docker_hub
         if: success()

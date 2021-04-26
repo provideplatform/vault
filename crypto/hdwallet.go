@@ -246,7 +246,6 @@ func CreateHDWalletFromSeedPhrase(mnemonic string) (*HDWallet, error) {
 
 func validateHDWalletMnemonic(mnemonic string) error {
 
-	common.Log.Debugf("*** validating mnemonic ***: %s", mnemonic)
 	// make sure we can use the mnemonic to generate a HD wallet
 	_, err := hdwallet.NewFromMnemonic(mnemonic)
 	if err != nil {

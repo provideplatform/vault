@@ -62,7 +62,7 @@ func main() {
 			if now.Before(gracePeriodEndAt) {
 				util.RequireJWTVerifiers()
 			} else if now.After(verifiersRefreshedAt.Add(jwtVerifierRefreshInterval)) {
-				verifiersRefreshedAt := now
+				verifiersRefreshedAt = now
 				util.RequireJWTVerifiers()
 			}
 		case sig := <-sigs:

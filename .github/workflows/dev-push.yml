@@ -32,7 +32,13 @@ jobs:
         working-directory: vault
       - run: TAGS=integration ./ops/run_local_tests_long.sh
         working-directory: vault
-      - run: docker-compose -f ./ops/docker-compose.yml logs
+      - name: log vault on failure
+        if: failure()
+        run: docker logs vault
+        working-directory: vault
+      - name: log ident on failure
+        if: failure()        
+        run: docker logs ident
         working-directory: vault  
       - name: push_to_docker_hub
         if: success()

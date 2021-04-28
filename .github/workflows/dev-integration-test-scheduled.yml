@@ -31,8 +31,14 @@ jobs:
         working-directory: vault
       - run: TAGS=integration ./ops/run_local_tests_long.sh
         working-directory: vault
-      - run: docker-compose -f ./ops/docker-compose.yml logs
-        working-directory: vault                                      
+      - name: log vault on failure
+        if: failure()
+        run: docker logs vault
+        working-directory: vault
+      - name: log ident on failure
+        if: failure()        
+        run: docker logs ident
+        working-directory: vault                                        
       - name: slack channel update
         uses: act10ns/slack@v1
         with:

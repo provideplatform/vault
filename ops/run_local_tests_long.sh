@@ -228,10 +228,9 @@ export LOG_LEVEL=DEBUG
 
 # go get gotest.tools/gotestsum
 
-go test "./test/..." -v \
+GOFLAGS="-count=1" go test "./test/..." -v \
                     -race \
                     -timeout 1800s \
-                    -parallel 1 \
                     -tags="$TAGS"
  
 

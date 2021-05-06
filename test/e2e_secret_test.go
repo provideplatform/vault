@@ -11,7 +11,6 @@ import (
 )
 
 func TestAPILIstSecretTypeFilter(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -83,7 +82,6 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 }
 
 func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
-	t.Parallel()
 
 	// add the secrets out of order, and expect to get thte same out of order secrets returned, unfiltered
 	token, err := userTokenFactory()
@@ -157,7 +155,6 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 }
 
 func TestAPIListSecrets(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -211,7 +208,6 @@ func TestAPIListSecrets(t *testing.T) {
 }
 
 func TestAPICreateSecret(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -237,7 +233,6 @@ func TestAPICreateSecret(t *testing.T) {
 }
 
 func TestAPICreateSecretTooLong(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -264,7 +259,6 @@ func TestAPICreateSecretTooLong(t *testing.T) {
 }
 
 func TestAPICreateSecretMaxSize(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -300,7 +294,6 @@ func TestAPICreateSecretMaxSize(t *testing.T) {
 }
 
 func TestAPICreateSecretNoName(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -323,7 +316,6 @@ func TestAPICreateSecretNoName(t *testing.T) {
 }
 
 func TestAPICreateSecretNoType(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -346,7 +338,6 @@ func TestAPICreateSecretNoType(t *testing.T) {
 }
 
 func TestAPICreateSecretNoData(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -369,7 +360,6 @@ func TestAPICreateSecretNoData(t *testing.T) {
 }
 
 func TestAPICreateAndRetrieveSecret(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -403,7 +393,6 @@ func TestAPICreateAndRetrieveSecret(t *testing.T) {
 }
 
 func TestAPIDeleteSecret(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {

@@ -50,7 +50,7 @@ jobs:
           tags: dev
           path: 'vault'
       - name: slack channel update
-        if: failure()  
+        if: always()  
         uses: act10ns/slack@v1
         with:
           status: ${{ job.status }}

@@ -12,6 +12,8 @@ RUN make build
 
 FROM alpine
 
+RUN apk add --no-cache bash
+
 RUN mkdir -p /vault
 WORKDIR /vault
 

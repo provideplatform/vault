@@ -10,7 +10,7 @@ RUN rm -rf ~/.ssh && rm -rf /go/src/github.com/provideapp/vault/ops/keys && rm -
 WORKDIR /go/src/github.com/provideapp/vault
 RUN make build
 
-FROM golang:1.15
+FROM alpine
 
 RUN mkdir -p /vault
 WORKDIR /vault

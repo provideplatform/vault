@@ -52,16 +52,16 @@ func InitAzureKeyVaultSealUnsealProvider(params map[string]interface{}) *AzureSe
 	tenantID, tenantIDOk := credentials["azure_tenant_id"].(string)
 	subscriptionID, subscriptionIDOk := credentials["azure_subscription_id"].(string)
 	clientID, clientIDOk := credentials["azure_client_id"].(string)
-	clientSecret, clientSecretOk := credentials["azure_client_secret"].(string)
+	clientSecret, _ := credentials["azure_client_secret"].(string)
 
 	if !tenantIDOk || !subscriptionIDOk || !clientIDOk {
 		common.Log.Warning("failed to initialize Azure provider; tenant_id, subscription_id, client_id are required")
 		return nil
 	}
 
-	if !clientSecretOk {
-		common.Log.Debugf("initializing Azure provider without client_secret; client will use managed identity authorization")
-	}
+	// if !clientSecretOk {
+	// 	common.Log.Debugf("initializing Azure provider without client_secret; client will use managed identity authorization")
+	// }
 
 	unsealKeySecretName := defaultUnsealKeySecretName
 	if os.Getenv("SEAL_UNSEAL_SECRET_NAME") != "" {

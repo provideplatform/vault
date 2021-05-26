@@ -2,7 +2,6 @@ package common
 
 import (
 	"os"
-	"strings"
 
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
@@ -14,16 +13,12 @@ const UnsealerKeyRequiredBytes = 32
 var (
 	// Log is the configured logger
 	Log *logger.Logger
-
-	// UnsealerKeyValidationHash is the SHA256 validation hash for the unsealer key
-	UnsealerKeyValidationHash string
 )
 
 func init() {
 	godotenv.Load()
 
 	requireLogger()
-	requireSealerValidationHash()
 }
 
 func requireLogger() {
@@ -39,13 +34,4 @@ func requireLogger() {
 	}
 
 	Log = logger.NewLogger("vault", lvl, endpoint)
-}
-
-func requireSealerValidationHash() {
-	if os.Getenv("SEAL_UNSEAL_VALIDATION_HASH") == "" {
-		Log.Warning("vault unsealer key validation hash not provided")
-	} else {
-		UnsealerKeyValidationHash = strings.Replace(os.Getenv("SEAL_UNSEAL_VALIDATION_HASH"), "0x", "", -1)
-		Log.Debugf("vault validation hash set %s", UnsealerKeyValidationHash)
-	}
 }

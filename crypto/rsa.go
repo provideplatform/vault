@@ -12,8 +12,8 @@ import (
 
 // RSAKeyPair is the internal struct for an asymmetric keypair
 type RSAKeyPair struct {
-	PrivateKey *[]byte
-	PublicKey  *[]byte
+	PrivateKey []byte
+	PublicKey  []byte
 }
 
 // NonceSizeRSA is the size of the optional RSA nonce for encryption/decryption (in bytes)
@@ -143,13 +143,13 @@ func CreateRSAKeyPair(bitsize int) (*RSAKeyPair, error) {
 	if err != nil {
 		return nil, ErrCannotGenerateKey
 	}
-	RSAKeyPair.PrivateKey = &privkey
+	RSAKeyPair.PrivateKey = privkey
 
 	pubkey, err := json.Marshal(*&privateKey.PublicKey)
 	if err != nil {
 		return nil, ErrCannotGenerateKey
 	}
-	RSAKeyPair.PublicKey = &pubkey
+	RSAKeyPair.PublicKey = pubkey
 
 	return &RSAKeyPair, nil
 }
@@ -184,7 +184,7 @@ func (k *RSAKeyPair) Sign(payload []byte, algo string) ([]byte, error) {
 
 	// get the private key struct from the privatekey bytes
 	var rsaPrivateKey rsa.PrivateKey
-	json.Unmarshal(*k.PrivateKey, &rsaPrivateKey)
+	json.Unmarshal(k.PrivateKey, &rsaPrivateKey)
 
 	// get the signature algorithm
 	signingMethod, err := selectSignatureMethod(algo)
@@ -296,7 +296,7 @@ func (k *RSAKeyPair) Encrypt(plaintext []byte) ([]byte, error) {
 
 	// get the rsa public key struct from the publickey bytes
 	var rsaKey rsa.PrivateKey
-	json.Unmarshal(*k.PublicKey, &rsaKey.PublicKey)
+	json.Unmarshal(k.PublicKey, &rsaKey.PublicKey)
 
 	// check if we're trying to encrypt too large a payload
 	// formula (for OAEP encryption) is keylen(bytes) -2 -2*hashsize(bytes)
@@ -322,7 +322,7 @@ func (k *RSAKeyPair) Decrypt(ciphertext []byte) ([]byte, error) {
 
 	//get the private key struct from the privatekey bytes
 	var rsaPrivateKey rsa.PrivateKey
-	json.Unmarshal(*k.PrivateKey, &rsaPrivateKey)
+	json.Unmarshal(k.PrivateKey, &rsaPrivateKey)
 
 	// decrypt using OAEP
 	plaintext, err := rsaPrivateKey.Decrypt(nil, ciphertext, &rsa.OAEPOptions{Hash: crypto.SHA256})

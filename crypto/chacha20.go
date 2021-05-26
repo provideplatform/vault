@@ -13,7 +13,7 @@ const NonceSizeChaCha20 = 12
 
 // ChaCha is the internal struct for a keypair using seed.
 type ChaCha struct {
-	Seed *[]byte
+	Seed []byte
 }
 
 // ChaCha20 ...
@@ -59,7 +59,7 @@ func (k *ChaCha) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 	}
 
 	//NB: shared, unencrypted seed stored in only one memory location
-	cipher, err := chacha20.NewUnauthenticatedCipher(*k.Seed, nonce)
+	cipher, err := chacha20.NewUnauthenticatedCipher(k.Seed, nonce)
 	if err != nil {
 		return nil, ErrCannotEncrypt
 	}
@@ -75,7 +75,7 @@ func (k *ChaCha) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 func (k *ChaCha) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) {
 
 	//NB: shared, unencrypted seed stored in only one memory location
-	cipher, err := chacha20.NewUnauthenticatedCipher(*k.Seed, nonce)
+	cipher, err := chacha20.NewUnauthenticatedCipher(k.Seed, nonce)
 	if err != nil {
 		return nil, ErrCannotDecrypt
 	}
@@ -88,6 +88,6 @@ func (k *ChaCha) Decrypt(ciphertext []byte, nonce []byte) ([]byte, error) {
 
 // Wipe will randomize the contents of the seed key
 func (k *ChaCha) Wipe() {
-	io.ReadFull(rand.Reader, *k.Seed)
+	io.ReadFull(rand.Reader, k.Seed)
 	k.Seed = nil
 }

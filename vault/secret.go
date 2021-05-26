@@ -65,11 +65,11 @@ func (s *Secret) validate() bool {
 		})
 	}
 
-	if s.DecryptedValue != nil && len(*s.DecryptedValue) > MaxSecretLengthInBytes {
-		s.Errors = append(s.Errors, &provide.Error{
-			Message: common.StringOrNil("value too long"),
-		})
-	}
+	// if s.DecryptedValue != nil && len(*s.DecryptedValue) > MaxSecretLengthInBytes {
+	// 	s.Errors = append(s.Errors, &provide.Error{
+	// 		Message: common.StringOrNil("value too long"),
+	// 	})
+	// }
 
 	return len(s.Errors) == 0
 }
@@ -286,7 +286,7 @@ func (s *Secret) decryptFields() error {
 
 		if s.Value != nil {
 			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = &unsealerKey
+			masterVaultKey.PrivateKey = unsealerKey
 			encryptedData := *s.Value
 			decryptedData, err := masterVaultKey.Decrypt(encryptedData[NonceSizeSymmetric:], encryptedData[0:NonceSizeSymmetric])
 			if err != nil {

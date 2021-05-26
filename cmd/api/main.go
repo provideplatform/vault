@@ -2,12 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -109,9 +106,9 @@ func runAPI() {
 
 	vault.InstallAPI(r)
 
-	err := autoUnsealVault()
+	err := vault.AutoUnseal()
 	if err != nil {
-		common.Log.Warningf("error unsealing vault %s", err.Error())
+		common.Log.Warningf("error automatically unsealing vault; %s", err.Error())
 	}
 
 	srv = &http.Server{
@@ -126,44 +123,6 @@ func runAPI() {
 	}
 
 	common.Log.Debugf("listening on %s", util.ListenAddr)
-}
-
-func autoUnsealVault() error {
-	unsealerkey, err := GetEnv("VAULT_SEAL_UNSEAL_KEY")
-	if err != nil {
-		return fmt.Errorf("vault not unsealed. Error: %s", err.Error())
-	}
-
-	err = vault.SetUnsealerKey(*unsealerkey)
-	if err != nil {
-		return err
-	}
-
-	common.Log.Debug("vault unsealed")
-	return nil
-}
-
-// GetEnv gets environment data, including from docker secrets in-memory file system
-func GetEnv(s string) (*string, error) {
-
-	// first check if it exists
-	if s == "" {
-		return nil, fmt.Errorf("environment variable %s not found", s)
-	}
-
-	// then check if it's a docker secret
-	if strings.HasPrefix(s, "/run/secrets") {
-		data, err := ioutil.ReadFile(s)
-		if err != nil {
-			common.Log.Debugf("File reading error %s", err)
-			return nil, err
-		}
-		returnData := string(data)
-		return &returnData, nil
-	}
-
-	returnData := os.Getenv(s)
-	return &returnData, nil
 }
 
 func statusHandler(c *gin.Context) {

@@ -259,11 +259,11 @@ func seal(unsealedKey []byte) ([]byte, error) {
 
 // unseal decrypts the sealed material with the unsealer key
 func unseal(sealedKey []byte) ([]byte, error) {
-	if unsealerKey == nil {
+	if unsealerKey == nil || len(unsealerKey) == 0 {
 		return nil, fmt.Errorf("vault is sealed")
 	}
 
-	if sealedKey == nil {
+	if sealedKey == nil || len(sealedKey) == 0 {
 		return nil, fmt.Errorf("error unsealing vault; no sealed key")
 	}
 
@@ -274,7 +274,7 @@ func unseal(sealedKey []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error unsealing vault %s", err.Error())
 	}
 
-	common.Log.Debugf("resolved %d-byte sealed key: %d", len(sealedKey))
+	common.Log.Debugf("resolved %d-byte sealed key", len(sealedKey))
 
 	unsealedKey, err := unsealerKey.Decrypt(sealedKey[NonceSizeSymmetric:], sealedKey[0:NonceSizeSymmetric])
 	if err != nil {

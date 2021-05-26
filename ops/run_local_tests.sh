@@ -43,6 +43,10 @@ if [[ -z "${RACE}" ]]; then
   RACE=true
 fi
 
+if [[ -z "${SEAL_UNSEAL_KEY}" ]]; then
+  SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
+fi
+
 if [[ -z "${SEAL_UNSEAL_VALIDATION_HASH}" ]]; then
   SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
 fi
@@ -255,6 +259,7 @@ for d in "${pkgs[@]}" ; do
     VAULT_API_HOST=localhost:8082 \
     VAULT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
+    SEAL_UNSEAL_KEY=$SEAL_UNSEAL_KEY \
     SEAL_UNSEAL_VALIDATION_HASH=$SEAL_UNSEAL_VALIDATION_HASH \
     go test ./... -v \
                        -race \
@@ -281,6 +286,7 @@ for d in "${pkgs[@]}" ; do
     VAULT_API_HOST=localhost:8082 \
     VAULT_API_SCHEME=http \
     LOG_LEVEL=DEBUG \
+    SEAL_UNSEAL_KEY=$SEAL_UNSEAL_KEY \
     SEAL_UNSEAL_VALIDATION_HASH=$SEAL_UNSEAL_VALIDATION_HASH \
     go test ./... -v \
                        -timeout 1800s \

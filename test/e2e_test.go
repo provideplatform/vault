@@ -122,7 +122,7 @@ func userTokenFactory() (*string, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error generating uuid %s", err.Error()))
 	}
-	email := fmt.Sprintf("%s@provide-integration-tests.com", newUUID.String())
+	email := fmt.Sprintf("%s@provide.local", newUUID.String())
 	password := fmt.Sprintf("%s", newUUID.String())
 
 	userID, err := userFactory(email, password)

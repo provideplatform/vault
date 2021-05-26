@@ -194,10 +194,9 @@ func (k *Key) createBabyJubJubKeypair() error {
 		return fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
 	}
 
-	publicKeyHex := hex.EncodeToString(publicKey)
-
 	k.PrivateKey = privateKey
 	k.PublicKey = publicKey
+	k.PublicKeyHex = common.StringOrNil(hex.EncodeToString(publicKey))
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.Spec = common.StringOrNil(KeySpecECCBabyJubJub)
 
@@ -326,7 +325,7 @@ func (k *Key) createSecp256k1Keypair() error {
 		k.Description = common.StringOrNil(desc)
 	}
 
-	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, hex.EncodeToString(*k.PublicKey))
+	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, hex.EncodeToString(k.PublicKey))
 	return nil
 }
 
@@ -396,7 +395,7 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 
 	k.Enrich()
 
-	common.Log.Debugf("created rsa-%d key for vault: %s; public key:\n%s", bitsize, k.VaultID, *k.PublicKeyHex)
+	common.Log.Debugf("created rsa-%d key for vault: %s; public key:\n%s", bitsize, k.VaultID, k.PublicKeyHex)
 	return nil
 }
 
@@ -575,7 +574,7 @@ func (k *Key) encryptFields() error {
 func (k *Key) Enrich() {
 	enrichRSA := func() {
 		var rsaPublicKey rsa.PublicKey
-		json.Unmarshal(*k.PublicKey, &rsaPublicKey)
+		json.Unmarshal(k.PublicKey, &rsaPublicKey)
 		publicKeyBytes, _ := x509.MarshalPKIXPublicKey(&rsaPublicKey)
 		k.PublicKeyHex = common.StringOrNil(string(pem.EncodeToMemory(&pem.Block{
 			Type:  "PUBLIC KEY",
@@ -588,7 +587,7 @@ func (k *Key) Enrich() {
 		case KeySpecECCBIP39:
 			k.PublicKeyHex = common.StringOrNil(string(k.PublicKey))
 		case KeySpecECCSecp256k1:
-			pubkey := *k.PublicKey
+			pubkey := k.PublicKey
 			x, y := elliptic.Unmarshal(secp256k1.S256(), pubkey)
 			if x != nil {
 				publicKey := &ecdsa.PublicKey{
@@ -598,7 +597,7 @@ func (k *Key) Enrich() {
 				}
 				addr := ethcrypto.PubkeyToAddress(*publicKey)
 				k.Address = common.StringOrNil(addr.Hex())
-				k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
+				k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(k.PublicKey)))
 			}
 		case KeySpecRSA2048:
 			enrichRSA()
@@ -1286,10 +1285,10 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 
 	switch *k.Spec {
 	case KeySpecECCBabyJubJub:
-		return providecrypto.TECVerify(*k.PublicKey, payload, sig)
+		return providecrypto.TECVerify(k.PublicKey, payload, sig)
 
 	case KeySpecECCEd25519:
-		return crypto.Ed25519Verify(*k.PublicKey, payload, sig)
+		return crypto.Ed25519Verify(k.PublicKey, payload, sig)
 
 	case KeySpecECCBIP39:
 		var path *accounts.DerivationPath

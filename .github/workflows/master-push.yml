@@ -1,4 +1,4 @@
-name: Vault (master)
+name: Vault
 on: 
   push:
     branches:

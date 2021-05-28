@@ -145,6 +145,7 @@ services:
     depends_on:
       - ident
       - postgres
+      - redis
     environment:
       - DATABASE_HOST=postgres
       - DATABASE_NAME=vault_dev

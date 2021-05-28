@@ -249,6 +249,7 @@ if [ "$RACE" = "true" ]; then
   VAULT_API_HOST=localhost:8082 \
   VAULT_API_SCHEME=http \
   LOG_LEVEL=DEBUG \
+  REDIS_HOSTS=localhost:6379 \
   SEAL_UNSEAL_KEY=$SEAL_UNSEAL_KEY \
   SEAL_UNSEAL_VALIDATION_HASH=$SEAL_UNSEAL_VALIDATION_HASH \
   go test "./test/..." -v \

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
 	uuid "github.com/kthomas/go.uuid"
 	"github.com/provideapp/vault/common"
@@ -143,6 +144,8 @@ func init() {
 		log.Printf("failed to create token; %s", err.Error())
 		return
 	}
+
+	time.Sleep(time.Second * 5)
 
 	//test getting a new unsealer key
 	newkeyresp, err := provide.GenerateSeal(*token, map[string]interface{}{})

@@ -219,6 +219,8 @@ echo waiting for ident to be ready
 timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' '${IDENT_API_SCHEME}"://"${IDENT_API_HOST}'/status)" != "200" ]]; do sleep 5; done' || false
 echo ident ready
 
+sleep 5
+
 export NATS_TOKEN=testtoken
 export NATS_URL=nats://localhost:${NATS_SERVER_PORT}
 export NATS_STREAMING_URL=nats://localhost:${NATS_STREAMING_SERVER_PORT}

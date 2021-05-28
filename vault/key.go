@@ -100,9 +100,9 @@ type Key struct {
 	Spec                    *string    `sql:"not null" json:"spec"`
 	Name                    *string    `sql:"not null" json:"name"`
 	Description             *string    `json:"description"`
-	Seed                    []byte     `sql:"type:bytea" json:"-"`
-	PublicKey               []byte     `sql:"type:bytea" json:"-"`
-	PrivateKey              []byte     `sql:"type:bytea" json:"-"`
+	Seed                    *[]byte    `sql:"type:bytea" json:"-"`
+	PublicKey               *[]byte    `sql:"type:bytea" json:"-"`
+	PrivateKey              *[]byte    `sql:"type:bytea" json:"-"`
 	IterativeDerivationPath *string    `gorm:"column:iterative_hd_derivation_path" json:"-"`
 	Mnemonic                *string    `sql:"-" json:"mnemonic,omitempty"`
 
@@ -179,7 +179,7 @@ func (k *Key) createAES256GCM() error {
 		return err
 	}
 
-	k.PrivateKey = privatekey
+	k.PrivateKey = &privatekey
 	k.Type = common.StringOrNil(KeyTypeSymmetric)
 	k.Spec = common.StringOrNil(KeySpecAES256GCM)
 
@@ -194,8 +194,8 @@ func (k *Key) createBabyJubJubKeypair() error {
 		return fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
 	}
 
-	k.PrivateKey = privateKey
-	k.PublicKey = publicKey
+	k.PrivateKey = &privateKey
+	k.PublicKey = &publicKey
 	k.PublicKeyHex = common.StringOrNil(hex.EncodeToString(publicKey))
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.Spec = common.StringOrNil(KeySpecECCBabyJubJub)
@@ -211,8 +211,8 @@ func (k *Key) createC25519Keypair() error {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	k.PrivateKey = c25519KeyPair.PrivateKey
-	k.PublicKey = c25519KeyPair.PublicKey
+	k.PrivateKey = &c25519KeyPair.PrivateKey
+	k.PublicKey = &c25519KeyPair.PublicKey
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.Spec = common.StringOrNil(KeySpecECCC25519)
 
@@ -227,7 +227,7 @@ func (k *Key) createChaCha20() error {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	k.Seed = seed
+	k.Seed = &seed
 	k.Type = common.StringOrNil(KeyTypeSymmetric)
 	k.Spec = common.StringOrNil(KeySpecChaCha20)
 
@@ -262,7 +262,7 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 		return nil, fmt.Errorf("failed to compute shared secret; failed to verify %d-byte Ed22519 signature using public key: %s; %s", len(peerSignature), string(peerPublicKey), err.Error())
 	}
 
-	sharedSecret := providecrypto.C25519ComputeSecret(privkey, peerPublicKey)
+	sharedSecret := providecrypto.C25519ComputeSecret(*privkey, peerPublicKey)
 
 	ecdhSecret := &Key{
 		VaultID:     k.VaultID,
@@ -271,7 +271,7 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 		Spec:        common.StringOrNil(KeySpecChaCha20),
 		Name:        common.StringOrNil(name),
 		Description: common.StringOrNil(description),
-		Seed:        sharedSecret,
+		Seed:        &sharedSecret,
 	}
 
 	db := dbconf.DatabaseConnection()
@@ -299,12 +299,12 @@ func (k *Key) createEd25519Keypair() error {
 	publicKeyBytes := []byte(publicKey)
 
 	seed := privateKey.Seed()
-	k.Seed = seed
-	k.PublicKey = publicKeyBytes
+	k.Seed = &seed
+	k.PublicKey = &publicKeyBytes
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.Spec = common.StringOrNil(KeySpecECCEd25519)
 
-	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, hex.EncodeToString(k.PublicKey))
+	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, hex.EncodeToString(*k.PublicKey))
 	return nil
 }
 
@@ -315,8 +315,8 @@ func (k *Key) createSecp256k1Keypair() error {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	k.PrivateKey = secp256k1KeyPair.PrivateKey
-	k.PublicKey = secp256k1KeyPair.PublicKey
+	k.PrivateKey = &secp256k1KeyPair.PrivateKey
+	k.PublicKey = &secp256k1KeyPair.PublicKey
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.Spec = common.StringOrNil(KeySpecECCSecp256k1)
 
@@ -325,7 +325,7 @@ func (k *Key) createSecp256k1Keypair() error {
 		k.Description = common.StringOrNil(desc)
 	}
 
-	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, hex.EncodeToString(k.PublicKey))
+	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, hex.EncodeToString(*k.PublicKey))
 	return nil
 }
 
@@ -335,10 +335,10 @@ func (k *Key) createHDWallet() error {
 		return fmt.Errorf("unable to create HD wallet; %s", err.Error())
 	}
 
-	k.Seed = hdwllt.Seed
+	k.Seed = &hdwllt.Seed
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.IterativeDerivationPath = common.StringOrNil(crypto.DefaultHDDerivationPath().String())
-	k.PublicKey = hdwllt.PublicKey
+	k.PublicKey = &hdwllt.PublicKey
 	k.PublicKeyHex = common.StringOrNil(string(hdwllt.PublicKey))
 	k.Spec = common.StringOrNil(KeySpecECCBIP39)
 
@@ -357,10 +357,10 @@ func (k *Key) createHDWalletFromSeedPhrase(mnemonic []byte) error {
 		return fmt.Errorf("unable to create HD wallet; %s", err.Error())
 	}
 
-	k.Seed = hdwllt.Seed
+	k.Seed = &hdwllt.Seed
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.IterativeDerivationPath = common.StringOrNil(crypto.DefaultHDDerivationPath().String())
-	k.PublicKey = hdwllt.PublicKey
+	k.PublicKey = &hdwllt.PublicKey
 	k.PublicKeyHex = common.StringOrNil(string(hdwllt.PublicKey))
 	k.Spec = common.StringOrNil(KeySpecECCBIP39)
 
@@ -380,8 +380,8 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	k.PrivateKey = rsaKeyPair.PrivateKey
-	k.PublicKey = rsaKeyPair.PublicKey
+	k.PrivateKey = &rsaKeyPair.PrivateKey
+	k.PublicKey = &rsaKeyPair.PublicKey
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 
 	switch bitsize {
@@ -467,18 +467,20 @@ func (k *Key) decryptFields() error {
 
 		if k.Seed != nil {
 			// unseal the data with the unsealer key
-			k.Seed, err = unseal(k.Seed)
+			seed, err := unseal(*k.Seed)
 			if err != nil {
 				return err
 			}
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
 			// unseal the data with the unsealer key
-			k.PrivateKey, err = unseal(k.PrivateKey)
+			privateKey, err := unseal(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
+			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("decrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
@@ -487,19 +489,19 @@ func (k *Key) decryptFields() error {
 		defer masterKey.encryptFields()
 
 		if k.Seed != nil {
-			seed, err := masterKey.Decrypt(k.Seed)
+			seed, err := masterKey.Decrypt(*k.Seed)
 			if err != nil {
 				return err
 			}
-			k.Seed = seed
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
-			privateKey, err := masterKey.Decrypt(k.PrivateKey)
+			privateKey, err := masterKey.Decrypt(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = privateKey
+			k.PrivateKey = &privateKey
 		}
 	}
 
@@ -529,18 +531,20 @@ func (k *Key) encryptFields() error {
 
 		if k.Seed != nil {
 			// seal the data with the unsealer key
-			k.Seed, err = seal(k.Seed)
+			seed, err := seal(*k.Seed)
 			if err != nil {
 				return err
 			}
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
 			// seal the data with the unsealer key
-			k.PrivateKey, err = seal(k.PrivateKey)
+			privateKey, err := seal(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
+			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("encrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
@@ -549,19 +553,19 @@ func (k *Key) encryptFields() error {
 		defer masterKey.encryptFields()
 
 		if k.Seed != nil {
-			seed, err := masterKey.Encrypt(k.Seed, nil)
+			seed, err := masterKey.Encrypt(*k.Seed, nil)
 			if err != nil {
 				return err
 			}
-			k.Seed = seed
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
-			privateKey, err := masterKey.Encrypt(k.PrivateKey, nil)
+			privateKey, err := masterKey.Encrypt(*k.PrivateKey, nil)
 			if err != nil {
 				return err
 			}
-			k.PrivateKey = privateKey
+			k.PrivateKey = &privateKey
 		}
 	}
 
@@ -574,7 +578,7 @@ func (k *Key) encryptFields() error {
 func (k *Key) Enrich() {
 	enrichRSA := func() {
 		var rsaPublicKey rsa.PublicKey
-		json.Unmarshal(k.PublicKey, &rsaPublicKey)
+		json.Unmarshal(*k.PublicKey, &rsaPublicKey)
 		publicKeyBytes, _ := x509.MarshalPKIXPublicKey(&rsaPublicKey)
 		k.PublicKeyHex = common.StringOrNil(string(pem.EncodeToMemory(&pem.Block{
 			Type:  "PUBLIC KEY",
@@ -585,10 +589,10 @@ func (k *Key) Enrich() {
 	if k.PublicKey != nil {
 		switch *k.Spec {
 		case KeySpecECCBIP39:
-			k.PublicKeyHex = common.StringOrNil(string(k.PublicKey))
+			k.PublicKeyHex = common.StringOrNil(string(*k.PublicKey))
 		case KeySpecECCSecp256k1:
 			pubkey := k.PublicKey
-			x, y := elliptic.Unmarshal(secp256k1.S256(), pubkey)
+			x, y := elliptic.Unmarshal(secp256k1.S256(), *pubkey)
 			if x != nil {
 				publicKey := &ecdsa.PublicKey{
 					Curve: secp256k1.S256(),
@@ -597,7 +601,7 @@ func (k *Key) Enrich() {
 				}
 				addr := ethcrypto.PubkeyToAddress(*publicKey)
 				k.Address = common.StringOrNil(addr.Hex())
-				k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(k.PublicKey)))
+				k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 			}
 		case KeySpecRSA2048:
 			enrichRSA()
@@ -606,7 +610,7 @@ func (k *Key) Enrich() {
 		case KeySpecRSA4096:
 			enrichRSA()
 		default:
-			k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(k.PublicKey)))
+			k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 		}
 	}
 }
@@ -718,11 +722,11 @@ func (k *Key) create() error {
 
 	if isEphemeral {
 		if k.Seed != nil {
-			ephemeralSeed := string(k.Seed)
+			ephemeralSeed := string(*k.Seed)
 
 			// hex encode the seed if it's not a BIP39 seed
 			if *k.Spec != KeySpecECCBIP39 {
-				SeedHex := hex.EncodeToString(k.Seed)
+				SeedHex := hex.EncodeToString(*k.Seed)
 				ephemeralSeed = fmt.Sprintf("0x%s", SeedHex)
 			}
 
@@ -730,7 +734,7 @@ func (k *Key) create() error {
 		}
 
 		if k.PrivateKey != nil {
-			privateKeyHex := hex.EncodeToString(k.PrivateKey)
+			privateKeyHex := hex.EncodeToString(*k.PrivateKey)
 			ephemeralPrivateKey := fmt.Sprintf("0x%s", privateKeyHex)
 			k.EphemeralPrivateKey = &ephemeralPrivateKey
 		}
@@ -879,7 +883,7 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 	switch *k.Spec {
 	case KeySpecRSA4096:
 		rsa4096 := crypto.RSAKeyPair{}
-		rsa4096.PrivateKey = k.PrivateKey
+		rsa4096.PrivateKey = *k.PrivateKey
 		plaintext, err = rsa4096.Decrypt(ciphertext)
 		if err != nil {
 			return nil, crypto.ErrCannotDecrypt
@@ -887,7 +891,7 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 
 	case KeySpecRSA3072:
 		rsa3072 := crypto.RSAKeyPair{}
-		rsa3072.PrivateKey = k.PrivateKey
+		rsa3072.PrivateKey = *k.PrivateKey
 		plaintext, err = rsa3072.Decrypt(ciphertext)
 		if err != nil {
 			return nil, crypto.ErrCannotDecrypt
@@ -895,7 +899,7 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 
 	case KeySpecRSA2048:
 		rsa2048 := crypto.RSAKeyPair{}
-		rsa2048.PrivateKey = k.PrivateKey
+		rsa2048.PrivateKey = *k.PrivateKey
 		plaintext, err = rsa2048.Decrypt(ciphertext)
 		if err != nil {
 			return nil, crypto.ErrCannotDecrypt
@@ -927,7 +931,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	switch *k.Spec {
 	case KeySpecAES256GCM:
 		aes256 := crypto.AES256GCM{}
-		aes256.PrivateKey = k.PrivateKey
+		aes256.PrivateKey = *k.PrivateKey
 
 		var err error
 		plaintext, err = aes256.Decrypt(ciphertext, nonce)
@@ -937,7 +941,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 
 	case KeySpecChaCha20:
 		chacha := crypto.ChaCha{}
-		chacha.Seed = k.Seed
+		chacha.Seed = *k.Seed
 
 		var err error
 		plaintext, err = chacha.Decrypt(ciphertext, nonce)
@@ -966,7 +970,7 @@ func (k *Key) deriveSecp256k1KeyFromHDWallet(path accounts.DerivationPath) (*cry
 	switch path[1] - 0x80000000 {
 	case crypto.HDWalletCoinCodeEthereum:
 		hdwllt := &crypto.HDWallet{
-			Seed: k.Seed,
+			Seed: *k.Seed,
 		}
 
 		derivedKey, err := hdwllt.DeriveKey(path)
@@ -1001,7 +1005,7 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 
 	switch *k.Spec {
 	case KeySpecChaCha20:
-		key := []byte(k.Seed)
+		key := []byte(*k.Seed)
 		derivedKey, err := chacha20.HChaCha20(key, nonce)
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive symmetric key from key: %s; %s", k.ID, err.Error())
@@ -1014,7 +1018,7 @@ func (k *Key) DeriveSymmetric(nonce, context []byte, name, description string) (
 			Spec:        common.StringOrNil(KeySpecChaCha20),
 			Name:        common.StringOrNil(name),
 			Description: common.StringOrNil(description),
-			Seed:        derivedKey,
+			Seed:        &derivedKey,
 		}
 
 		db := dbconf.DatabaseConnection()
@@ -1066,7 +1070,7 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 	switch *k.Spec {
 	case KeySpecRSA4096:
 		rsa4096key := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		ciphertext, err = rsa4096key.Encrypt(plaintext)
 		if err != nil {
@@ -1075,7 +1079,7 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 
 	case KeySpecRSA3072:
 		rsa3072key := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		ciphertext, err = rsa3072key.Encrypt(plaintext)
 		if err != nil {
@@ -1084,7 +1088,7 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 
 	case KeySpecRSA2048:
 		rsa2048key := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		ciphertext, err = rsa2048key.Encrypt(plaintext)
 		if err != nil {
@@ -1120,7 +1124,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 	switch *k.Spec {
 	case KeySpecAES256GCM:
 		aes256 := crypto.AES256GCM{
-			PrivateKey: k.PrivateKey,
+			PrivateKey: *k.PrivateKey,
 		}
 
 		var err error
@@ -1131,7 +1135,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 
 	case KeySpecChaCha20:
 		chacha := crypto.ChaCha{
-			Seed: k.Seed,
+			Seed: *k.Seed,
 		}
 
 		var err error
@@ -1161,7 +1165,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
-		sig, sigerr = providecrypto.TECSign([]byte(k.PrivateKey), payload)
+		sig, sigerr = providecrypto.TECSign([]byte(*k.PrivateKey), payload)
 
 	case KeySpecECCBIP39:
 		if k.Seed == nil {
@@ -1208,7 +1212,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
 		}
-		ec25519Key := crypto.FromSeed(k.Seed)
+		ec25519Key := crypto.FromSeed(*k.Seed)
 		if ec25519Key == nil {
 			return nil, fmt.Errorf("failed to create public key from seed using key: %s", k.ID)
 		}
@@ -1219,7 +1223,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		secp256k1 := crypto.Secp256k1{}
-		secp256k1.PrivateKey = k.PrivateKey
+		secp256k1.PrivateKey = *k.PrivateKey
 		sig, sigerr = secp256k1.Sign(payload)
 
 	case KeySpecRSA4096:
@@ -1230,7 +1234,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		rsa4096 := crypto.RSAKeyPair{}
-		rsa4096.PrivateKey = k.PrivateKey
+		rsa4096.PrivateKey = *k.PrivateKey
 		sig, sigerr = rsa4096.Sign(payload, *opts.Algorithm)
 
 	case KeySpecRSA3072:
@@ -1241,7 +1245,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		rsa3072 := crypto.RSAKeyPair{}
-		rsa3072.PrivateKey = k.PrivateKey
+		rsa3072.PrivateKey = *k.PrivateKey
 		sig, sigerr = rsa3072.Sign(payload, *opts.Algorithm)
 
 	case KeySpecRSA2048:
@@ -1252,7 +1256,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		rsa2048 := crypto.RSAKeyPair{}
-		rsa2048.PrivateKey = k.PrivateKey
+		rsa2048.PrivateKey = *k.PrivateKey
 		sig, sigerr = rsa2048.Sign(payload, *opts.Algorithm)
 
 	default:
@@ -1285,10 +1289,10 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 
 	switch *k.Spec {
 	case KeySpecECCBabyJubJub:
-		return providecrypto.TECVerify(k.PublicKey, payload, sig)
+		return providecrypto.TECVerify(*k.PublicKey, payload, sig)
 
 	case KeySpecECCEd25519:
-		return crypto.Ed25519Verify(k.PublicKey, payload, sig)
+		return crypto.Ed25519Verify(*k.PublicKey, payload, sig)
 
 	case KeySpecECCBIP39:
 		var path *accounts.DerivationPath
@@ -1318,7 +1322,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
 		}
 		secp256k1 := crypto.Secp256k1{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		return secp256k1.Verify(payload, sig)
 
@@ -1327,7 +1331,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; no algorithm provided", len(payload), k.ID)
 		}
 		rsa4096 := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		return rsa4096.Verify(payload, sig, *opts.Algorithm)
 
@@ -1336,7 +1340,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; no algorithm provided", len(payload), k.ID)
 		}
 		rsa3072 := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		return rsa3072.Verify(payload, sig, *opts.Algorithm)
 
@@ -1345,7 +1349,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; no algorithm provided", len(payload), k.ID)
 		}
 		rsa2048 := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		return rsa2048.Verify(payload, sig, *opts.Algorithm)
 	}

@@ -232,31 +232,32 @@ func TestAPICreateSecret(t *testing.T) {
 	}
 }
 
-func TestAPICreateSecretTooLong(t *testing.T) {
+// TestAPICreateSecretTooLong commented out because max secret length is currently 1GB
+// func TestAPICreateSecretTooLong(t *testing.T) {
 
-	token, err := userTokenFactory()
-	if err != nil {
-		t.Errorf("failed to create token; %s", err.Error())
-		return
-	}
+// 	token, err := userTokenFactory()
+// 	if err != nil {
+// 		t.Errorf("failed to create token; %s", err.Error())
+// 		return
+// 	}
 
-	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
-	if err != nil {
-		t.Errorf("failed to create vault; %s", err.Error())
-		return
-	}
+// 	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+// 	if err != nil {
+// 		t.Errorf("failed to create vault; %s", err.Error())
+// 		return
+// 	}
 
-	maxSecretLength := 4096 * 32
-	secret := common.RandomString(maxSecretLength + 1)
-	name := "secret name"
-	description := "secret description"
-	secretType := "secret type"
-	_, err = provide.CreateSecret(*token, vault.ID.String(), secret, name, description, secretType)
-	if err == nil {
-		t.Errorf("allowed creation of secret that exceeds max length")
-		return
-	}
-}
+// 	maxSecretLength := 4096 * 32
+// 	secret := common.RandomString(maxSecretLength + 1)
+// 	name := "secret name"
+// 	description := "secret description"
+// 	secretType := "secret type"
+// 	_, err = provide.CreateSecret(*token, vault.ID.String(), secret, name, description, secretType)
+// 	if err == nil {
+// 		t.Errorf("allowed creation of secret that exceeds max length")
+// 		return
+// 	}
+// }
 
 func TestAPICreateSecretMaxSize(t *testing.T) {
 

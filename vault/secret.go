@@ -13,8 +13,8 @@ import (
 	provide "github.com/provideservices/provide-go/api"
 )
 
-// MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored
-const MaxSecretLengthInBytes = 4096 * 32
+// MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored (currently set to 1GB)
+const MaxSecretLengthInBytes = 1024 * 1024 * 1024
 
 // Secret represents a secret encrypted by the vault's master key
 type Secret struct {
@@ -65,11 +65,11 @@ func (s *Secret) validate() bool {
 		})
 	}
 
-	// if s.DecryptedValue != nil && len(*s.DecryptedValue) > MaxSecretLengthInBytes {
-	// 	s.Errors = append(s.Errors, &provide.Error{
-	// 		Message: common.StringOrNil("value too long"),
-	// 	})
-	// }
+	if s.DecryptedValue != nil && len(*s.DecryptedValue) > MaxSecretLengthInBytes {
+		s.Errors = append(s.Errors, &provide.Error{
+			Message: common.StringOrNil("value too long"),
+		})
+	}
 
 	return len(s.Errors) == 0
 }
@@ -234,18 +234,20 @@ func (s *Secret) encryptFields() error {
 
 		if masterKey.Seed != nil {
 			// seal the data with the unsealer key
-			masterKey.Seed, err = seal(masterKey.Seed)
+			seed, err := seal(*masterKey.Seed)
 			if err != nil {
 				return err
 			}
+			masterKey.Seed = &seed
 		}
 
 		if masterKey.PrivateKey != nil {
 			// seal the data with the unsealer key
-			masterKey.PrivateKey, err = seal(masterKey.PrivateKey)
+			privateKey, err := seal(*masterKey.PrivateKey)
 			if err != nil {
 				return err
 			}
+			masterKey.PrivateKey = &privateKey
 		}
 	} else {
 		masterKey.decryptFields()
@@ -297,18 +299,20 @@ func (s *Secret) decryptFields() error {
 
 		if masterKey.Seed != nil {
 			// unseal the data with the unsealer key
-			masterKey.Seed, err = unseal(masterKey.Seed)
+			seed, err := unseal(*masterKey.Seed)
 			if err != nil {
 				return err
 			}
+			masterKey.Seed = &seed
 		}
 
 		if masterKey.PrivateKey != nil {
 			// unseal the data with the unsealer key
-			masterKey.PrivateKey, err = unseal(masterKey.PrivateKey)
+			privateKey, err := unseal(*masterKey.PrivateKey)
 			if err != nil {
 				return err
 			}
+			masterKey.PrivateKey = &privateKey
 		}
 
 	} else {

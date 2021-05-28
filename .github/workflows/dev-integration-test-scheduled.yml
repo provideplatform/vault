@@ -1,4 +1,4 @@
-name: VAULT-s
+name: Hourly Integration
 on:
   schedule:
     - cron: '0 * * * *'  # every hour on the hour

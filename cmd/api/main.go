@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kthomas/go-redisutil"
 
 	"github.com/provideapp/ident/common"
 	"github.com/provideapp/ident/token"
@@ -36,6 +37,7 @@ var (
 func init() {
 	util.RequireJWTVerifiers()
 	util.RequireGin()
+	redisutil.RequireRedis()
 	common.EnableAPIAccounting()
 }
 

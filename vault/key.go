@@ -1069,8 +1069,9 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 
 	switch *k.Spec {
 	case KeySpecRSA4096:
-		rsa4096key := crypto.RSAKeyPair{
-			PublicKey: *k.PublicKey,
+		rsa4096key := crypto.RSAKeyPair{}
+		if k.PublicKey != nil {
+			rsa4096key.PublicKey = *k.PublicKey
 		}
 		ciphertext, err = rsa4096key.Encrypt(plaintext)
 		if err != nil {
@@ -1078,8 +1079,9 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 		}
 
 	case KeySpecRSA3072:
-		rsa3072key := crypto.RSAKeyPair{
-			PublicKey: *k.PublicKey,
+		rsa3072key := crypto.RSAKeyPair{}
+		if k.PublicKey != nil {
+			rsa3072key.PublicKey = *k.PublicKey
 		}
 		ciphertext, err = rsa3072key.Encrypt(plaintext)
 		if err != nil {
@@ -1087,8 +1089,9 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 		}
 
 	case KeySpecRSA2048:
-		rsa2048key := crypto.RSAKeyPair{
-			PublicKey: *k.PublicKey,
+		rsa2048key := crypto.RSAKeyPair{}
+		if k.PublicKey != nil {
+			rsa2048key.PublicKey = *k.PublicKey
 		}
 		ciphertext, err = rsa2048key.Encrypt(plaintext)
 		if err != nil {

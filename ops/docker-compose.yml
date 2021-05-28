@@ -152,14 +152,12 @@ services:
       - DATABASE_PASSWORD=vault
       - DATABASE_SUPERUSER=prvd
       - DATABASE_SUPERUSER_PASSWORD=prvdp455
-      - LOG_LEVEL=DEBUG
-      - PORT=8080
       - IDENT_API_HOST=ident:8080
       - IDENT_API_PATH=api/v1
       - IDENT_API_SCHEME=http
-      - VAULT_API_HOST=vault:8080
-      - VAULT_API_PATH=api/v1
-      - VAULT_API_SCHEME=http
+      - LOG_LEVEL=DEBUG
+      - PORT=8080
+      - REDIS_HOSTS=redis:6379
       - SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
       - SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
     healthcheck:

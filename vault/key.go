@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
+	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/provideapp/vault/common"
@@ -777,47 +778,52 @@ func (k *Key) updateIterativeDerivationPath(db *gorm.DB) error {
 		return fmt.Errorf("cannot update iteration for ephemeral key")
 	}
 
-	derivationPath, err := hdwallet.ParseDerivationPath(*k.IterativeDerivationPath)
-	if err != nil {
-		return fmt.Errorf("failed to update iterative hd derivation path on key: %s; failed path: %s", k.ID, *k.IterativeDerivationPath)
-	}
+	key := fmt.Sprintf("vault.%s.key.%s.derivation", k.VaultID.String(), k.ID.String())
+	return redisutil.WithRedlock(key, func() error {
+		db.Model(&k).Find(k) // reload the record
 
-	account := derivationPath[2] - 0x80000000
-	index := derivationPath[len(derivationPath)-1]
-
-	// if we have reached the uint32 maximum, we cannot generate any more keys
-	if index == maxHDIteration {
-		common.Log.Debugf("maximum index %d reached - incrementing account", index)
-		account = account + 1
-		index = 0
-	} else {
-		index = index + 1
-	}
-
-	k.IterativeDerivationPath = common.StringOrNil(fmt.Sprintf("m/%d'/%d'/%d'/%d/%d",
-		derivationPath[0]-0x80000000,
-		derivationPath[1]-0x80000000,
-		account,
-		derivationPath[3],
-		index,
-	))
-
-	result := db.Save(&k)
-	errors := result.GetErrors()
-	if len(errors) > 0 {
-		for _, err := range errors {
-			k.Errors = append(k.Errors, &provide.Error{
-				Message: common.StringOrNil(err.Error()),
-			})
+		derivationPath, err := hdwallet.ParseDerivationPath(*k.IterativeDerivationPath)
+		if err != nil {
+			return fmt.Errorf("failed to update iterative hd derivation path on key: %s; failed path: %s", k.ID, *k.IterativeDerivationPath)
 		}
-	}
 
-	rowsAffected := result.RowsAffected
-	if rowsAffected == 0 {
-		return fmt.Errorf("invalid key and/or path - no iterative derivation path update possible")
-	}
+		account := derivationPath[2] - 0x80000000
+		index := derivationPath[len(derivationPath)-1]
 
-	return nil
+		// if we have reached the uint32 maximum, we cannot generate any more keys
+		if index == maxHDIteration {
+			common.Log.Debugf("maximum index %d reached - incrementing account", index)
+			account = account + 1
+			index = 0
+		} else {
+			index = index + 1
+		}
+
+		k.IterativeDerivationPath = common.StringOrNil(fmt.Sprintf("m/%d'/%d'/%d'/%d/%d",
+			derivationPath[0]-0x80000000,
+			derivationPath[1]-0x80000000,
+			account,
+			derivationPath[3],
+			index,
+		))
+
+		result := db.Save(&k)
+		errors := result.GetErrors()
+		if len(errors) > 0 {
+			for _, err := range errors {
+				k.Errors = append(k.Errors, &provide.Error{
+					Message: common.StringOrNil(err.Error()),
+				})
+			}
+		}
+
+		rowsAffected := result.RowsAffected
+		if rowsAffected == 0 {
+			return fmt.Errorf("invalid key and/or path - no iterative derivation path update possible")
+		}
+
+		return nil
+	})
 }
 
 // Create and persist a key

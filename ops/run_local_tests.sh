@@ -44,7 +44,7 @@ if [[ -z "${RACE}" ]]; then
 fi
 
 if [[ -z "${SEAL_UNSEAL_KEY}" ]]; then
-  SEAL_UNSEAL_KEY=traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
+  SEAL_UNSEAL_KEY='traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day'
 fi
 
 if [[ -z "${SEAL_UNSEAL_VALIDATION_HASH}" ]]; then

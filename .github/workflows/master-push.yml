@@ -26,15 +26,15 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: 'vault'                  
-      - run: docker-compose -f ./ops/docker-compose-master.yml build --no-cache vault
+      - run: docker-compose -f ./ops/docker-compose.yml build --no-cache vault
         working-directory: vault
-      - run: docker-compose -f ./ops/docker-compose-master.yml up -d
+      - run: docker-compose -f ./ops/docker-compose.yml up -d
         working-directory: vault
       - run: TAGS=integration ./ops/run_local_tests_long.sh
         working-directory: vault
       - run: docker-compose -f ./ops/docker-compose.yml logs
         working-directory: vault
-      - run: docker-compose -f ./ops/docker-compose-master.yml down
+      - run: docker-compose -f ./ops/docker-compose.yml down
         working-directory: vault
       - run: docker volume rm ops_provide-db
         working-directory: vault   

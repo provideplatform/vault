@@ -395,7 +395,7 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 
 	k.Enrich()
 
-	common.Log.Debugf("created rsa-%d key for vault: %s; public key:\n%s", bitsize, k.VaultID, k.PublicKeyHex)
+	common.Log.Debugf("created rsa-%d key for vault: %s; public key:\n%s", bitsize, k.VaultID, *k.PublicKeyHex)
 	return nil
 }
 

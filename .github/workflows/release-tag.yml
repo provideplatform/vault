@@ -6,17 +6,17 @@ on:
 
 jobs:
   push-to-registry:
-    name: Push docker image to DockerHub
+    name: Push Docker Image
     runs-on: ubuntu-latest
     steps:
-      - name: check out repo
+      - name: Clone Repo
         id: checkout
         uses: actions/checkout@v2
       - name: get latest tag
         id: latest_tag
         run: |
           echo ::set-output name=tags::${GITHUB_REF#refs/*/}
-      - name: push to docker hub 
+      - name: Push Docker Image 
         uses: docker/build-push-action@v1
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}

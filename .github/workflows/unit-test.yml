@@ -26,7 +26,7 @@ jobs:
       - run: echo "SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309" >> $GITHUB_ENV
       - run: echo "TAGS=unit" >> $GITHUB_ENV
       - run: echo "JWT_SIGNER_PUBLIC_KEY=${{ secrets.DEV_JWT }}" >> $GITHUB_ENV
-      - name: Setup go
+      - name: Setup golang
         uses: actions/setup-go@v2
         with:
           go-version: '1.15.1'

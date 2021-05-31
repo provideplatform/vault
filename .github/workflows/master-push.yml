@@ -11,7 +11,7 @@ jobs:
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.INTEGRATION_SLACK_WEBHOOK }}
     steps:
-      - name: Setup go
+      - name: Setup golang
         uses: actions/setup-go@v2
         with:
           go-version: '1.15.1'
@@ -38,7 +38,7 @@ jobs:
         working-directory: vault
       - run: docker volume rm ops_provide-db
         working-directory: vault   
-      - name: push_to_docker_hub
+      - name: Push Docker Image
         if: success()
         uses: docker/build-push-action@v1
         with:
@@ -47,7 +47,7 @@ jobs:
           repository: provide/vault
           tags: "latest"
           path: 'vault'
-      - name: slack channel update
+      - name: Send Slack Notification
         if: failure()  
         uses: act10ns/slack@v1
         with:

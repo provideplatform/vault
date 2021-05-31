@@ -12,7 +12,7 @@ jobs:
       - name: Clone Repo
         id: checkout
         uses: actions/checkout@v2
-      - name: get latest tag
+      - name: Fetch Latest Tag
         id: latest_tag
         run: |
           echo ::set-output name=tags::${GITHUB_REF#refs/*/}

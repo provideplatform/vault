@@ -51,7 +51,7 @@ func InitAzureKeyVaultSealUnsealProvider(params map[string]interface{}) *AzureSe
 
 	tenantID, tenantIDOk := credentials["azure_tenant_id"].(string)
 	subscriptionID, subscriptionIDOk := credentials["azure_subscription_id"].(string)
-	clientID, clientIDOk := credentials["azure_client_id"].(string)
+	clientID, _ := credentials["azure_client_id"].(string)
 	clientSecret, _ := credentials["azure_client_secret"].(string)
 
 	if !tenantIDOk || !subscriptionIDOk {

@@ -44,7 +44,7 @@ func InitAzureKeyVaultSealUnsealProvider(params map[string]interface{}) *AzureSe
 		regionOk = true
 	}
 
-	if !credentialsOk || !regionOk {
+	if !regionOk {
 		common.Log.Warning("failed to initialize Azure provider; credentials and region are required")
 		return nil
 	}
@@ -54,8 +54,8 @@ func InitAzureKeyVaultSealUnsealProvider(params map[string]interface{}) *AzureSe
 	clientID, clientIDOk := credentials["azure_client_id"].(string)
 	clientSecret, _ := credentials["azure_client_secret"].(string)
 
-	if !tenantIDOk || !subscriptionIDOk || !clientIDOk {
-		common.Log.Warning("failed to initialize Azure provider; tenant_id, subscription_id, client_id are required")
+	if !tenantIDOk || !subscriptionIDOk {
+		common.Log.Warning("failed to initialize Azure provider; tenant_id, subscription_id are required")
 		return nil
 	}
 

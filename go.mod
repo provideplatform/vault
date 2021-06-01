@@ -3,7 +3,7 @@ module github.com/provideapp/vault
 go 1.13
 
 require (
-	github.com/Azure/azure-sdk-for-go v54.3.0+incompatible
+	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.18 // indirect
 	github.com/ethereum/go-ethereum v1.9.22
 	github.com/gin-gonic/gin v1.6.3

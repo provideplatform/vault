@@ -10,7 +10,7 @@ require (
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
-	github.com/kthomas/go-azure-wrapper v0.0.0-20210409115636-8b71edfc2fcc
+	github.com/kthomas/go-azure-wrapper v0.0.0-20210601205830-d821b52e2872
 	github.com/kthomas/go-db-config v0.0.0-20200612131637-ec0436a9685e
 	github.com/kthomas/go-logger v0.0.0-20210526080020-a63672d0724c
 	github.com/kthomas/go-pgputil v0.0.0-20200602073402-784e96083943

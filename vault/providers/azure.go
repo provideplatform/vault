@@ -83,8 +83,8 @@ func (p *AzureSealUnsealProvider) targetCredentials() *provide.TargetCredentials
 	return &provide.TargetCredentials{
 		AzureTenantID:       common.StringOrNil(p.tenantID),
 		AzureSubscriptionID: common.StringOrNil(p.subscriptionID),
-		AzureClientID:       common.StringOrNil(p.clientID),
-		AzureClientSecret:   common.StringOrNil(p.clientSecret),
+		AzureClientID:       p.clientID,
+		AzureClientSecret:   p.clientSecret,
 	}
 }
 

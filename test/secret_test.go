@@ -7,8 +7,8 @@ import (
 
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/vault/common"
-	"github.com/provideapp/vault/vault"
+	"github.com/provideplatform/vault/common"
+	"github.com/provideplatform/vault/vault"
 )
 
 var secretDB = dbconf.DatabaseConnection()
@@ -114,20 +114,20 @@ func TestSecretStoreNoSecret(t *testing.T) {
 	}
 }
 
-func TestSecretStoreTooLong(t *testing.T) {
-	vlt := vaultFactory()
-	if vlt.ID == uuid.Nil {
-		t.Error("failed! no vault created for secret store unit test!")
-		return
-	}
+// func TestSecretStoreTooLong(t *testing.T) {
+// 	vlt := vaultFactory()
+// 	if vlt.ID == uuid.Nil {
+// 		t.Error("failed! no vault created for secret store unit test!")
+// 		return
+// 	}
 
-	secretText := common.RandomString(vault.MaxSecretLengthInBytes + 1)
-	_, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "description")
-	if err == nil {
-		t.Errorf("created secret too long for vault: %s", vlt.ID)
-		return
-	}
-}
+// 	secretText := common.RandomString(vault.MaxSecretLengthInBytes + 1)
+// 	_, err := vault.SecretFactory(secretDB, &vlt.ID, []byte(secretText), "name", "secret type", "description")
+// 	if err == nil {
+// 		t.Errorf("created secret too long for vault: %s", vlt.ID)
+// 		return
+// 	}
+// }
 
 func TestSecretDelete(t *testing.T) {
 	vlt := vaultFactory()

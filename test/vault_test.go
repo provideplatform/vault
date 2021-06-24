@@ -9,8 +9,8 @@ import (
 
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/vault/common"
-	"github.com/provideapp/vault/vault"
+	"github.com/provideplatform/vault/common"
+	"github.com/provideplatform/vault/vault"
 )
 
 func init() {

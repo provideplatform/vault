@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/provideapp/vault/common"
-	cryptovault "github.com/provideapp/vault/vault"
-	provide "github.com/provideservices/provide-go/api/vault"
+	provide "github.com/provideplatform/provide-go/api/vault"
+	"github.com/provideplatform/vault/common"
+	cryptovault "github.com/provideplatform/vault/vault"
 )
 
 func TestCreateBLSKey(t *testing.T) {

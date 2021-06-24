@@ -9,14 +9,19 @@ import (
 	"time"
 
 	dbconf "github.com/kthomas/go-db-config"
+	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
-	"github.com/provideapp/vault/common"
-	"github.com/provideapp/vault/crypto"
-	"github.com/provideapp/vault/vault"
+	"github.com/provideplatform/vault/common"
+	"github.com/provideplatform/vault/crypto"
+	"github.com/provideplatform/vault/vault"
 )
 
 var ethHDKeyDB = dbconf.DatabaseConnection()
+
+func init() {
+	redisutil.RequireRedis()
+}
 
 func TestCreateEthHDWallet(t *testing.T) {
 	vlt := vaultFactory()

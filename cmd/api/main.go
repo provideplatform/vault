@@ -10,17 +10,20 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kthomas/go-redisutil"
 
-	"github.com/provideapp/ident/common"
-	"github.com/provideapp/ident/token"
-	"github.com/provideapp/vault/vault"
+	"github.com/provideplatform/ident/common"
+	"github.com/provideplatform/ident/token"
+	"github.com/provideplatform/vault/vault"
 
-	provide "github.com/provideservices/provide-go/common"
-	util "github.com/provideservices/provide-go/common/util"
+	provide "github.com/provideplatform/provide-go/common"
+	util "github.com/provideplatform/provide-go/common/util"
 )
 
 const runloopSleepInterval = 250 * time.Millisecond
 const runloopTickInterval = 5000 * time.Millisecond
+const jwtVerifierRefreshInterval = 60 * time.Second
+const jwtVerifierGracePeriod = 60 * time.Second
 
 var (
 	cancelF     context.CancelFunc
@@ -34,6 +37,7 @@ var (
 func init() {
 	util.RequireJWTVerifiers()
 	util.RequireGin()
+	redisutil.RequireRedis()
 	common.EnableAPIAccounting()
 }
 
@@ -43,13 +47,23 @@ func main() {
 
 	runAPI()
 
+	startAt := time.Now()
+	gracePeriodEndAt := startAt.Add(jwtVerifierGracePeriod)
+	verifiersRefreshedAt := time.Now()
+
 	timer := time.NewTicker(runloopTickInterval)
 	defer timer.Stop()
 
 	for !shuttingDown() {
 		select {
 		case <-timer.C:
-			// tick... no-op
+			now := time.Now()
+			if now.Before(gracePeriodEndAt) {
+				util.RequireJWTVerifiers()
+			} else if now.After(verifiersRefreshedAt.Add(jwtVerifierRefreshInterval)) {
+				verifiersRefreshedAt = now
+				util.RequireJWTVerifiers()
+			}
 		case sig := <-sigs:
 			common.Log.Debugf("received signal: %s", sig)
 			srv.Shutdown(shutdownCtx)
@@ -93,6 +107,11 @@ func runAPI() {
 	r.Use(vault.AuditLogMiddleware())
 
 	vault.InstallAPI(r)
+
+	err := vault.AutoUnseal()
+	if err != nil {
+		common.Log.Warningf("error automatically unsealing vault; %s", err.Error())
+	}
 
 	srv = &http.Server{
 		Addr:    util.ListenAddr,

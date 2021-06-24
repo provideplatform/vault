@@ -4,10 +4,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
-	"github.com/provideapp/vault/common"
+	"github.com/provideplatform/vault/common"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -20,6 +21,9 @@ const DefaultHDWalletCoin = HDWalletCoinCodeEthereum
 
 // DefaultHDWalletSeedEntropy is default entropy for seed phrases (24 words)
 const DefaultHDWalletSeedEntropy = 256
+
+// DefaultHDWalletMnemonicValidationRetries is the default number of retries vault performs when validating HD wallet mnemonics
+const DefaultHDWalletMnemonicValidationRetries = 10
 
 // HDWalletCoinAbbrBTC is the standard abbreviation for native coin of the Bitcoin chain
 const HDWalletCoinAbbrBTC = "BTC"
@@ -43,9 +47,9 @@ type HDWallet struct {
 	Change   *uint32 `json:"change,omitempty"`
 	Index    *uint32 `json:"index,omitempty"`
 
-	Seed       *[]byte `json:"-"` // contains the mnemonic seed phrase in bytes
-	PublicKey  *[]byte `json:"-"` // contains the extended public key; in general it is safest NOT to share this
-	PrivateKey *[]byte `json:"-"` // contains the extended private key; NEVER share this! it exists here to support ephemeral wallet creation...
+	Seed       []byte `json:"-"` // contains the mnemonic seed phrase in bytes
+	PublicKey  []byte `json:"-"` // contains the extended public key; in general it is safest NOT to share this
+	PrivateKey []byte `json:"-"` // contains the extended private key; NEVER share this! it exists here to support ephemeral wallet creation...
 }
 
 // DefaultHDDerivationPath returns the default hd derivation path
@@ -126,7 +130,7 @@ func (o *HDWallet) DeriveKey(path accounts.DerivationPath) (*Secp256k1, error) {
 	}()
 
 	// first recreate the hd wallet from the mnemonic
-	wallet, err := hdwallet.NewFromMnemonic(string(*o.Seed))
+	wallet, err := hdwallet.NewFromMnemonic(string(o.Seed))
 	if err != nil {
 		return nil, fmt.Errorf("error generating wallet from mnemonic %s", err.Error())
 	}
@@ -155,8 +159,8 @@ func (o *HDWallet) DeriveKey(path accounts.DerivationPath) (*Secp256k1, error) {
 
 	secp256k1 := Secp256k1{
 		Address:        &address,
-		PrivateKey:     &privatekey,
-		PublicKey:      &publickey,
+		PrivateKey:     privatekey,
+		PublicKey:      publickey,
 		DerivationPath: &pathstr,
 	}
 
@@ -164,10 +168,12 @@ func (o *HDWallet) DeriveKey(path accounts.DerivationPath) (*Secp256k1, error) {
 	return &secp256k1, nil
 }
 
-// CreateHDWalletSeedPhrase creates a mnemonic phrase in accordance with the BIP39 specification;
+// CreateHDWalletWithEntropy creates a mnemonic phrase in accordance with the BIP39 specification;
 // the bitsize parameter sets the amount of entropy to use for the generated seed (i.e., 256 bit
 // entropy will generate for a 24-word mnemonic)
-func CreateHDWalletSeedPhrase(bitsize int) (*HDWallet, error) {
+// TODO split this up so we're just generating the seed phrase here, and then creating the wallet from it
+// TODO and sort out the FIXME
+func CreateHDWalletWithEntropy(bitsize int) (*HDWallet, error) {
 	// first we generate a random mnemonic using `bitsize` bits of entropy
 	entropy, err := bip39.NewEntropy(bitsize)
 	if err != nil {
@@ -183,9 +189,14 @@ func CreateHDWalletSeedPhrase(bitsize int) (*HDWallet, error) {
 	}
 
 	// make sure we can use the mnemonic to generate a HD wallet
-	_, err = hdwallet.NewFromMnemonic(mnemonic) // FIXME? make sure this cannot fail on occasion; if it can, retry until it works...
+	// validate the mnemonic, retrying if it fails
+	err = common.Retry(DefaultHDWalletMnemonicValidationRetries, 0*time.Second, func() (err error) {
+		err = validateHDWalletMnemonic(mnemonic)
+		return
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("error generating HD wallet from mnemonic %s", err.Error())
+		return nil, fmt.Errorf("failed to validate provided BIP39 mnemonic. Error: %s", err.Error())
 	}
 
 	mnemonicBytes := []byte(mnemonic)
@@ -199,9 +210,48 @@ func CreateHDWalletSeedPhrase(bitsize int) (*HDWallet, error) {
 
 	// return a new HDWallet and store the generated mnemonic as the `Seed`
 	return &HDWallet{
-		Seed:      &mnemonicBytes, // FIXME -- see https://github.com/provideapp/vault/issues/3
-		PublicKey: &xpubBytes,
+		Seed:      mnemonicBytes, // FIXME -- see https://github.com/provideplatform/vault/issues/3
+		PublicKey: xpubBytes,
 	}, nil
+}
+
+// CreateHDWalletFromSeedPhrase creates a HD wallet using the generated seed phrase
+func CreateHDWalletFromSeedPhrase(mnemonic string) (*HDWallet, error) {
+
+	// validate the mnemonic, retrying if it fails
+	err := common.Retry(DefaultHDWalletMnemonicValidationRetries, 0*time.Second, func() (err error) {
+		err = validateHDWalletMnemonic(mnemonic)
+		return
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate provided BIP39 mnemonic. Error: %s", err.Error())
+	}
+
+	mnemonicBytes := []byte(mnemonic)
+	masterKey, err := bip32.NewMasterKey(mnemonicBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error resolving master extended key for HD wallet; %s", err.Error())
+	}
+
+	xpub := masterKey.PublicKey().String()
+	xpubBytes := []byte(xpub)
+
+	// return a new HDWallet and store the provided mnemonic as the `Seed`
+	return &HDWallet{
+		Seed:      mnemonicBytes, // FIXME -- see https://github.com/provideplatform/vault/issues/3
+		PublicKey: xpubBytes,
+	}, nil
+}
+
+func validateHDWalletMnemonic(mnemonic string) error {
+
+	// make sure we can use the mnemonic to generate a HD wallet
+	_, err := hdwallet.NewFromMnemonic(mnemonic)
+	if err != nil {
+		return fmt.Errorf("error generating HD wallet from mnemonic %s", err.Error())
+	}
+	return nil
 }
 
 // GetEntropyFromMnemonic is used by the mnemonic-based unsealer key

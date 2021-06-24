@@ -7,18 +7,20 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
+	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 
-	"github.com/provideapp/ident/token"
-	"github.com/provideapp/vault/common"
-	"github.com/provideapp/vault/crypto"
-	provide "github.com/provideservices/provide-go/common"
+	"github.com/provideplatform/ident/token"
+	provide "github.com/provideplatform/provide-go/common"
+	"github.com/provideplatform/vault/common"
+	"github.com/provideplatform/vault/crypto"
 )
 
 // InstallAPI installs the handlers using the given gin Engine
@@ -53,6 +55,7 @@ func installKeysAPI(r *gin.Engine) {
 	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
 	r.POST("api/v1/bls/aggregate", blsAggregateHandler)
 	r.POST("api/v1/bls/verify", blsAggregateVerifyHandler)
+	r.POST("/api/v1/verify", verifyDetachedVerifyHandler)
 }
 
 func installSecretsAPI(r *gin.Engine) {
@@ -479,6 +482,16 @@ func createVaultKeyHandler(c *gin.Context) {
 		return
 	}
 
+	// ensure the key spec is valid and correct the case
+	keySpec, err := ValidateKeySpec(key.Spec)
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+	if err == nil {
+		key.Spec = keySpec
+	}
+
 	db := dbconf.DatabaseConnection()
 	vault := &Vault{}
 	vault = GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
@@ -765,7 +778,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 
 	provide.Render(&KeySignVerifyRequestResponse{
 		Verified: &verified,
-	}, 201, c)
+	}, 200, c)
 }
 
 func vaultSecretsListHandler(c *gin.Context) {
@@ -971,4 +984,119 @@ func blsAggregateVerifyHandler(c *gin.Context) {
 		Verified: &verified,
 	}, 201, c)
 
+}
+
+func verifyDetachedVerifyHandler(c *gin.Context) {
+	// path is protected by valid ident token, but no bearer parameters are required
+	_ = token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &DetachedVerifyRequestResponse{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	// first confirm we have the required input parameters
+	if common.StringOrNil(*params.Spec) == nil {
+		provide.RenderError("key spec is required", 422, c)
+		return
+	}
+
+	// ensure the key spec is valid and correct the case
+	keySpec, err := ValidateKeySpec(params.Spec)
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+	if err == nil {
+		params.Spec = keySpec
+	}
+
+	if common.StringOrNil(*params.Message) == nil {
+		provide.RenderError("message is required", 422, c)
+		return
+	}
+
+	if common.StringOrNil(*params.Signature) == nil {
+		provide.RenderError("signature is required", 422, c)
+		return
+	}
+
+	if common.StringOrNil(*params.PublicKey) == nil {
+		provide.RenderError("public key is required", 422, c)
+		return
+	}
+
+	isRSAKeySpec := *params.Spec == KeySpecRSA2048 || *params.Spec == KeySpecRSA3072 || *params.Spec == KeySpecRSA4096
+	if isRSAKeySpec {
+		if params.Options.Algorithm == nil {
+			provide.RenderError("algorithm option required for RSA key spec", 422, c)
+			return
+		}
+	}
+
+	var publicKey []byte
+
+	// next confirm that the public key provided is in hex format
+	pubkey := strings.Replace(*params.PublicKey, "0x", "", -1)
+	publicKey, err = hex.DecodeString(pubkey)
+	if err != nil {
+		common.Log.Debugf("attempt to converting public key (hex) to bytes failed; %s", err.Error())
+		publicKey = []byte(pubkey)
+
+		if isRSAKeySpec {
+			rsaPublicKey, err := pgputil.DecodeRSAPublicKeyFromPEM([]byte(*params.PublicKey))
+			if err != nil {
+				provide.RenderError("failed to decode RSA public key", 422, c)
+				return
+			}
+			publicKey, _ = json.Marshal(*rsaPublicKey)
+		}
+	}
+
+	messagehex := strings.Replace(*params.Message, "0x", "", -1)
+	message, err := hex.DecodeString(messagehex)
+	if err != nil {
+		provide.RenderError("error converting message (hex) to bytes", 422, c)
+		return
+	}
+
+	signaturehex := strings.Replace(*params.Signature, "0x", "", -1)
+	signature, err := hex.DecodeString(signaturehex)
+	if err != nil {
+		provide.RenderError("error converting signature (hex) to bytes", 422, c)
+		return
+	}
+
+	opts := params.Options
+
+	// generate a vault key from the parameters
+	key := &Key{}
+	key.PublicKey = &publicKey
+	key.Spec = params.Spec
+	key.Usage = common.StringOrNil(KeyUsageSignVerify)
+	key.Type = common.StringOrNil(KeyTypeAsymmetric)
+
+	verified := false
+
+	verifyError := key.Verify(message, signature, opts)
+	if verifyError == nil {
+		verified = true
+	}
+
+	provide.Render(&DetachedVerifyRequestResponse{
+		Verified: &verified,
+	}, 200, c)
 }

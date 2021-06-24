@@ -3,7 +3,7 @@ package crypto
 import (
 	"crypto/ed25519"
 
-	"github.com/provideapp/vault/common"
+	"github.com/provideplatform/vault/common"
 )
 
 // CreateEd25519KeyPair creates an Ed25519 keypair

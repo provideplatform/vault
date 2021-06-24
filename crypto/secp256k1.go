@@ -7,13 +7,13 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	providecrypto "github.com/provideservices/provide-go/crypto"
+	providecrypto "github.com/provideplatform/provide-go/crypto"
 )
 
 // Secp256k1 is the internal struct for an asymmetric keypair
 type Secp256k1 struct {
-	PrivateKey     *[]byte
-	PublicKey      *[]byte
+	PrivateKey     []byte
+	PublicKey      []byte
 	Address        *string
 	DerivationPath *string //used for derived keys
 }
@@ -29,8 +29,8 @@ func CreateSecp256k1KeyPair() (*Secp256k1, error) {
 	publicKey := elliptic.Marshal(secp256k1.S256(), privkey.PublicKey.X, privkey.PublicKey.Y)
 
 	secp256k1 := Secp256k1{
-		PrivateKey: &privateKey,
-		PublicKey:  &publicKey,
+		PrivateKey: privateKey,
+		PublicKey:  publicKey,
 		Address:    address, //this is added when the key is enriched
 	}
 
@@ -44,7 +44,7 @@ func (k *Secp256k1) Sign(payload []byte) ([]byte, error) {
 		return nil, ErrNilPrivateKey
 	}
 
-	secp256k1Key, err := ethcrypto.ToECDSA(*k.PrivateKey)
+	secp256k1Key, err := ethcrypto.ToECDSA(k.PrivateKey)
 	if err != nil {
 		return nil, ErrCannotSignPayload
 	}
@@ -69,7 +69,7 @@ func (k *Secp256k1) Verify(payload, sig []byte) error {
 	secp256k1PublicKey := k.PublicKey
 
 	// check if the signature's public key corresponds to the vault public key
-	verified := bytes.Equal(sigPublicKey, *secp256k1PublicKey)
+	verified := bytes.Equal(sigPublicKey, secp256k1PublicKey)
 
 	if !verified {
 		return ErrCannotVerifyPayload

@@ -7,7 +7,7 @@ import (
 
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/vault/vault"
+	"github.com/provideplatform/vault/vault"
 )
 
 var ephDB = dbconf.DatabaseConnection()

@@ -43,15 +43,16 @@ if [[ -z "${RACE}" ]]; then
   RACE=true
 fi
 
+if [[ -z "${SEAL_UNSEAL_KEY}" ]]; then
+  SEAL_UNSEAL_KEY='traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day'
+fi
+
 if [[ -z "${SEAL_UNSEAL_VALIDATION_HASH}" ]]; then
   SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309
 fi
 
-
-
-PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropdb -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_NAME || true >/dev/null
-PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropuser -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_USER || true >/dev/null
-
+PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropdb -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_NAME 2&>/dev/null || true
+PGPASSWORD=$DATABASE_SUPERUSER_PASSWORD dropuser -U $DATABASE_SUPERUSER -h 0.0.0.0 -p $DATABASE_PORT $DATABASE_USER 2&>/dev/null || true
 DATABASE_USER=$DATABASE_USER DATABASE_PASSWORD=$DATABASE_PASSWORD DATABASE_NAME=$DATABASE_NAME make migrate
 
 PGP_PUBLIC_KEY='-----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -231,64 +232,60 @@ K8zK4j7n+BYl+7y1dzOQw4CadsDi5whgNcg2QUxuTlW+TQ5VBvdUl9wpTSygD88H
 xH2b0OBcVjYsgRnQ9OZpQ+kIPaFhaWChnfEArCmhrOEgOnhfkr6YGDHFenfT3/RA
 PUl1cxrvY7BHh4obNa6Bf8ECAwEAAQ==
 -----END PUBLIC KEY-----'
-
-#traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day
-SEAL_UNSEAL_VALIDATION_HASH='0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309'
-
-pkgs=(test)
-for d in "${pkgs[@]}" ; do
-  pkg=$(echo $d | sed 's/\/*$//g')
   
-  if [ "$RACE" = "true" ]; then
-    PGP_PUBLIC_KEY=$PGP_PUBLIC_KEY \
-    PGP_PRIVATE_KEY=$PGP_PRIVATE_KEY \
-    PGP_PASSPHRASE=$PGP_PASSPHRASE \
-    JWT_SIGNER_PUBLIC_KEY=$JWT_SIGNER_PUBLIC_KEY \
-    JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
-    GIN_MODE=release \
-    DATABASE_HOST=localhost \
-    DATABASE_NAME=vault_dev \
-    DATABASE_USER=${DATABASE_USER} \
-    DATABASE_PASSWORD=${DATABASE_PASSWORD} \
-    IDENT_API_HOST=localhost:8081 \
-    IDENT_API_SCHEME=http \
-    VAULT_API_HOST=localhost:8082 \
-    VAULT_API_SCHEME=http \
-    LOG_LEVEL=DEBUG \
-    SEAL_UNSEAL_VALIDATION_HASH=$SEAL_UNSEAL_VALIDATION_HASH \
-    go test ./... -v \
-                       -race \
-                       -timeout 1800s \
-                       -cover \
-                       -coverpkg=./vault/...,./crypto/... \
-                       -coverprofile=profile.cov \
-                       -tags="$TAGS"
-    go tool cover -func profile.cov
-    go tool cover -html=profile.cov -o cover.html
-  else
-    PGP_PUBLIC_KEY=$PGP_PUBLIC_KEY \
-    PGP_PRIVATE_KEY=$PGP_PRIVATE_KEY \
-    PGP_PASSPHRASE=$PGP_PASSPHRASE \
-    JWT_SIGNER_PUBLIC_KEY=$JWT_SIGNER_PUBLIC_KEY \
-    JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
-    GIN_MODE=release \
-    DATABASE_HOST=localhost \
-    DATABASE_NAME=vault_dev \
-    DATABASE_USER=${DATABASE_USER} \
-    DATABASE_PASSWORD=${DATABASE_PASSWORD} \
-    IDENT_API_HOST=localhost:8081 \
-    IDENT_API_SCHEME=http \
-    VAULT_API_HOST=localhost:8082 \
-    VAULT_API_SCHEME=http \
-    LOG_LEVEL=DEBUG \
-    SEAL_UNSEAL_VALIDATION_HASH=$SEAL_UNSEAL_VALIDATION_HASH \
-    go test ./... -v \
-                       -timeout 1800s \
-                       -cover \
-                       -coverpkg=./vault/...,./crypto/... \
-                       -coverprofile=profile.cov \
-                       -tags="$TAGS"
-    go tool cover -func profile.cov
-    go tool cover -html=profile.cov -o cover.html
-  fi
-done
+if [ "$RACE" = "true" ]; then
+  PGP_PUBLIC_KEY=$PGP_PUBLIC_KEY \
+  PGP_PRIVATE_KEY=$PGP_PRIVATE_KEY \
+  PGP_PASSPHRASE=$PGP_PASSPHRASE \
+  JWT_SIGNER_PUBLIC_KEY=$JWT_SIGNER_PUBLIC_KEY \
+  JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
+  GIN_MODE=release \
+  DATABASE_HOST=localhost \
+  DATABASE_NAME=vault_dev \
+  DATABASE_USER=${DATABASE_USER} \
+  DATABASE_PASSWORD=${DATABASE_PASSWORD} \
+  IDENT_API_HOST=localhost:8081 \
+  IDENT_API_SCHEME=http \
+  VAULT_API_HOST=localhost:8082 \
+  VAULT_API_SCHEME=http \
+  LOG_LEVEL=DEBUG \
+  REDIS_HOSTS=localhost:6379 \
+  SEAL_UNSEAL_KEY=$SEAL_UNSEAL_KEY \
+  SEAL_UNSEAL_VALIDATION_HASH=$SEAL_UNSEAL_VALIDATION_HASH \
+  go test "./test/..." -v \
+                      -race \
+                      -timeout 1800s \
+                      -cover \
+                      -coverpkg=./vault/...,./crypto/... \
+                      -coverprofile=profile.cov \
+                      -tags="$TAGS"
+  go tool cover -func profile.cov
+  go tool cover -html=profile.cov -o cover.html
+else
+  PGP_PUBLIC_KEY=$PGP_PUBLIC_KEY \
+  PGP_PRIVATE_KEY=$PGP_PRIVATE_KEY \
+  PGP_PASSPHRASE=$PGP_PASSPHRASE \
+  JWT_SIGNER_PUBLIC_KEY=$JWT_SIGNER_PUBLIC_KEY \
+  JWT_SIGNER_PRIVATE_KEY=$JWT_SIGNER_PRIVATE_KEY \
+  GIN_MODE=release \
+  DATABASE_HOST=localhost \
+  DATABASE_NAME=vault_dev \
+  DATABASE_USER=${DATABASE_USER} \
+  DATABASE_PASSWORD=${DATABASE_PASSWORD} \
+  IDENT_API_HOST=localhost:8081 \
+  IDENT_API_SCHEME=http \
+  VAULT_API_HOST=localhost:8082 \
+  VAULT_API_SCHEME=http \
+  LOG_LEVEL=DEBUG \
+  REDIS_HOSTS=localhost:6379 \
+  SEAL_UNSEAL_KEY=$SEAL_UNSEAL_KEY \
+  SEAL_UNSEAL_VALIDATION_HASH=$SEAL_UNSEAL_VALIDATION_HASH \
+  go test "./test/..." -v \
+                      -timeout 1800s \
+                      -cover \
+                      -coverpkg=./vault/...,./crypto/... \
+                      -coverprofile=profile.cov \
+                      -tags="$TAGS"
+  go tool cover -func profile.cov
+  go tool cover -html=profile.cov -o cover.html
+fi

@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/provideapp/vault/common"
-	provide "github.com/provideservices/provide-go/api/vault"
+	"github.com/provideplatform/vault/common"
+	provide "github.com/provideplatform/provide-go/api/vault"
 )
 
 func TestAPILIstSecretTypeFilter(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -83,7 +82,6 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 }
 
 func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
-	t.Parallel()
 
 	// add the secrets out of order, and expect to get thte same out of order secrets returned, unfiltered
 	token, err := userTokenFactory()
@@ -157,7 +155,6 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 }
 
 func TestAPIListSecrets(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -211,7 +208,6 @@ func TestAPIListSecrets(t *testing.T) {
 }
 
 func TestAPICreateSecret(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -236,35 +232,34 @@ func TestAPICreateSecret(t *testing.T) {
 	}
 }
 
-func TestAPICreateSecretTooLong(t *testing.T) {
-	t.Parallel()
+// TestAPICreateSecretTooLong commented out because max secret length is currently 1GB
+// func TestAPICreateSecretTooLong(t *testing.T) {
 
-	token, err := userTokenFactory()
-	if err != nil {
-		t.Errorf("failed to create token; %s", err.Error())
-		return
-	}
+// 	token, err := userTokenFactory()
+// 	if err != nil {
+// 		t.Errorf("failed to create token; %s", err.Error())
+// 		return
+// 	}
 
-	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
-	if err != nil {
-		t.Errorf("failed to create vault; %s", err.Error())
-		return
-	}
+// 	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+// 	if err != nil {
+// 		t.Errorf("failed to create vault; %s", err.Error())
+// 		return
+// 	}
 
-	maxSecretLength := 4096 * 32
-	secret := common.RandomString(maxSecretLength + 1)
-	name := "secret name"
-	description := "secret description"
-	secretType := "secret type"
-	_, err = provide.CreateSecret(*token, vault.ID.String(), secret, name, description, secretType)
-	if err == nil {
-		t.Errorf("allowed creation of secret that exceeds max length")
-		return
-	}
-}
+// 	maxSecretLength := 4096 * 32
+// 	secret := common.RandomString(maxSecretLength + 1)
+// 	name := "secret name"
+// 	description := "secret description"
+// 	secretType := "secret type"
+// 	_, err = provide.CreateSecret(*token, vault.ID.String(), secret, name, description, secretType)
+// 	if err == nil {
+// 		t.Errorf("allowed creation of secret that exceeds max length")
+// 		return
+// 	}
+// }
 
 func TestAPICreateSecretMaxSize(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -300,7 +295,6 @@ func TestAPICreateSecretMaxSize(t *testing.T) {
 }
 
 func TestAPICreateSecretNoName(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -323,7 +317,6 @@ func TestAPICreateSecretNoName(t *testing.T) {
 }
 
 func TestAPICreateSecretNoType(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -346,7 +339,6 @@ func TestAPICreateSecretNoType(t *testing.T) {
 }
 
 func TestAPICreateSecretNoData(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -369,7 +361,6 @@ func TestAPICreateSecretNoData(t *testing.T) {
 }
 
 func TestAPICreateAndRetrieveSecret(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {
@@ -403,7 +394,6 @@ func TestAPICreateAndRetrieveSecret(t *testing.T) {
 }
 
 func TestAPIDeleteSecret(t *testing.T) {
-	t.Parallel()
 
 	token, err := userTokenFactory()
 	if err != nil {

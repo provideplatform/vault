@@ -9,8 +9,9 @@ import (
 	"log"
 
 	uuid "github.com/kthomas/go.uuid"
-	ident "github.com/provideservices/provide-go/api/ident"
-	provide "github.com/provideservices/provide-go/api/vault"
+	"github.com/provideplatform/ident/common"
+	ident "github.com/provideplatform/provide-go/api/ident"
+	provide "github.com/provideplatform/provide-go/api/vault"
 )
 
 func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
@@ -106,7 +107,8 @@ func userTokenFactory() (*string, error) {
 	if err != nil {
 		return nil, errors.New("failed to authenticate user")
 	}
-	return resp.Token.Token, nil
+	common.Log.Debugf("resp is %+v", resp)
+	return resp.Token.AccessToken, nil
 }
 
 func init() {

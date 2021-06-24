@@ -8,13 +8,13 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/vault/common"
-	vaultcrypto "github.com/provideapp/vault/crypto"
-	provide "github.com/provideservices/provide-go/api"
+	provide "github.com/provideplatform/provide-go/api"
+	"github.com/provideplatform/vault/common"
+	vaultcrypto "github.com/provideplatform/vault/crypto"
 )
 
-// MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored
-const MaxSecretLengthInBytes = 4096 * 32
+// MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored (currently set to 1GB)
+const MaxSecretLengthInBytes = 1024 * 1024 * 1024
 
 // Secret represents a secret encrypted by the vault's master key
 type Secret struct {
@@ -234,18 +234,20 @@ func (s *Secret) encryptFields() error {
 
 		if masterKey.Seed != nil {
 			// seal the data with the unsealer key
-			masterKey.Seed, err = seal(masterKey.Seed)
+			seed, err := seal(*masterKey.Seed)
 			if err != nil {
 				return err
 			}
+			masterKey.Seed = &seed
 		}
 
 		if masterKey.PrivateKey != nil {
 			// seal the data with the unsealer key
-			masterKey.PrivateKey, err = seal(masterKey.PrivateKey)
+			privateKey, err := seal(*masterKey.PrivateKey)
 			if err != nil {
 				return err
 			}
+			masterKey.PrivateKey = &privateKey
 		}
 	} else {
 		masterKey.decryptFields()
@@ -286,7 +288,7 @@ func (s *Secret) decryptFields() error {
 
 		if s.Value != nil {
 			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = &unsealerKey
+			masterVaultKey.PrivateKey = unsealerKey
 			encryptedData := *s.Value
 			decryptedData, err := masterVaultKey.Decrypt(encryptedData[NonceSizeSymmetric:], encryptedData[0:NonceSizeSymmetric])
 			if err != nil {
@@ -297,18 +299,20 @@ func (s *Secret) decryptFields() error {
 
 		if masterKey.Seed != nil {
 			// unseal the data with the unsealer key
-			masterKey.Seed, err = unseal(masterKey.Seed)
+			seed, err := unseal(*masterKey.Seed)
 			if err != nil {
 				return err
 			}
+			masterKey.Seed = &seed
 		}
 
 		if masterKey.PrivateKey != nil {
 			// unseal the data with the unsealer key
-			masterKey.PrivateKey, err = unseal(masterKey.PrivateKey)
+			privateKey, err := unseal(*masterKey.PrivateKey)
 			if err != nil {
 				return err
 			}
+			masterKey.PrivateKey = &privateKey
 		}
 
 	} else {

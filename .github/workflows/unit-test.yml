@@ -1,4 +1,4 @@
-name: unit-test
+name: Unit Tests
 on:
   push:
     branches:
@@ -7,7 +7,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    steps:                                                                                       
+    steps:
       - name: Checkout vault
         uses: actions/checkout@v2
         with:
@@ -22,10 +22,11 @@ jobs:
       - run: echo "DATABASE_SUPERUSER_PASSWORD=prvdp455" >> $GITHUB_ENV
       - run: echo "DATABASE_SSL_MODE=disable" >> $GITHUB_ENV
       - run: echo "DATABASE_LOGGING=false" >> $GITHUB_ENV
+      - run: echo "REDIS_HOSTS=localhost:6379" >> $GITHUB_ENV
       - run: echo "SEAL_UNSEAL_VALIDATION_HASH=0x7cff64a2d2b709dd9df196000be6237875bafe0a92873fd9fd9f35c00808f309" >> $GITHUB_ENV
       - run: echo "TAGS=unit" >> $GITHUB_ENV
-      - run: echo "JWT_SIGNER_PUBLIC_KEY=${{ secrets.DEV_JWT }}" >> $GITHUB_ENV                 
-      - name: Setup go
+      - run: echo "JWT_SIGNER_PUBLIC_KEY=${{ secrets.DEV_JWT }}" >> $GITHUB_ENV
+      - name: Setup golang
         uses: actions/setup-go@v2
         with:
           go-version: '1.15.1'
@@ -41,13 +42,12 @@ jobs:
       - run: go mod tidy
         working-directory: vaultyvault
       - run: go mod vendor
-        working-directory: vaultyvault      
+        working-directory: vaultyvault
       - run: go build -v -o ./.bin/vault_migrate ./cmd/migrate
         working-directory: vaultyvault
       - run: ./.bin/vault_migrate
-        working-directory: vaultyvault 
-      - run:     go test ./... -v -race -timeout 1800s -tags="$TAGS"                                      
-        working-directory: vaultyvault       
+        working-directory: vaultyvault
+      - run: go test ./... -v -race -timeout 1800s -tags="$TAGS"
+        working-directory: vaultyvault
       - run: docker-compose -f vaultyvault/ops/docker-compose-db.yml down
       - run: docker volume rm ops_vault-db
-

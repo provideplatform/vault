@@ -1,20 +1,58 @@
+name: Vault (dev)
 on: 
   push:
     branches:
       - dev
 
 jobs:
-  push-to-registry:
-    name: Push docker image to DockerHub
+  push_to_dev_branch:
     runs-on: ubuntu-latest
+    timeout-minutes: 10    
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.INTEGRATION_SLACK_WEBHOOK }}
     steps:
-      - name: check out repo
-        id: checkout
+      - name: Setup golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.15.1'
+      - name: Checkout ident
         uses: actions/checkout@v2
-      - name: push to docker hub 
+        with:
+          repository: provideapp/ident
+          path: 'ident'
+          ref: dev
+          token: ${{ secrets.DEPLOY_GITHUB_PAT }}             
+      - name: Checkout vault
+        uses: actions/checkout@v2
+        with:
+          ref: dev
+          path: 'vault'                  
+      - run: docker-compose -f ./ops/docker-compose.yml build --no-cache vault
+        working-directory: vault
+      - run: docker-compose -f ./ops/docker-compose.yml up -d
+        working-directory: vault
+      - run: TAGS=integration ./ops/run_local_tests_long.sh
+        working-directory: vault
+      - name: log vault on failure
+        if: failure()
+        run: docker logs vault
+        working-directory: vault
+      - name: log ident on failure
+        if: failure()        
+        run: docker logs ident
+        working-directory: vault  
+      - name: Push Docker Image
+        if: success()
         uses: docker/build-push-action@v1
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PAT }}
           repository: provide/vault
           tags: dev
+          path: 'vault'
+      - name: Send Slack Notification
+        if: always()  
+        uses: act10ns/slack@v1
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}

@@ -4,9 +4,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -14,12 +19,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
+	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
-	"github.com/provideapp/vault/common"
-	"github.com/provideapp/vault/crypto"
-	provide "github.com/provideservices/provide-go/api"
-	providecrypto "github.com/provideservices/provide-go/crypto"
+	provide "github.com/provideplatform/provide-go/api"
+	providecrypto "github.com/provideplatform/provide-go/crypto"
+	"github.com/provideplatform/vault/common"
+	"github.com/provideplatform/vault/crypto"
 	"golang.org/x/crypto/chacha20"
 )
 
@@ -102,6 +108,7 @@ type Key struct {
 	PublicKey               *[]byte    `sql:"type:bytea" json:"-"`
 	PrivateKey              *[]byte    `sql:"type:bytea" json:"-"`
 	IterativeDerivationPath *string    `gorm:"column:iterative_hd_derivation_path" json:"-"`
+	Mnemonic                *string    `sql:"-" json:"mnemonic,omitempty"`
 
 	Address             *string `sql:"-" json:"address,omitempty"`
 	Ephemeral           *bool   `sql:"-" json:"ephemeral,omitempty"`
@@ -174,6 +181,17 @@ type BLSAggregateVerifyRequestResponse struct {
 	Verified   *bool     `json:"verified,omitempty"`
 }
 
+// DetachedVerifyRequestResponse represents the API request/response parameters
+// needed to verify a provided signature created outside of vault
+type DetachedVerifyRequestResponse struct {
+	Spec      *string         `json:"spec,omitempty"`
+	Message   *string         `json:"message,omitempty"`
+	Signature *string         `json:"signature,omitempty"`
+	Options   *SigningOptions `json:"options,omitempty"`
+	Verified  *bool           `json:"verified,omitempty"`
+	PublicKey *string         `json:"public_key,omitempty"`
+}
+
 // createAES256GCM creates a key using a random seed
 func (k *Key) createAES256GCM() error {
 	privatekey, err := crypto.CreateAES256GCMSeed()
@@ -182,7 +200,8 @@ func (k *Key) createAES256GCM() error {
 	}
 
 	k.PrivateKey = &privatekey
-	*k.Type = KeyTypeSymmetric
+	k.Type = common.StringOrNil(KeyTypeSymmetric)
+	k.Spec = common.StringOrNil(KeySpecAES256GCM)
 
 	common.Log.Debugf("created AES256GCM key for vault: %s;", k.VaultID)
 	return nil
@@ -195,13 +214,13 @@ func (k *Key) createBabyJubJubKeypair() error {
 		return fmt.Errorf("failed to create babyJubJub keypair; %s", err.Error())
 	}
 
-	publicKeyHex := hex.EncodeToString(publicKey)
-
 	k.PrivateKey = &privateKey
 	k.PublicKey = &publicKey
-	*k.Type = KeyTypeAsymmetric
+	k.PublicKeyHex = common.StringOrNil(hex.EncodeToString(publicKey))
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.Spec = common.StringOrNil(KeySpecECCBabyJubJub)
 
-	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, publicKeyHex)
+	common.Log.Debugf("created babyJubJub key for vault: %s; public key: %s", k.VaultID, hex.EncodeToString(publicKey))
 	return nil
 }
 
@@ -212,11 +231,12 @@ func (k *Key) createC25519Keypair() error {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	k.PrivateKey = c25519KeyPair.PrivateKey
-	k.PublicKey = c25519KeyPair.PublicKey
-	*k.Type = KeyTypeAsymmetric
+	k.PrivateKey = &c25519KeyPair.PrivateKey
+	k.PublicKey = &c25519KeyPair.PublicKey
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.Spec = common.StringOrNil(KeySpecECCC25519)
 
-	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, hex.EncodeToString(*c25519KeyPair.PublicKey))
+	common.Log.Debugf("created C25519 key for vault: %s; public key: %s", k.VaultID, hex.EncodeToString(c25519KeyPair.PublicKey))
 	return nil
 }
 
@@ -228,7 +248,8 @@ func (k *Key) createChaCha20() error {
 	}
 
 	k.Seed = &seed
-	*k.Type = KeyTypeSymmetric
+	k.Type = common.StringOrNil(KeyTypeSymmetric)
+	k.Spec = common.StringOrNil(KeySpecChaCha20)
 
 	common.Log.Debugf("created chacha20 key for vault: %s;", k.VaultID)
 	return nil
@@ -261,7 +282,7 @@ func (k *Key) CreateDiffieHellmanSharedSecret(peerPublicKey, peerSigningKey, pee
 		return nil, fmt.Errorf("failed to compute shared secret; failed to verify %d-byte Ed22519 signature using public key: %s; %s", len(peerSignature), string(peerPublicKey), err.Error())
 	}
 
-	sharedSecret := providecrypto.C25519ComputeSecret([]byte(*privkey), peerPublicKey)
+	sharedSecret := providecrypto.C25519ComputeSecret(*privkey, peerPublicKey)
 
 	ecdhSecret := &Key{
 		VaultID:     k.VaultID,
@@ -300,7 +321,8 @@ func (k *Key) createEd25519Keypair() error {
 	seed := privateKey.Seed()
 	k.Seed = &seed
 	k.PublicKey = &publicKeyBytes
-	*k.Type = KeyTypeAsymmetric
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.Spec = common.StringOrNil(KeySpecECCEd25519)
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, hex.EncodeToString(*k.PublicKey))
 	return nil
@@ -313,30 +335,54 @@ func (k *Key) createSecp256k1Keypair() error {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	k.PrivateKey = secp256k1KeyPair.PrivateKey
-	k.PublicKey = secp256k1KeyPair.PublicKey
-	*k.Type = KeyTypeAsymmetric
+	k.PrivateKey = &secp256k1KeyPair.PrivateKey
+	k.PublicKey = &secp256k1KeyPair.PublicKey
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.Spec = common.StringOrNil(KeySpecECCSecp256k1)
 
 	if k.Description == nil {
 		desc := fmt.Sprintf("secp256k1 keypair; address: %s", *secp256k1KeyPair.Address)
 		k.Description = common.StringOrNil(desc)
 	}
 
-	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, *k.PublicKey)
+	common.Log.Debugf("created secp256k1 key for vault: %s; public key: 0x%s", k.VaultID, hex.EncodeToString(*k.PublicKey))
 	return nil
 }
 
 func (k *Key) createHDWallet() error {
-	hdwllt, err := crypto.CreateHDWalletSeedPhrase(crypto.DefaultHDWalletSeedEntropy)
+	hdwllt, err := crypto.CreateHDWalletWithEntropy(crypto.DefaultHDWalletSeedEntropy)
 	if err != nil {
 		return fmt.Errorf("unable to create HD wallet; %s", err.Error())
 	}
 
-	k.Seed = hdwllt.Seed
-	*k.Type = KeyTypeAsymmetric
+	k.Seed = &hdwllt.Seed
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 	k.IterativeDerivationPath = common.StringOrNil(crypto.DefaultHDDerivationPath().String())
-	k.PublicKey = hdwllt.PublicKey
-	k.PublicKeyHex = common.StringOrNil(string(*hdwllt.PublicKey))
+	k.PublicKey = &hdwllt.PublicKey
+	k.PublicKeyHex = common.StringOrNil(string(hdwllt.PublicKey))
+	k.Spec = common.StringOrNil(KeySpecECCBIP39)
+
+	if k.Description == nil {
+		desc := fmt.Sprint("BIP39 HD Wallet")
+		k.Description = common.StringOrNil(desc)
+	}
+
+	common.Log.Debugf("created HD wallet for vault: %s;", k.VaultID)
+	return nil
+}
+
+func (k *Key) createHDWalletFromSeedPhrase(mnemonic []byte) error {
+	hdwllt, err := crypto.CreateHDWalletFromSeedPhrase(string(mnemonic))
+	if err != nil {
+		return fmt.Errorf("unable to create HD wallet; %s", err.Error())
+	}
+
+	k.Seed = &hdwllt.Seed
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.IterativeDerivationPath = common.StringOrNil(crypto.DefaultHDDerivationPath().String())
+	k.PublicKey = &hdwllt.PublicKey
+	k.PublicKeyHex = common.StringOrNil(string(hdwllt.PublicKey))
+	k.Spec = common.StringOrNil(KeySpecECCBIP39)
 
 	if k.Description == nil {
 		desc := fmt.Sprint("BIP39 HD Wallet")
@@ -354,11 +400,22 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	k.PrivateKey = rsaKeyPair.PrivateKey
-	k.PublicKey = rsaKeyPair.PublicKey
+	k.PrivateKey = &rsaKeyPair.PrivateKey
+	k.PublicKey = &rsaKeyPair.PublicKey
 	k.Type = common.StringOrNil(KeyTypeAsymmetric)
 
-	common.Log.Debugf("created rsa%d key for vault: %s; public key: 0x%s", bitsize, k.VaultID, *k.PublicKey)
+	switch bitsize {
+	case 2048:
+		k.Spec = common.StringOrNil(KeySpecRSA2048)
+	case 3072:
+		k.Spec = common.StringOrNil(KeySpecRSA3072)
+	case 4096:
+		k.Spec = common.StringOrNil(KeySpecRSA4096)
+	}
+
+	k.Enrich()
+
+	common.Log.Debugf("created rsa-%d key for vault: %s; public key:\n%s", bitsize, k.VaultID, *k.PublicKeyHex)
 	return nil
 }
 
@@ -445,18 +502,20 @@ func (k *Key) decryptFields() error {
 
 		if k.Seed != nil {
 			// unseal the data with the unsealer key
-			k.Seed, err = unseal(k.Seed)
+			seed, err := unseal(*k.Seed)
 			if err != nil {
 				return err
 			}
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
 			// unseal the data with the unsealer key
-			k.PrivateKey, err = unseal(k.PrivateKey)
+			privateKey, err := unseal(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
+			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("decrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
@@ -507,18 +566,20 @@ func (k *Key) encryptFields() error {
 
 		if k.Seed != nil {
 			// seal the data with the unsealer key
-			k.Seed, err = seal(k.Seed)
+			seed, err := seal(*k.Seed)
 			if err != nil {
 				return err
 			}
+			k.Seed = &seed
 		}
 
 		if k.PrivateKey != nil {
 			// seal the data with the unsealer key
-			k.PrivateKey, err = seal(k.PrivateKey)
+			privateKey, err := seal(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
+			k.PrivateKey = &privateKey
 		}
 	} else {
 		common.Log.Tracef("encrypting key fields with master key %s for vault: %s", masterKey.ID, k.VaultID)
@@ -550,20 +611,40 @@ func (k *Key) encryptFields() error {
 // Enrich the key; typically a no-op; useful for public keys which
 // have a compressed representation (i.e., crypto address)
 func (k *Key) Enrich() {
+	enrichRSA := func() {
+		var rsaPublicKey rsa.PublicKey
+		json.Unmarshal(*k.PublicKey, &rsaPublicKey)
+		publicKeyBytes, _ := x509.MarshalPKIXPublicKey(&rsaPublicKey)
+		k.PublicKeyHex = common.StringOrNil(string(pem.EncodeToMemory(&pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: publicKeyBytes,
+		})))
+	}
+
 	if k.PublicKey != nil {
-		if k.Spec != nil && *k.Spec == KeySpecECCSecp256k1 {
-			pubkey := *k.PublicKey
-			x, y := elliptic.Unmarshal(secp256k1.S256(), pubkey)
+		switch *k.Spec {
+		case KeySpecECCBIP39:
+			k.PublicKeyHex = common.StringOrNil(string(*k.PublicKey))
+		case KeySpecECCSecp256k1:
+			pubkey := k.PublicKey
+			x, y := elliptic.Unmarshal(secp256k1.S256(), *pubkey)
 			if x != nil {
-				publicKey := &ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
+				publicKey := &ecdsa.PublicKey{
+					Curve: secp256k1.S256(),
+					X:     x,
+					Y:     y,
+				}
 				addr := ethcrypto.PubkeyToAddress(*publicKey)
 				k.Address = common.StringOrNil(addr.Hex())
+				k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 			}
-		}
-
-		if k.Spec != nil && *k.Spec == KeySpecECCBIP39 {
-			k.PublicKeyHex = common.StringOrNil(string(*k.PublicKey))
-		} else {
+		case KeySpecRSA2048:
+			enrichRSA()
+		case KeySpecRSA3072:
+			enrichRSA()
+		case KeySpecRSA4096:
+			enrichRSA()
+		default:
 			k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 		}
 	}
@@ -592,16 +673,32 @@ func (k *Key) create() error {
 		return fmt.Errorf("failed to validate key; %s", *k.Errors[0].Message)
 	}
 
-	hasKeyMaterial := k.Seed != nil || k.PrivateKey != nil
+	hasKeyMaterial := k.Seed != nil || k.PrivateKey != nil || k.Mnemonic != nil
 
-	if k.ID != uuid.Nil && hasKeyMaterial {
+	if *k.Spec == KeySpecECCBIP39 && hasKeyMaterial {
+
+		// first check that we only have the mnemonic phrase, not a seed or private key
+		if k.Mnemonic == nil {
+			return fmt.Errorf("mnemonic required to create BIP39 key from existing seed phrase")
+		}
+
+		// attempt to create a hd wallet from the provided mnemonic
+		err := k.createHDWalletFromSeedPhrase([]byte(*k.Mnemonic))
+		if err != nil {
+			return fmt.Errorf("failed to create hd wallet; %s", err.Error())
+		}
+	}
+
+	// if we have a provided seed/private key and it's not a BIP39 key,
+	// then append an error
+	if k.ID != uuid.Nil && hasKeyMaterial && *k.Spec != KeySpecECCBIP39 {
 		k.Errors = append(k.Errors, &provide.Error{
 			Message: common.StringOrNil(fmt.Sprintf("attempted to regenerate key material for key: %s", k.ID)),
 		})
 		return nil
 	}
 
-	if !hasKeyMaterial { // FIXME? this sucks :D
+	if !hasKeyMaterial {
 		switch *k.Spec {
 		case KeySpecAES256GCM:
 			err := k.createAES256GCM()
@@ -720,47 +817,52 @@ func (k *Key) updateIterativeDerivationPath(db *gorm.DB) error {
 		return fmt.Errorf("cannot update iteration for ephemeral key")
 	}
 
-	derivationPath, err := hdwallet.ParseDerivationPath(*k.IterativeDerivationPath)
-	if err != nil {
-		return fmt.Errorf("failed to update iterative hd derivation path on key: %s; failed path: %s", k.ID, *k.IterativeDerivationPath)
-	}
+	key := fmt.Sprintf("vault.%s.key.%s.derivation", k.VaultID.String(), k.ID.String())
+	return redisutil.WithRedlock(key, func() error {
+		db.Model(&k).Find(k) // reload the record
 
-	account := derivationPath[2] - 0x80000000
-	index := derivationPath[len(derivationPath)-1]
-
-	// if we have reached the uint32 maximum, we cannot generate any more keys
-	if index == maxHDIteration {
-		common.Log.Debugf("maximum index %d reached - incrementing account", index)
-		account = account + 1
-		index = 0
-	} else {
-		index = index + 1
-	}
-
-	k.IterativeDerivationPath = common.StringOrNil(fmt.Sprintf("m/%d'/%d'/%d'/%d/%d",
-		derivationPath[0]-0x80000000,
-		derivationPath[1]-0x80000000,
-		account,
-		derivationPath[3],
-		index,
-	))
-
-	result := db.Save(&k)
-	errors := result.GetErrors()
-	if len(errors) > 0 {
-		for _, err := range errors {
-			k.Errors = append(k.Errors, &provide.Error{
-				Message: common.StringOrNil(err.Error()),
-			})
+		derivationPath, err := hdwallet.ParseDerivationPath(*k.IterativeDerivationPath)
+		if err != nil {
+			return fmt.Errorf("failed to update iterative hd derivation path on key: %s; failed path: %s", k.ID, *k.IterativeDerivationPath)
 		}
-	}
 
-	rowsAffected := result.RowsAffected
-	if rowsAffected == 0 {
-		return fmt.Errorf("invalid key and/or path - no iterative derivation path update possible")
-	}
+		account := derivationPath[2] - 0x80000000
+		index := derivationPath[len(derivationPath)-1]
 
-	return nil
+		// if we have reached the uint32 maximum, we cannot generate any more keys
+		if index == maxHDIteration {
+			common.Log.Debugf("maximum index %d reached - incrementing account", index)
+			account = account + 1
+			index = 0
+		} else {
+			index = index + 1
+		}
+
+		k.IterativeDerivationPath = common.StringOrNil(fmt.Sprintf("m/%d'/%d'/%d'/%d/%d",
+			derivationPath[0]-0x80000000,
+			derivationPath[1]-0x80000000,
+			account,
+			derivationPath[3],
+			index,
+		))
+
+		result := db.Save(&k)
+		errors := result.GetErrors()
+		if len(errors) > 0 {
+			for _, err := range errors {
+				k.Errors = append(k.Errors, &provide.Error{
+					Message: common.StringOrNil(err.Error()),
+				})
+			}
+		}
+
+		rowsAffected := result.RowsAffected
+		if rowsAffected == 0 {
+			return fmt.Errorf("invalid key and/or path - no iterative derivation path update possible")
+		}
+
+		return nil
+	})
 }
 
 // Create and persist a key
@@ -785,6 +887,7 @@ func (k *Key) save(db *gorm.DB) bool {
 			success := rowsAffected > 0
 			if success {
 				common.Log.Debugf("created key %s (%s) in vault %s", *k.Name, k.ID.String(), k.VaultID.String())
+				k.Enrich()
 				return success
 			}
 		}
@@ -825,7 +928,7 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 	switch *k.Spec {
 	case KeySpecRSA4096:
 		rsa4096 := crypto.RSAKeyPair{}
-		rsa4096.PrivateKey = k.PrivateKey
+		rsa4096.PrivateKey = *k.PrivateKey
 		plaintext, err = rsa4096.Decrypt(ciphertext)
 		if err != nil {
 			return nil, crypto.ErrCannotDecrypt
@@ -833,7 +936,7 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 
 	case KeySpecRSA3072:
 		rsa3072 := crypto.RSAKeyPair{}
-		rsa3072.PrivateKey = k.PrivateKey
+		rsa3072.PrivateKey = *k.PrivateKey
 		plaintext, err = rsa3072.Decrypt(ciphertext)
 		if err != nil {
 			return nil, crypto.ErrCannotDecrypt
@@ -841,7 +944,7 @@ func (k *Key) decryptAsymmetric(ciphertext []byte) ([]byte, error) {
 
 	case KeySpecRSA2048:
 		rsa2048 := crypto.RSAKeyPair{}
-		rsa2048.PrivateKey = k.PrivateKey
+		rsa2048.PrivateKey = *k.PrivateKey
 		plaintext, err = rsa2048.Decrypt(ciphertext)
 		if err != nil {
 			return nil, crypto.ErrCannotDecrypt
@@ -873,7 +976,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	switch *k.Spec {
 	case KeySpecAES256GCM:
 		aes256 := crypto.AES256GCM{}
-		aes256.PrivateKey = k.PrivateKey
+		aes256.PrivateKey = *k.PrivateKey
 
 		var err error
 		plaintext, err = aes256.Decrypt(ciphertext, nonce)
@@ -883,7 +986,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 
 	case KeySpecChaCha20:
 		chacha := crypto.ChaCha{}
-		chacha.Seed = k.Seed
+		chacha.Seed = *k.Seed
 
 		var err error
 		plaintext, err = chacha.Decrypt(ciphertext, nonce)
@@ -912,7 +1015,7 @@ func (k *Key) deriveSecp256k1KeyFromHDWallet(path accounts.DerivationPath) (*cry
 	switch path[1] - 0x80000000 {
 	case crypto.HDWalletCoinCodeEthereum:
 		hdwllt := &crypto.HDWallet{
-			Seed: k.Seed,
+			Seed: *k.Seed,
 		}
 
 		derivedKey, err := hdwllt.DeriveKey(path)
@@ -1011,8 +1114,9 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 
 	switch *k.Spec {
 	case KeySpecRSA4096:
-		rsa4096key := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+		rsa4096key := crypto.RSAKeyPair{}
+		if k.PublicKey != nil {
+			rsa4096key.PublicKey = *k.PublicKey
 		}
 		ciphertext, err = rsa4096key.Encrypt(plaintext)
 		if err != nil {
@@ -1020,8 +1124,9 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 		}
 
 	case KeySpecRSA3072:
-		rsa3072key := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+		rsa3072key := crypto.RSAKeyPair{}
+		if k.PublicKey != nil {
+			rsa3072key.PublicKey = *k.PublicKey
 		}
 		ciphertext, err = rsa3072key.Encrypt(plaintext)
 		if err != nil {
@@ -1029,8 +1134,9 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 		}
 
 	case KeySpecRSA2048:
-		rsa2048key := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+		rsa2048key := crypto.RSAKeyPair{}
+		if k.PublicKey != nil {
+			rsa2048key.PublicKey = *k.PublicKey
 		}
 		ciphertext, err = rsa2048key.Encrypt(plaintext)
 		if err != nil {
@@ -1066,7 +1172,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 	switch *k.Spec {
 	case KeySpecAES256GCM:
 		aes256 := crypto.AES256GCM{
-			PrivateKey: k.PrivateKey,
+			PrivateKey: *k.PrivateKey,
 		}
 
 		var err error
@@ -1077,7 +1183,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 
 	case KeySpecChaCha20:
 		chacha := crypto.ChaCha{
-			Seed: k.Seed,
+			Seed: *k.Seed,
 		}
 
 		var err error
@@ -1111,7 +1217,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 
 	case KeySpecECCBIP39:
 		if k.Seed == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil seed phrase", len(payload), k.ID)
+			return nil, fmt.Errorf("failed to sign %d-byte payload using HD wallet key: %s; nil seed phrase", len(payload), k.ID)
 		}
 
 		var path *accounts.DerivationPath
@@ -1165,40 +1271,40 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		secp256k1 := crypto.Secp256k1{}
-		secp256k1.PrivateKey = k.PrivateKey
+		secp256k1.PrivateKey = *k.PrivateKey
 		sig, sigerr = secp256k1.Sign(payload)
 
 	case KeySpecRSA4096:
 		if opts == nil || opts.Algorithm == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil signing options", len(payload), k.ID)
 		}
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		rsa4096 := crypto.RSAKeyPair{}
-		rsa4096.PrivateKey = k.PrivateKey
+		rsa4096.PrivateKey = *k.PrivateKey
 		sig, sigerr = rsa4096.Sign(payload, *opts.Algorithm)
 
 	case KeySpecRSA3072:
 		if opts == nil || opts.Algorithm == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil signing options", len(payload), k.ID)
 		}
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		rsa3072 := crypto.RSAKeyPair{}
-		rsa3072.PrivateKey = k.PrivateKey
+		rsa3072.PrivateKey = *k.PrivateKey
 		sig, sigerr = rsa3072.Sign(payload, *opts.Algorithm)
 
 	case KeySpecRSA2048:
 		if opts == nil || opts.Algorithm == nil {
-			return nil, fmt.Errorf("failed to sign %d-byte payload using hd wallet key: %s; nil signing options", len(payload), k.ID)
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil signing options", len(payload), k.ID)
 		}
 		if k.PrivateKey == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
 		}
 		rsa2048 := crypto.RSAKeyPair{}
-		rsa2048.PrivateKey = k.PrivateKey
+		rsa2048.PrivateKey = *k.PrivateKey
 		sig, sigerr = rsa2048.Sign(payload, *opts.Algorithm)
 
 	case KeySpecBLS12381:
@@ -1239,15 +1345,10 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 
 	switch *k.Spec {
 	case KeySpecECCBabyJubJub:
-		decodedPubKey := *k.PublicKey
-		return providecrypto.TECVerify(decodedPubKey, payload, sig)
+		return providecrypto.TECVerify(*k.PublicKey, payload, sig)
 
 	case KeySpecECCEd25519:
-		ec25519Key := crypto.FromSeed(*k.Seed).Public().(ed25519.PublicKey)
-		if ec25519Key == nil {
-			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s", len(payload), k.ID)
-		}
-		return crypto.Ed25519Verify(ec25519Key, payload, sig)
+		return crypto.Ed25519Verify(*k.PublicKey, payload, sig)
 
 	case KeySpecECCBIP39:
 		var path *accounts.DerivationPath
@@ -1277,7 +1378,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil public key", len(payload), k.ID)
 		}
 		secp256k1 := crypto.Secp256k1{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		return secp256k1.Verify(payload, sig)
 
@@ -1286,7 +1387,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; no algorithm provided", len(payload), k.ID)
 		}
 		rsa4096 := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		return rsa4096.Verify(payload, sig, *opts.Algorithm)
 
@@ -1295,7 +1396,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; no algorithm provided", len(payload), k.ID)
 		}
 		rsa3072 := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		return rsa3072.Verify(payload, sig, *opts.Algorithm)
 
@@ -1304,7 +1405,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; no algorithm provided", len(payload), k.ID)
 		}
 		rsa2048 := crypto.RSAKeyPair{
-			PublicKey: k.PublicKey,
+			PublicKey: *k.PublicKey,
 		}
 		return rsa2048.Verify(payload, sig, *opts.Algorithm)
 
@@ -1428,4 +1529,46 @@ func (o *SigningOptions) validateHDWalletOpts() (*accounts.DerivationPath, error
 	}
 
 	return path, nil
+}
+
+// ValidateKeySpec performs a case-insensitive key spec validation
+// and returns the correctly case keyspec
+func ValidateKeySpec(keySpec *string) (*string, error) {
+	switch strings.ToUpper(*keySpec) {
+	case strings.ToUpper(KeySpecAES256GCM):
+		return common.StringOrNil(KeySpecAES256GCM), nil
+
+	case strings.ToUpper(KeySpecChaCha20):
+		return common.StringOrNil(KeySpecChaCha20), nil
+
+	case strings.ToUpper(KeySpecECCBIP39):
+		return common.StringOrNil(KeySpecECCBIP39), nil
+
+	case strings.ToUpper(KeySpecECCBabyJubJub):
+		return common.StringOrNil(KeySpecECCBabyJubJub), nil
+
+	case strings.ToUpper(KeySpecECCC25519):
+		return common.StringOrNil(KeySpecECCC25519), nil
+
+	case strings.ToUpper(KeySpecECCEd25519):
+		return common.StringOrNil(KeySpecECCEd25519), nil
+
+	case strings.ToUpper(KeySpecECCSecp256k1):
+		return common.StringOrNil(KeySpecECCSecp256k1), nil
+
+	case strings.ToUpper(KeySpecRSA2048):
+		return common.StringOrNil(KeySpecRSA2048), nil
+
+	case strings.ToUpper(KeySpecRSA3072):
+		return common.StringOrNil(KeySpecRSA3072), nil
+
+	case strings.ToUpper(KeySpecRSA4096):
+		return common.StringOrNil(KeySpecRSA4096), nil
+
+	case strings.ToUpper(KeySpecBLS12381):
+		return common.StringOrNil(KeySpecBLS12381), nil
+
+	default:
+		return nil, fmt.Errorf("invalid key spec: %s", *keySpec)
+	}
 }

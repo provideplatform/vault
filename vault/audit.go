@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/vault/common"
+	"github.com/provideplatform/vault/common"
 )
 
 // AuditLogEvent is the struct containing the audit log fields

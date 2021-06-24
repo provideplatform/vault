@@ -135,7 +135,7 @@ func userTokenFactory() (*string, error) {
 	if err != nil {
 		return nil, errors.New("failed to authenticate user")
 	}
-	return resp.Token.Token, nil
+	return resp.Token.AccessToken, nil
 }
 
 func init() {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
-	"github.com/provideapp/vault/common"
+	"github.com/provideplatform/vault/common"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -210,7 +210,7 @@ func CreateHDWalletWithEntropy(bitsize int) (*HDWallet, error) {
 
 	// return a new HDWallet and store the generated mnemonic as the `Seed`
 	return &HDWallet{
-		Seed:      mnemonicBytes, // FIXME -- see https://github.com/provideapp/vault/issues/3
+		Seed:      mnemonicBytes, // FIXME -- see https://github.com/provideplatform/vault/issues/3
 		PublicKey: xpubBytes,
 	}, nil
 }
@@ -239,7 +239,7 @@ func CreateHDWalletFromSeedPhrase(mnemonic string) (*HDWallet, error) {
 
 	// return a new HDWallet and store the provided mnemonic as the `Seed`
 	return &HDWallet{
-		Seed:      mnemonicBytes, // FIXME -- see https://github.com/provideapp/vault/issues/3
+		Seed:      mnemonicBytes, // FIXME -- see https://github.com/provideplatform/vault/issues/3
 		PublicKey: xpubBytes,
 	}, nil
 }

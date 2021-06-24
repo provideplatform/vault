@@ -22,10 +22,10 @@ import (
 	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
-	"github.com/provideapp/vault/common"
-	"github.com/provideapp/vault/crypto"
-	provide "github.com/provideservices/provide-go/api"
-	providecrypto "github.com/provideservices/provide-go/crypto"
+	provide "github.com/provideplatform/provide-go/api"
+	providecrypto "github.com/provideplatform/provide-go/crypto"
+	"github.com/provideplatform/vault/common"
+	"github.com/provideplatform/vault/crypto"
 	"golang.org/x/crypto/chacha20"
 )
 

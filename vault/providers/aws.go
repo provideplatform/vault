@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/provideapp/vault/common"
-	provide "github.com/provideservices/provide-go/api/c2"
+	provide "github.com/provideplatform/provide-go/api/c2"
+	"github.com/provideplatform/vault/common"
 )
 
 // AWSSealUnsealProvider implements the Unsealer interface

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/provideapp/vault/common"
-	provide "github.com/provideservices/provide-go/api/vault"
+	"github.com/provideplatform/vault/common"
+	provide "github.com/provideplatform/provide-go/api/vault"
 )
 
 func TestAPILIstSecretTypeFilter(t *testing.T) {

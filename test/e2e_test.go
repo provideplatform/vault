@@ -12,10 +12,10 @@ import (
 	"time"
 
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/vault/common"
-	cryptovault "github.com/provideapp/vault/vault"
-	ident "github.com/provideservices/provide-go/api/ident"
-	provide "github.com/provideservices/provide-go/api/vault"
+	ident "github.com/provideplatform/provide-go/api/ident"
+	provide "github.com/provideplatform/provide-go/api/vault"
+	"github.com/provideplatform/vault/common"
+	cryptovault "github.com/provideplatform/vault/vault"
 )
 
 func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {

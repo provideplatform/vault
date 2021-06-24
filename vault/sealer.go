@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/provideapp/vault/common"
-	vaultcrypto "github.com/provideapp/vault/crypto"
-	"github.com/provideapp/vault/vault/providers"
+	"github.com/provideplatform/vault/common"
+	vaultcrypto "github.com/provideplatform/vault/crypto"
+	"github.com/provideplatform/vault/vault/providers"
 )
 
 var (

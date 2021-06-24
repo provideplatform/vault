@@ -1,4 +1,4 @@
-module github.com/provideapp/vault
+module github.com/provideplatform/vault
 
 go 1.13
 
@@ -10,7 +10,7 @@ require (
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
-	github.com/kthomas/go-azure-wrapper v0.0.0-20210601205830-d821b52e2872
+	github.com/kthomas/go-azure-wrapper v0.0.0-20210624073755-e84cb6805571
 	github.com/kthomas/go-db-config v0.0.0-20200612131637-ec0436a9685e
 	github.com/kthomas/go-logger v0.0.0-20210526080020-a63672d0724c
 	github.com/kthomas/go-pgputil v0.0.0-20200602073402-784e96083943
@@ -19,11 +19,11 @@ require (
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
-	github.com/provideapp/ident v0.0.0-00010101000000-000000000000
-	github.com/provideservices/provide-go v0.0.0-20210528064845-41b80b9b02b9
+	github.com/provideplatform/ident v0.0.0-00010101000000-000000000000
+	github.com/provideplatform/provide-go v0.0.0-20210624064849-d7328258f0d8
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 )
 
-replace github.com/provideapp/ident => ../ident
+replace github.com/provideplatform/ident => ../ident

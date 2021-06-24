@@ -9,9 +9,9 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	azurewrapper "github.com/kthomas/go-azure-wrapper"
-	"github.com/provideapp/vault/common"
-	vaultcrypto "github.com/provideapp/vault/crypto"
-	provide "github.com/provideservices/provide-go/api/c2"
+	provide "github.com/provideplatform/provide-go/api/c2"
+	"github.com/provideplatform/vault/common"
+	vaultcrypto "github.com/provideplatform/vault/crypto"
 )
 
 const defaultUnsealKeySecretName = "_unsealerkey"

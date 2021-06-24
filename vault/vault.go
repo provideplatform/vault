@@ -6,8 +6,8 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/vault/common"
-	provide "github.com/provideservices/provide-go/api"
+	provide "github.com/provideplatform/provide-go/api"
+	"github.com/provideplatform/vault/common"
 )
 
 // Vault provides secure key management

@@ -42,7 +42,7 @@ setup_go()
     export GOBIN=$GOPATH/bin
     export PATH=~/.local/bin:$GOBIN:$PATH
     echo "PATH is: '$PATH'"
-    mkdir -p $GOPATH/src/github.com/provideapp
+    mkdir -p $GOPATH/src/github.com/provideplatform
     mkdir -p $GOBIN
 
     go env

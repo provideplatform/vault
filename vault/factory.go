@@ -5,7 +5,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/vault/common"
+	"github.com/provideplatform/vault/common"
 )
 
 // New is a factory factory to create and persist vault instances

@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	providecrypto "github.com/provideservices/provide-go/crypto"
+	providecrypto "github.com/provideplatform/provide-go/crypto"
 )
 
 // Secp256k1 is the internal struct for an asymmetric keypair

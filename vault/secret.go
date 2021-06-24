@@ -8,9 +8,9 @@ import (
 	"github.com/jinzhu/gorm"
 	dbconf "github.com/kthomas/go-db-config"
 	uuid "github.com/kthomas/go.uuid"
-	"github.com/provideapp/vault/common"
-	vaultcrypto "github.com/provideapp/vault/crypto"
-	provide "github.com/provideservices/provide-go/api"
+	provide "github.com/provideplatform/provide-go/api"
+	"github.com/provideplatform/vault/common"
+	vaultcrypto "github.com/provideplatform/vault/crypto"
 )
 
 // MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored (currently set to 1GB)

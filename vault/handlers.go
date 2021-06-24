@@ -17,10 +17,10 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 
-	"github.com/provideapp/ident/token"
-	"github.com/provideapp/vault/common"
-	"github.com/provideapp/vault/crypto"
-	provide "github.com/provideservices/provide-go/common"
+	"github.com/provideplatform/ident/token"
+	provide "github.com/provideplatform/provide-go/common"
+	"github.com/provideplatform/vault/common"
+	"github.com/provideplatform/vault/crypto"
 )
 
 // InstallAPI installs the handlers using the given gin Engine

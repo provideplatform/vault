@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/provideapp/vault/common"
+	"github.com/provideplatform/vault/common"
 )
 
 // DockerSealUnsealProvider implements the Unsealer interface

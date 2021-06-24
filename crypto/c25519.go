@@ -1,7 +1,7 @@
 package crypto
 
 import (
-	providecrypto "github.com/provideservices/provide-go/crypto"
+	providecrypto "github.com/provideplatform/provide-go/crypto"
 )
 
 // C25519 is the internal struct for a C25519 keypair

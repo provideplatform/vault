@@ -982,7 +982,7 @@ func blsAggregateVerifyHandler(c *gin.Context) {
 
 	provide.Render(&KeySignVerifyRequestResponse{
 		Verified: &verified,
-	}, 201, c)
+	}, 200, c)
 
 }
 

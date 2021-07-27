@@ -611,21 +611,6 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 		return
 	}
 
-	if params.Context == nil {
-		provide.RenderError("context required", 422, c)
-		return
-	}
-
-	if params.Name == nil {
-		provide.RenderError("name required", 422, c)
-		return
-	}
-
-	if params.Description == nil {
-		provide.RenderError("description required", 422, c)
-		return
-	}
-
 	var derivedKey *Key
 
 	switch *key.Spec {
@@ -637,6 +622,21 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 			binary.BigEndian.PutUint32(nonceAsBytes, uint32(*params.Nonce))
 		} else {
 			binary.BigEndian.PutUint32(nonceAsBytes, uint32(rand.Int31()))
+		}
+
+		if params.Context == nil {
+			provide.RenderError("context required", 422, c)
+			return
+		}
+
+		if params.Name == nil {
+			provide.RenderError("name required", 422, c)
+			return
+		}
+
+		if params.Description == nil {
+			provide.RenderError("description required", 422, c)
+			return
 		}
 
 		derivedKey, err = key.DeriveSymmetric(

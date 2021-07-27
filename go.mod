@@ -19,11 +19,9 @@ require (
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
-	github.com/provideplatform/ident v0.0.0-00010101000000-000000000000
+	github.com/provideplatform/ident v0.9.10-0.20210625024122-80a05d6cf1d7
 	github.com/provideplatform/provide-go v0.0.0-20210624064849-d7328258f0d8
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 )
-
-replace github.com/provideplatform/ident => ../ident

@@ -598,10 +598,31 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 		return
 	}
 
-	key := GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	key := GetVaultKey(
+		c.Param("keyId"),
+		c.Param("id"),
+		bearer.ApplicationID,
+		bearer.OrganizationID,
+		bearer.UserID,
+	)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
+		return
+	}
+
+	if params.Context == nil {
+		provide.RenderError("context required", 422, c)
+		return
+	}
+
+	if params.Name == nil {
+		provide.RenderError("name required", 422, c)
+		return
+	}
+
+	if params.Description == nil {
+		provide.RenderError("description required", 422, c)
 		return
 	}
 
@@ -618,7 +639,12 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 			binary.BigEndian.PutUint32(nonceAsBytes, uint32(rand.Int31()))
 		}
 
-		derivedKey, err = key.DeriveSymmetric(nonceAsBytes, []byte(*params.Context), *params.Name, *params.Description)
+		derivedKey, err = key.DeriveSymmetric(
+			nonceAsBytes,
+			[]byte(*params.Context),
+			*params.Name,
+			*params.Description,
+		)
 		if err != nil {
 			provide.RenderError(err.Error(), 500, c)
 			return

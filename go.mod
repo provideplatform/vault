@@ -6,7 +6,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.18 // indirect
 	github.com/ethereum/go-ethereum v1.9.22
-	github.com/gin-gonic/gin v1.6.3
+	github.com/gin-gonic/gin v1.7.0
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0

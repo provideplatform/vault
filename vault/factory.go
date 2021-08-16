@@ -205,6 +205,24 @@ func Ed25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (
 	return key, nil
 }
 
+// Ed25519NKeyFactory Ed25519-nkey
+func Ed25519NKeyFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
+	key := &Key{
+		VaultID:     vaultID,
+		Name:        common.StringOrNil(name),
+		Description: common.StringOrNil(description),
+		Spec:        common.StringOrNil(KeySpecECCEd25519NKey),
+		Type:        common.StringOrNil(KeyTypeAsymmetric),
+		Usage:       common.StringOrNil(KeyUsageSignVerify),
+	}
+
+	if !key.createPersisted(db) {
+		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCEd25519, *key.Errors[0].Message)
+	}
+
+	return key, nil
+}
+
 // Secp256k1Factory secp256k1
 func Secp256k1Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*Key, error) {
 	key := &Key{

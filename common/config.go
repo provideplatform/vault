@@ -3,6 +3,7 @@ package common
 import (
 	"os"
 
+	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/joho/godotenv"
 	logger "github.com/kthomas/go-logger"
 )
@@ -18,6 +19,14 @@ var (
 func init() {
 	godotenv.Load()
 	requireLogger()
+	requireBLS()
+}
+
+func requireBLS() {
+	if err := bls.Init(bls.BLS12_381); err != nil {
+		panic(err)
+	}
+	bls.SetETHmode(bls.EthModeDraft07)
 }
 
 func requireLogger() {

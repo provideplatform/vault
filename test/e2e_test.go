@@ -5,63 +5,15 @@ package test
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"testing"
 	"time"
 
-	uuid "github.com/kthomas/go.uuid"
-	ident "github.com/provideplatform/provide-go/api/ident"
 	provide "github.com/provideplatform/provide-go/api/vault"
 	"github.com/provideplatform/vault/common"
 	cryptovault "github.com/provideplatform/vault/vault"
 )
-
-func keyFactoryEphemeral(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
-	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
-		"type":        keyType,
-		"usage":       keyUsage,
-		"spec":        keySpec,
-		"name":        keyName,
-		"description": keyDescription,
-		"ephemeral":   true,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create key error: %s", err.Error())
-	}
-
-	key := &provide.Key{}
-	respRaw, err := json.Marshal(resp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshall key data: %s", err.Error())
-	}
-	json.Unmarshal(respRaw, &key)
-	return key, nil
-}
-
-func keyFactory(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription string) (*provide.Key, error) {
-	resp, err := provide.CreateKey(token, vaultID, map[string]interface{}{
-		"type":        keyType,
-		"usage":       keyUsage,
-		"spec":        keySpec,
-		"name":        keyName,
-		"description": keyDescription,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create key error: %s", err.Error())
-	}
-
-	key := &provide.Key{}
-	respRaw, err := json.Marshal(resp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshall key data: %s", err.Error())
-	}
-	json.Unmarshal(respRaw, &key)
-	return key, nil
-}
 
 func keyFactoryWithSeed(token, vaultID, keyType, keyUsage, keySpec, keyName, keyDescription, seedPhrase string) (*provide.Key, error) {
 
@@ -85,57 +37,6 @@ func keyFactoryWithSeed(token, vaultID, keyType, keyUsage, keySpec, keyName, key
 	}
 	json.Unmarshal(respRaw, &key)
 	return key, nil
-}
-
-func vaultFactory(token, name, desc string) (*provide.Vault, error) {
-	resp, err := provide.CreateVault(token, map[string]interface{}{
-		"name":        name,
-		"description": desc,
-	})
-	if err != nil {
-		return nil, err
-	}
-	vlt := &provide.Vault{}
-	respRaw, err := json.Marshal(resp)
-	if err != nil {
-		return nil, err
-	}
-	json.Unmarshal(respRaw, &vlt)
-	return vlt, nil
-}
-
-func userFactory(email, password string) (*uuid.UUID, error) {
-	resp, err := ident.CreateUser("", map[string]interface{}{
-		"first_name": "A",
-		"last_name":  "User",
-		"email":      email,
-		"password":   password,
-	})
-	if err != nil {
-		return nil, errors.New("failed to create user")
-	}
-	usrID := &resp.ID
-	return usrID, nil
-}
-
-func userTokenFactory() (*string, error) {
-	newUUID, err := uuid.NewV4()
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("error generating uuid %s", err.Error()))
-	}
-	email := fmt.Sprintf("%s@provide.local", newUUID.String())
-	password := fmt.Sprintf("%s", newUUID.String())
-
-	userID, err := userFactory(email, password)
-	if err != nil || userID == nil {
-		return nil, err
-	}
-
-	resp, err := ident.Authenticate(email, password)
-	if err != nil {
-		return nil, errors.New("failed to authenticate user")
-	}
-	return resp.Token.AccessToken, nil
 }
 
 func init() {
@@ -173,22 +74,6 @@ func init() {
 		return
 	}
 
-}
-
-func unsealVault() error {
-	token, err := userTokenFactory()
-	if err != nil {
-		return fmt.Errorf("failed to create token; %s", err.Error())
-
-	}
-
-	_, err = provide.Unseal(token, map[string]interface{}{
-		"key": "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day",
-	})
-	if err != nil {
-		return fmt.Errorf("**vault not unsealed**. error: %s", err.Error())
-	}
-	return nil
 }
 
 func TestSealUnsealer(t *testing.T) {

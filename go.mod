@@ -8,6 +8,7 @@ require (
 	github.com/ethereum/go-ethereum v1.9.22
 	github.com/gin-gonic/gin v1.7.0
 	github.com/golang-migrate/migrate v3.5.4+incompatible
+	github.com/herumi/bls-eth-go-binary v0.0.0-20210102080045-a126987eca2b
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
 	github.com/kthomas/go-azure-wrapper v0.0.0-20210624073755-e84cb6805571

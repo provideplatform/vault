@@ -66,6 +66,9 @@ const KeySpecECCEd25519 = "Ed25519"
 // KeySpecECCSecp256k1 secp256k1 key spec
 const KeySpecECCSecp256k1 = "secp256k1"
 
+// KeySpecBLS12381 BLS12-381 key curve
+const KeySpecBLS12381 = "BLS12-381"
+
 // NonceSizeSymmetric chacha20 & aes256 encrypt/decrypt nonce size
 const NonceSizeSymmetric = 12
 
@@ -160,6 +163,22 @@ type KeySignVerifyRequestResponse struct {
 	Verified       *bool           `json:"verified,omitempty"`
 	Address        *string         `json:"address,omitempty"`
 	DerivationPath *string         `json:"hd_derivation_path,omitempty"`
+}
+
+// BLSAggregateRequestResponse aggregates n BLS signatures into one signature
+type BLSAggregateRequestResponse struct {
+	Signatures         []*string `json:"signatures,omitempty"`
+	AggregateSignature *string   `json:"aggregate_signature,omitempty"`
+}
+
+// BLSAggregateVerifyRequestResponse verifies an aggregated BLS signature
+// given the aggregates signature, the public keys used to generate the signature
+// and the messages signed by those public keys
+type BLSAggregateVerifyRequestResponse struct {
+	Messages   []*string `json:"messages,omitempty"`
+	PublicKeys []*string `json:"public_keys,omitempty"`
+	Signature  *string   `json:"signature,omitempty"`
+	Verified   *bool     `json:"verified,omitempty"`
 }
 
 // DetachedVerifyRequestResponse represents the API request/response parameters
@@ -397,6 +416,21 @@ func (k *Key) createRSAKeypair(bitsize int) error {
 	k.Enrich()
 
 	common.Log.Debugf("created rsa-%d key for vault: %s; public key:\n%s", bitsize, k.VaultID, *k.PublicKeyHex)
+	return nil
+}
+
+// createBLSKeypair creates a keypair using RSA(-bitsize bits)
+func (k *Key) createBLSKeypair() error {
+	blsKeyPair, err := crypto.CreateBLS12381KeyPair()
+	if err != nil {
+		return crypto.ErrCannotGenerateKey
+	}
+
+	k.PrivateKey = blsKeyPair.PrivateKey
+	k.PublicKey = blsKeyPair.PublicKey
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+
+	common.Log.Debugf("created BLS12381 key for vault: %s; public key: 0x%s", k.VaultID, *k.PublicKey)
 	return nil
 }
 
@@ -715,6 +749,11 @@ func (k *Key) create() error {
 			err := k.createRSAKeypair(KeyBits2048)
 			if err != nil {
 				return fmt.Errorf("failed to create rsa keypair; %s", err.Error())
+			}
+		case KeySpecBLS12381:
+			err := k.createBLSKeypair()
+			if err != nil {
+				return fmt.Errorf("failed to create bls keypair; %s", err.Error())
 			}
 		}
 	}
@@ -1159,7 +1198,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 
 // Sign the input with the private key
 func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39 && *k.Spec != KeySpecBLS12381) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -1268,6 +1307,14 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		rsa2048.PrivateKey = *k.PrivateKey
 		sig, sigerr = rsa2048.Sign(payload, *opts.Algorithm)
 
+	case KeySpecBLS12381:
+		if k.PrivateKey == nil {
+			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil private key", len(payload), k.ID)
+		}
+		bls := crypto.BLS12381KeyPair{}
+		bls.PrivateKey = k.PrivateKey
+		sig, sigerr = bls.Sign(payload)
+
 	default:
 		sigerr = fmt.Errorf("failed to sign %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
 	}
@@ -1281,7 +1328,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 
 // Verify the given payload against a signature using the public key
 func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39 && *k.Spec != KeySpecBLS12381) {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -1361,6 +1408,12 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 			PublicKey: *k.PublicKey,
 		}
 		return rsa2048.Verify(payload, sig, *opts.Algorithm)
+
+	case KeySpecBLS12381:
+		bls := crypto.BLS12381KeyPair{
+			PublicKey: k.PublicKey,
+		}
+		return bls.Verify(payload, sig)
 	}
 
 	return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; %s key spec not yet implemented", len(payload), k.ID, *k.Spec)
@@ -1511,6 +1564,9 @@ func ValidateKeySpec(keySpec *string) (*string, error) {
 
 	case strings.ToUpper(KeySpecRSA4096):
 		return common.StringOrNil(KeySpecRSA4096), nil
+
+	case strings.ToUpper(KeySpecBLS12381):
+		return common.StringOrNil(KeySpecBLS12381), nil
 
 	default:
 		return nil, fmt.Errorf("invalid key spec: %s", *keySpec)

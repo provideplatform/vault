@@ -53,7 +53,8 @@ func installKeysAPI(r *gin.Engine) {
 	r.POST("/api/v1/vaults/:id/keys/:keyId/sign", vaultKeySignHandler)
 	r.POST("/api/v1/vaults/:id/keys/:keyId/verify", vaultKeyVerifyHandler)
 	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
-
+	r.POST("api/v1/bls/aggregate", blsAggregateHandler)
+	r.POST("api/v1/bls/verify", blsAggregateVerifyHandler)
 	r.POST("/api/v1/verify", verifyDetachedVerifyHandler)
 }
 
@@ -936,6 +937,79 @@ func deleteVaultSecretHandler(c *gin.Context) {
 
 	provide.Render("secret deleted", 204, c)
 	return
+}
+
+// blsAggregateHandler aggregates bls signatures
+func blsAggregateHandler(c *gin.Context) {
+	_ = token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &BLSAggregateRequestResponse{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	signatures := params.Signatures
+
+	sig, err := crypto.AggregateSigs(signatures)
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	provide.Render(&BLSAggregateRequestResponse{
+		AggregateSignature: sig,
+	}, 201, c)
+}
+
+// blsAggregateVerifyHandler verifies aggregates bls signatures
+func blsAggregateVerifyHandler(c *gin.Context) {
+	_ = token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &BLSAggregateVerifyRequestResponse{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	messages := params.Messages
+	publicKeys := params.PublicKeys
+	signature := params.Signature
+
+	verified, err := crypto.AggregateVerify(signature, messages, publicKeys)
+	if err != nil {
+		provide.RenderError(err.Error(), 500, c)
+		return
+	}
+
+	provide.Render(&KeySignVerifyRequestResponse{
+		Verified: &verified,
+	}, 200, c)
+
 }
 
 func verifyDetachedVerifyHandler(c *gin.Context) {

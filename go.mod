@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.18 // indirect
-	github.com/ethereum/go-ethereum v1.9.22
+	github.com/ethereum/go-ethereum v1.9.25
 	github.com/gin-gonic/gin v1.7.0
 	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/herumi/bls-eth-go-binary v0.0.0-20210102080045-a126987eca2b

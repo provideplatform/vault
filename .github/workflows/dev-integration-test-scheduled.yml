@@ -12,14 +12,7 @@ jobs:
       - name: Setup golang
         uses: actions/setup-go@v2
         with:
-          go-version: '1.15.1'
-      - name: Checkout ident
-        uses: actions/checkout@v2
-        with:
-          repository: provideapp/ident
-          path: 'ident'
-          ref: dev
-          token: ${{ secrets.DEPLOY_GITHUB_PAT }}             
+          go-version: '1.15.1'        
       - name: Checkout vault
         uses: actions/checkout@v2
         with:

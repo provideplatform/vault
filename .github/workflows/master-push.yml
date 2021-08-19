@@ -2,7 +2,7 @@ name: Vault
 on: 
   push:
     branches:
-      - setup-gh-actions
+      - master
 jobs:
   push_to_branch:
     runs-on: ubuntu-latest

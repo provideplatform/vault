@@ -18,7 +18,7 @@ jobs:
       - name: Checkout ident
         uses: actions/checkout@v2
         with:
-          repository: provideapp/ident
+          repository: provideplatform/ident
           path: 'ident'
           ref: master
       - name: Checkout vault

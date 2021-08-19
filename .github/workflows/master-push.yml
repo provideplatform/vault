@@ -2,7 +2,7 @@ name: Vault
 on: 
   push:
     branches:
-      - master
+      - setup-gh-actions
 
 jobs:
   push_to_branch:

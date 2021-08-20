@@ -21,7 +21,6 @@ jobs:
           repository: provideapp/ident
           path: 'ident'
           ref: master
-          token: ${{ secrets.DEPLOY_GITHUB_PAT }}             
       - name: Checkout vault
         uses: actions/checkout@v2
         with:
@@ -53,3 +52,25 @@ jobs:
         with:
           status: ${{ job.status }}
           steps: ${{ toJson(steps) }}
+
+  deploy-api:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run ci-process.sh
+        shell: bash
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.PRODUCTION_AWS_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.PRODUCTION_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PRODUCTION_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.PRODUCTION_AWS_DEFAULT_REGION }}
+          AWS_DEFAULT_OUTPUT: json
+          ECR_REPOSITORY_NAME: provide/vault
+          ECS_TASK_DEFINITION_FAMILY: vault
+          ECS_CLUSTER: production
+          ECS_SERVICE_NAME: vault
+          RUN_INTEGRATION_SUITE: false
+        run: |
+          chmod +x "${GITHUB_WORKSPACE}/ops/ci-process.sh"
+          "${GITHUB_WORKSPACE}/ops/ci-process.sh"

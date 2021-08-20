@@ -2,7 +2,7 @@ name: Vault
 on: 
   push:
     branches:
-      - fix-ecs-deployment
+      - master
 
 jobs:
   push_to_branch:

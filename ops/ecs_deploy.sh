@@ -70,7 +70,7 @@ docker_build()
     sudo docker tag provide/vault:latest "${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/provide/vault:${buildRef}"
 
     echo 'Docker push...'
-    $(aws ecr get-login --no-include-email --region us-east-1)
+    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
     sudo docker push "${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/provide/vault:${buildRef}"
 }
 

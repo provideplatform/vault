@@ -35,6 +35,11 @@ var (
 )
 
 func init() {
+	if common.ConsumeNATSStreamingSubscriptions {
+		common.Log.Panicf("dedicated API instance started with CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true")
+		return
+	}
+
 	util.RequireJWTVerifiers()
 	util.RequireGin()
 	redisutil.RequireRedis()

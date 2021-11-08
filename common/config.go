@@ -14,6 +14,9 @@ const UnsealerKeyRequiredBytes = 32
 var (
 	// Log is the configured logger
 	Log *logger.Logger
+
+	// ConsumeNATSStreamingSubscriptions is a flag the indicates if the ident instance is running in API or consumer mode
+	ConsumeNATSStreamingSubscriptions bool
 )
 
 func init() {

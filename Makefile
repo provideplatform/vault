@@ -1,4 +1,4 @@
-.PHONY: build clean ecs_deploy install integration lint migrate mod run_api run_local run_local_dependencies stop_local_dependencies stop_local test
+.PHONY: build clean ecs_deploy install integration lint migrate mod run_api run_consumer run_local run_local_dependencies stop_local_dependencies stop_local test
 
 clean:
 	rm -rf ./.bin 2>/dev/null || true
@@ -8,8 +8,9 @@ clean:
 
 build: clean mod
 	go fmt ./...
-	go build -v -o ./.bin/vault_api ./cmd/api
-	go build -v -o ./.bin/vault_migrate ./cmd/migrate
+	CGO_CFLAGS=-Wno-undef-prefix go build -v -o ./.bin/vault_api ./cmd/api
+	CGO_CFLAGS=-Wno-undef-prefix go build -v -o ./.bin/vault_consumer ./cmd/consumer
+	CGO_CFLAGS=-Wno-undef-prefix go build -v -o ./.bin/vault_migrate ./cmd/migrate
 
 ecs_deploy:
 	./ops/ecs_deploy.sh
@@ -22,7 +23,7 @@ lint:
 
 migrate: mod
 	rm -rf ./.bin/vault_migrate 2>/dev/null || true
-	go build -v -o ./.bin/vault_migrate ./cmd/migrate
+	CGO_CFLAGS=-Wno-undef-prefix go build -v -o ./.bin/vault_migrate ./cmd/migrate
 	./ops/migrate.sh
 
 mod:
@@ -32,6 +33,9 @@ mod:
 
 run_api: build run_local_dependencies
 	./ops/run_api.sh
+
+run_consumer: build run_consumer
+	./ops/run_consumer.sh
 
 run_local: build run_local_dependencies
 	./ops/run_local.sh

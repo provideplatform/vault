@@ -30,7 +30,7 @@ if [[ -z "${DATABASE_NAME}" ]]; then
 fi
 
 if [[ -z "${DATABASE_USER}" ]]; then
-  DATABASE_USER=vault-proxy
+  DATABASE_USER=vault
 fi
 
 if [[ -z "${DATABASE_PASSWORD}" ]]; then

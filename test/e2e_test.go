@@ -385,6 +385,46 @@ func TestAPIVerifyEd25519Signature(t *testing.T) {
 	}
 }
 
+func TestAPIVerifyEd25519NKeySignature(t *testing.T) {
+
+	token, err := userTokenFactory()
+	if err != nil {
+		t.Errorf("failed to create token; %s", err.Error())
+		return
+	}
+
+	vault, err := vaultFactory(*token, "vaulty vault", "just a vault with a key")
+	if err != nil {
+		t.Errorf("failed to create vault; %s", err.Error())
+		return
+	}
+
+	key, err := keyFactory(*token, vault.ID.String(), "asymmetric", "sign/verify", cryptovault.KeySpecECCEd25519NKey, "namey name", "cute description")
+	if err != nil {
+		t.Errorf("failed to create key; %s", err.Error())
+		return
+	}
+
+	payloadBytes, _ := common.RandomBytes(1000)
+	messageToSign := hex.EncodeToString(payloadBytes)
+	sigresponse, err := provide.SignMessage(*token, vault.ID.String(), key.ID.String(), messageToSign, nil)
+	if err != nil {
+		t.Errorf("failed to sign message %s", err.Error())
+		return
+	}
+
+	verifyresponse, err := provide.VerifySignature(*token, vault.ID.String(), key.ID.String(), messageToSign, *sigresponse.Signature, nil)
+	if err != nil {
+		t.Errorf("failed to verify signature for vault: %s", err.Error())
+		return
+	}
+
+	if verifyresponse.Verified != true {
+		t.Error("failed to verify signature for vault")
+		return
+	}
+}
+
 func TestAPIVerifyRSA2048PS256Signature(t *testing.T) {
 
 	token, err := userTokenFactory()

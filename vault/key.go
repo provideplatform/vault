@@ -1396,11 +1396,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 		return crypto.Ed25519Verify(*k.PublicKey, payload, sig)
 
 	case KeySpecECCEd25519NKey:
-		publicKey, err := hex.DecodeString(string(*k.PublicKey))
-		if err != nil {
-			return err
-		}
-		return crypto.Ed25519NKeyVerify(publicKey, payload, sig)
+		return crypto.Ed25519NKeyVerify(*k.PublicKey, payload, sig)
 
 	case KeySpecECCBIP39:
 		var path *accounts.DerivationPath

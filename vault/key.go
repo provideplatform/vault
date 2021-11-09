@@ -343,7 +343,7 @@ func (k *Key) createEd25519NKeyKeypair() error {
 		return crypto.ErrCannotGenerateKey
 	}
 
-	seed, err := keyPair.PrivateKey()
+	seed, err := keyPair.Seed()
 	if err != nil {
 		return crypto.ErrCannotGenerateKey
 	}
@@ -1373,7 +1373,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 
 // Verify the given payload against a signature using the public key
 func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39 && *k.Spec != KeySpecBLS12381) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCEd25519NKey && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39 && *k.Spec != KeySpecBLS12381) {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 

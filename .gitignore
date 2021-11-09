@@ -25,6 +25,7 @@ _cgo_export.*
 *.iml
 
 vault_api
+vault_consumer
 vault_migrate
 
 # Miscellaneous

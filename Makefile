@@ -8,9 +8,9 @@ clean:
 
 build: clean mod
 	go fmt ./...
-	CGO_CFLAGS=-Wno-undef-prefix go build -v -o ./.bin/vault_api ./cmd/api
-	CGO_CFLAGS=-Wno-undef-prefix go build -v -o ./.bin/vault_consumer ./cmd/consumer
-	CGO_CFLAGS=-Wno-undef-prefix go build -v -o ./.bin/vault_migrate ./cmd/migrate
+	go build -v -o ./.bin/vault_api ./cmd/api
+	go build -v -o ./.bin/vault_consumer ./cmd/consumer
+	go build -v -o ./.bin/vault_migrate ./cmd/migrate
 
 ecs_deploy:
 	./ops/ecs_deploy.sh
@@ -23,7 +23,7 @@ lint:
 
 migrate: mod
 	rm -rf ./.bin/vault_migrate 2>/dev/null || true
-	CGO_CFLAGS=-Wno-undef-prefix go build -v -o ./.bin/vault_migrate ./cmd/migrate
+	go build -v -o ./.bin/vault_migrate ./cmd/migrate
 	./ops/migrate.sh
 
 mod:

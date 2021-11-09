@@ -1601,6 +1601,9 @@ func ValidateKeySpec(keySpec *string) (*string, error) {
 	case strings.ToUpper(KeySpecECCEd25519):
 		return common.StringOrNil(KeySpecECCEd25519), nil
 
+	case strings.ToUpper(KeySpecECCEd25519NKey):
+		return common.StringOrNil(KeySpecECCEd25519NKey), nil
+
 	case strings.ToUpper(KeySpecECCSecp256k1):
 		return common.StringOrNil(KeySpecECCSecp256k1), nil
 

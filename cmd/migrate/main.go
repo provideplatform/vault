@@ -55,7 +55,7 @@ func main() {
 		panic(err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance("file://./ops/migration", cfg.DatabaseName, driver)
+	m, err := migrate.NewWithDatabaseInstance("file://./ops/migrations", cfg.DatabaseName, driver)
 	if err != nil {
 		common.Log.Warningf("migration failed; %s", err.Error())
 		panic(err)

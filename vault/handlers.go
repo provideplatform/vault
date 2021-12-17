@@ -278,9 +278,9 @@ func vaultsListHandler(c *gin.Context) {
 
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		query = db.Where("application_id = ?", bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+	} else if bearer.OrganizationID != nil {
 		query = db.Where("organization_id = ?", bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+	} else if bearer.UserID != nil {
 		query = db.Where("user_id = ?", bearer.UserID)
 	}
 
@@ -329,14 +329,14 @@ func createVaultHandler(c *gin.Context) {
 		return
 	}
 
-	if bearer.OrganizationID != nil && vault.OrganizationID != nil && bearer.OrganizationID.String() != vault.OrganizationID.String() {
+	if bearer.OrganizationID != nil && vault.OrganizationID != nil && *bearer.OrganizationID != *vault.OrganizationID {
 		err = errors.New("Failed to create vault; authorized organization id did not match organization_id provided in params")
 		common.Log.Warningf(err.Error())
 		provide.RenderError(err.Error(), 403, c)
 		return
 	}
 
-	if bearer.UserID != nil && vault.UserID != nil && bearer.UserID.String() != vault.UserID.String() {
+	if bearer.UserID != nil && vault.UserID != nil && *bearer.UserID != *vault.UserID {
 		err = errors.New("Failed to create vault; authorized user id did not match user_id provided in params")
 		common.Log.Warningf(err.Error())
 		provide.RenderError(err.Error(), 403, c)
@@ -365,7 +365,7 @@ func deleteVaultHandler(c *gin.Context) {
 	userID := bearer.UserID
 	appID := bearer.ApplicationID
 	orgID := bearer.OrganizationID
-	if bearer == nil || ((userID == nil || *userID == uuid.Nil) && (appID == nil || *appID == uuid.Nil) && (orgID == nil || *orgID == uuid.Nil)) {
+	if bearer == nil || (userID == nil && (appID == nil || *appID == uuid.Nil) && (orgID == nil)) {
 		provide.RenderError("unauthorized", 401, c)
 		return
 	}
@@ -421,9 +421,9 @@ func vaultKeysListHandler(c *gin.Context) {
 
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		query = query.Where("id = ? AND application_id = ?", c.Param("id"), bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+	} else if bearer.OrganizationID != nil {
 		query = query.Where("id = ? AND organization_id = ?", c.Param("id"), bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+	} else if bearer.UserID != nil {
 		query = query.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID)
 	}
 	query.Find(&vault)
@@ -554,9 +554,9 @@ func vaultKeyDetailsHandler(c *gin.Context) {
 
 	if bearer.ApplicationID != nil && *bearer.ApplicationID != uuid.Nil {
 		query = query.Where("id = ? AND application_id = ?", c.Param("id"), bearer.ApplicationID)
-	} else if bearer.OrganizationID != nil && *bearer.OrganizationID != uuid.Nil {
+	} else if bearer.OrganizationID != nil {
 		query = query.Where("id = ? AND organization_id = ?", c.Param("id"), bearer.OrganizationID)
-	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
+	} else if bearer.UserID != nil {
 		query = query.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID)
 	}
 	query.Find(&vault)

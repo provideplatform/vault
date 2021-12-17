@@ -12,7 +12,8 @@ import (
 func New(
 	db *gorm.DB,
 	name, description string,
-	applicationID, organizationID, userID *uuid.UUID,
+	applicationID *uuid.UUID,
+	organizationID, userID *string,
 ) *Vault {
 	vault := &Vault{
 		ApplicationID:  applicationID,

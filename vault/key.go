@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -26,6 +27,7 @@ import (
 	providecrypto "github.com/provideplatform/provide-go/crypto"
 	"github.com/provideplatform/vault/common"
 	"github.com/provideplatform/vault/crypto"
+	"github.com/spruceid/didkit-go"
 	"golang.org/x/crypto/chacha20"
 )
 
@@ -65,6 +67,9 @@ const KeySpecECCEd25519 = "Ed25519"
 
 // KeySpecECCEd25519 Ed25519 key spec
 const KeySpecECCEd25519NKey = "Ed25519-nkey"
+
+// KeySpecECCEd25519 Ed25519 key spec
+const KeySpecECCEd25519DIDKey = "Ed25519-did:key"
 
 // KeySpecECCSecp256k1 secp256k1 key spec
 const KeySpecECCSecp256k1 = "secp256k1"
@@ -121,6 +126,7 @@ type Key struct {
 	Fingerprint         *string `sql:"-" json:"fingerprint,omitempty"`
 	DerivationPath      *string `sql:"-" json:"hd_derivation_path,omitempty"`
 	// HardenedDerivationPath      *string `json:"hardened_hd_derivation_path,omitempty"` <-- may be useful to store this, i.e., m/44'/60'/0'
+	DIDKey *string `sql:"-" json:"did_key,omitempty"`
 
 	encrypted *bool      `sql:"-"`
 	mutex     sync.Mutex `sql:"-"`
@@ -329,6 +335,32 @@ func (k *Key) createEd25519Keypair() error {
 	k.Spec = common.StringOrNil(KeySpecECCEd25519)
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, hex.EncodeToString(*k.PublicKey))
+	return nil
+}
+
+// createEd25519NKeyKeypair creates an Ed25519 NKey keypair
+func (k *Key) createEd25519DIDKeyKeypair() error {
+	keyPair, err := crypto.NKeyCreatePair(crypto.NKeyPrefixByteSeed)
+	if err != nil {
+		return crypto.ErrCannotGenerateKey
+	}
+
+	publicKey, err := keyPair.PublicKey()
+	if err != nil {
+		return crypto.ErrCannotGenerateKey
+	}
+
+	seed, err := keyPair.Seed()
+	if err != nil {
+		return crypto.ErrCannotGenerateKey
+	}
+
+	k.Seed = &seed
+	k.PublicKey = &publicKey
+	k.Type = common.StringOrNil(KeyTypeAsymmetric)
+	k.Spec = common.StringOrNil(KeySpecECCEd25519DIDKey)
+
+	common.Log.Debugf("created Ed25519DIDKey key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, hex.EncodeToString(*k.PublicKey))
 	return nil
 }
 
@@ -679,10 +711,38 @@ func (k *Key) Enrich() {
 			enrichRSA()
 		case KeySpecRSA4096:
 			enrichRSA()
+		case KeySpecECCEd25519DIDKey:
+			k.enrichDIDKey()
 		default:
 			k.PublicKeyHex = common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(*k.PublicKey)))
 		}
 	}
+}
+
+func (k *Key) enrichDIDKey() error {
+	didKey := map[string]interface{}{
+		"kty": "OKP",
+		"crv": "Ed25519",
+		"x":   base64.URLEncoding.EncodeToString(*k.PublicKey),
+		"d":   base64.URLEncoding.EncodeToString(*k.Seed),
+	}
+
+	didKeyStr, err := json.Marshal(didKey)
+
+	if err != nil {
+		common.Log.Errorf("Failed to generate did:key; err %s", err.Error())
+		return err
+	}
+
+	did, err := didkit.KeyToDID("key", string(didKeyStr))
+
+	if err != nil {
+		common.Log.Errorf("Failed to generate did:key; err %s", err.Error())
+		return err
+	}
+
+	k.DIDKey = common.StringOrNil(fmt.Sprintf("%s", did))
+	return nil
 }
 
 // Generate key material and persist the key to the vault
@@ -762,6 +822,11 @@ func (k *Key) create() error {
 			}
 		case KeySpecECCEd25519NKey:
 			err := k.createEd25519NKeyKeypair()
+			if err != nil {
+				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
+			}
+		case KeySpecECCEd25519DIDKey:
+			err := k.createEd25519DIDKeyKeypair()
 			if err != nil {
 				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
 			}

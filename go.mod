@@ -23,6 +23,7 @@ require (
 	github.com/provideplatform/ident v0.9.10-0.20210625024122-80a05d6cf1d7
 	github.com/provideplatform/provide-go v0.0.0-20210624064849-d7328258f0d8
 	github.com/shirou/gopsutil v3.21.11-0.20211107133826-214bc8d94858+incompatible // indirect
+	github.com/spruceid/didkit-go v0.0.0-00010101000000-000000000000
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
@@ -30,7 +31,5 @@ require (
 )
 
 replace github.com/provideplatform/ident => ../ident
-
-replace github.com/provideplatform/provide-go => ../provide-go
 
 replace github.com/spruceid/didkit-go => ../didkit-go

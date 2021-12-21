@@ -8,9 +8,9 @@ clean:
 
 build: clean mod
 	go fmt ./...
-	CGO_ENABLED=0 go build -v -o ./.bin/vault_api ./cmd/api
-	CGO_ENABLED=0 go build -v -o ./.bin/vault_consumer ./cmd/consumer
-	CGO_ENABLED=0 go build -v -o ./.bin/vault_migrate ./cmd/migrate
+	go build -v -o ./.bin/vault_api ./cmd/api
+	go build -v -o ./.bin/vault_consumer ./cmd/consumer
+	go build -v -o ./.bin/vault_migrate ./cmd/migrate
 
 ecs_deploy:
 	./ops/ecs_deploy.sh

@@ -65,11 +65,11 @@ const KeySpecECCC25519 = "C25519"
 // KeySpecECCEd25519 Ed25519 key spec
 const KeySpecECCEd25519 = "Ed25519"
 
-// KeySpecECCEd25519 Ed25519 key spec
-const KeySpecECCEd25519NKey = "Ed25519-nkey"
-
-// KeySpecECCEd25519 Ed25519 key spec
+// KeySpecECCEd25519DIDKey Ed25519 key spec
 const KeySpecECCEd25519DIDKey = "Ed25519-did:key"
+
+// KeySpecECCEd25519NKey Ed25519 key spec
+const KeySpecECCEd25519NKey = "Ed25519-nkey"
 
 // KeySpecECCSecp256k1 secp256k1 key spec
 const KeySpecECCSecp256k1 = "secp256k1"
@@ -334,32 +334,6 @@ func (k *Key) createEd25519Keypair() error {
 	k.Spec = common.StringOrNil(KeySpecECCEd25519)
 
 	common.Log.Debugf("created Ed25519 key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, hex.EncodeToString(*k.PublicKey))
-	return nil
-}
-
-// createEd25519NKeyKeypair creates an Ed25519 NKey keypair
-func (k *Key) createEd25519DIDKeyKeypair() error {
-	keyPair, err := crypto.NKeyCreatePair(crypto.NKeyPrefixByteSeed)
-	if err != nil {
-		return crypto.ErrCannotGenerateKey
-	}
-
-	publicKey, err := keyPair.PublicKey()
-	if err != nil {
-		return crypto.ErrCannotGenerateKey
-	}
-
-	seed, err := keyPair.Seed()
-	if err != nil {
-		return crypto.ErrCannotGenerateKey
-	}
-
-	k.Seed = &seed
-	k.PublicKey = &publicKey
-	k.Type = common.StringOrNil(KeyTypeAsymmetric)
-	k.Spec = common.StringOrNil(KeySpecECCEd25519DIDKey)
-
-	common.Log.Debugf("created Ed25519DIDKey key with %d-byte seed for vault: %s; public key: %s", len(seed), k.VaultID, hex.EncodeToString(*k.PublicKey))
 	return nil
 }
 
@@ -818,7 +792,7 @@ func (k *Key) create() error {
 				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
 			}
 		case KeySpecECCEd25519DIDKey:
-			err := k.createEd25519DIDKeyKeypair()
+			err := k.createEd25519Keypair()
 			if err != nil {
 				return fmt.Errorf("failed to create Ed22519 keypair; %s", err.Error())
 			}
@@ -1295,7 +1269,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 
 // Sign the input with the private key
 func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCEd25519NKey && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39 && *k.Spec != KeySpecBLS12381) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCEd25519NKey && *k.Spec != KeySpecECCEd25519DIDKey && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39 && *k.Spec != KeySpecBLS12381) {
 		return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -1353,7 +1327,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 			}
 		}
 
-	case KeySpecECCEd25519:
+	case KeySpecECCEd25519, KeySpecECCEd25519DIDKey:
 		if k.Seed == nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; nil Ed25519 seed", len(payload), k.ID)
 		}
@@ -1438,7 +1412,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 
 // Verify the given payload against a signature using the public key
 func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
-	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCEd25519NKey && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39 && *k.Spec != KeySpecBLS12381) {
+	if k.Spec == nil || (*k.Spec != KeySpecECCBabyJubJub && *k.Spec != KeySpecECCEd25519 && *k.Spec != KeySpecECCEd25519NKey && *k.Spec != KeySpecECCEd25519DIDKey && *k.Spec != KeySpecECCSecp256k1 && *k.Spec != KeySpecRSA4096 && *k.Spec != KeySpecRSA3072 && *k.Spec != KeySpecRSA2048 && *k.Spec != KeySpecECCBIP39 && *k.Spec != KeySpecBLS12381) {
 		return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; nil or invalid key spec", len(payload), k.ID)
 	}
 
@@ -1457,7 +1431,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 	case KeySpecECCBabyJubJub:
 		return providecrypto.TECVerify(*k.PublicKey, payload, sig)
 
-	case KeySpecECCEd25519:
+	case KeySpecECCEd25519, KeySpecECCEd25519DIDKey:
 		return crypto.Ed25519Verify(*k.PublicKey, payload, sig)
 
 	case KeySpecECCEd25519NKey:
@@ -1665,6 +1639,9 @@ func ValidateKeySpec(keySpec *string) (*string, error) {
 
 	case strings.ToUpper(KeySpecECCEd25519):
 		return common.StringOrNil(KeySpecECCEd25519), nil
+
+	case strings.ToUpper(KeySpecECCEd25519DIDKey):
+		return common.StringOrNil(KeySpecECCEd25519DIDKey), nil
 
 	case strings.ToUpper(KeySpecECCEd25519NKey):
 		return common.StringOrNil(KeySpecECCEd25519NKey), nil

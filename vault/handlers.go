@@ -55,7 +55,8 @@ func installKeysAPI(r *gin.Engine) {
 	r.DELETE("/api/v1/vaults/:id/keys/:keyId", deleteVaultKeyHandler)
 	r.POST("api/v1/bls/aggregate", blsAggregateHandler)
 	r.POST("api/v1/bls/verify", blsAggregateVerifyHandler)
-	r.POST("/api/v1/verify", verifyDetachedVerifyHandler)
+	r.POST("/api/v1/encrypt", detachedEncryptHandler)
+	r.POST("/api/v1/verify", detachedVerifyHandler)
 }
 
 func installSecretsAPI(r *gin.Engine) {
@@ -181,11 +182,9 @@ func vaultKeyEncryptHandler(c *gin.Context) {
 	}
 
 	// handle empty nonces
-	nonce := []byte{}
+	var nonce []byte
 	if params.Nonce != nil {
 		nonce = []byte(*params.Nonce)
-	} else {
-		nonce = nil
 	}
 
 	var key = &Key{}
@@ -1012,7 +1011,95 @@ func blsAggregateVerifyHandler(c *gin.Context) {
 
 }
 
-func verifyDetachedVerifyHandler(c *gin.Context) {
+func detachedEncryptHandler(c *gin.Context) {
+	// path is protected by valid ident token, but no bearer parameters are required
+	_ = token.InContext(c)
+
+	if vaultIsSealed() {
+		provide.RenderError("vault is sealed", 403, c)
+		return
+	}
+
+	buf, err := c.GetRawData()
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	params := &DetachedEncryptDecryptRequestResponse{}
+	err = json.Unmarshal(buf, &params)
+	if err != nil {
+		provide.RenderError(err.Error(), 400, c)
+		return
+	}
+
+	// first confirm we have the required input parameters
+	if common.StringOrNil(*params.Spec) == nil {
+		provide.RenderError("key spec is required", 422, c)
+		return
+	}
+
+	// ensure the key spec is valid and correct the case
+	_, err = ValidateKeySpec(params.Spec)
+	if err != nil {
+		provide.RenderError(err.Error(), 422, c)
+		return
+	}
+
+	if params.Spec == nil {
+		provide.RenderError("spec is required", 422, c)
+		return
+	}
+
+	if params.PublicKey == nil {
+		provide.RenderError("public key is required", 422, c)
+		return
+	}
+
+	if params.Data == nil {
+		provide.RenderError("data is required", 422, c)
+		return
+	}
+
+	var publicKey []byte
+
+	// next confirm that the public key provided is in hex format
+	pubkey := strings.Replace(*params.PublicKey, "0x", "", -1)
+	publicKey, err = hex.DecodeString(pubkey)
+	if err != nil {
+		common.Log.Debugf("attempt to converting public key (hex) to bytes failed; %s", err.Error())
+		publicKey = []byte(pubkey)
+	}
+
+	data, err := hex.DecodeString(*params.Data)
+	if err != nil {
+		msg := fmt.Sprintf("failed to decode message from hex; %s", err.Error())
+		common.Log.Warningf(msg)
+		provide.RenderError(msg, 422, c)
+		return
+	}
+
+	// var nonce []byte // this is not currently allowed to be passed in... we randomly generate it
+	ciphertext, err := crypto.ECIESEncrypt(publicKey, data, nil)
+	if err != nil {
+		provide.RenderError(fmt.Sprintf("failed to encrypt message; %s", err.Error()), 500, c)
+		return
+	}
+
+	// the returned ciphertext has the nonce prepended... so we split it and return individually for consumption
+	nonceval := make([]byte, hex.EncodedLen(crypto.NonceSizeECIES))
+	hex.Encode(nonceval, ciphertext[0:crypto.NonceSizeECIES])
+
+	hexval := make([]byte, hex.EncodedLen(len(ciphertext[crypto.NonceSizeECIES:])))
+	hex.Encode(hexval, ciphertext[crypto.NonceSizeECIES:])
+
+	provide.Render(&DetachedEncryptDecryptRequestResponse{
+		Data:  common.StringOrNil(string(hexval)),
+		Nonce: common.StringOrNil(string(nonceval)),
+	}, 200, c)
+}
+
+func detachedVerifyHandler(c *gin.Context) {
 	// path is protected by valid ident token, but no bearer parameters are required
 	_ = token.InContext(c)
 

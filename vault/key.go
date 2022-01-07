@@ -62,6 +62,9 @@ const KeySpecECCBIP39 = "BIP39"
 // KeySpecECCC25519 C25519 key spec
 const KeySpecECCC25519 = "C25519"
 
+// KeySpecECCECIES ecies key spec
+const KeySpecECCECIES = "ECIES"
+
 // KeySpecECCEd25519 Ed25519 key spec
 const KeySpecECCEd25519 = "Ed25519"
 
@@ -172,6 +175,7 @@ type KeySignVerifyRequestResponse struct {
 	Verified       *bool           `json:"verified,omitempty"`
 	Address        *string         `json:"address,omitempty"`
 	DerivationPath *string         `json:"hd_derivation_path,omitempty"`
+	PublicKey      *string         `json:"public_key,omitempty"`
 }
 
 // BLSAggregateRequestResponse aggregates n BLS signatures into one signature
@@ -188,6 +192,14 @@ type BLSAggregateVerifyRequestResponse struct {
 	PublicKeys []*string `json:"public_keys,omitempty"`
 	Signature  *string   `json:"signature,omitempty"`
 	Verified   *bool     `json:"verified,omitempty"`
+}
+
+// DetachedEncryptDecryptRequestResponse contains the data to be encrypted/decrypted
+type DetachedEncryptDecryptRequestResponse struct {
+	Data      *string `json:"data,omitempty"`
+	Nonce     *string `json:"nonce,omitempty"` // optional nonce parameter
+	PublicKey *string `json:"public_key,omitempty"`
+	Spec      *string `json:"spec,omitempty"`
 }
 
 // DetachedVerifyRequestResponse represents the API request/response parameters
@@ -1052,7 +1064,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 		var err error
 		plaintext, err = aes256.Decrypt(ciphertext, nonce)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
+			return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key %s; %s", len(plaintext), k.ID, err.Error())
 		}
 
 	case KeySpecChaCha20:
@@ -1062,7 +1074,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 		var err error
 		plaintext, err = chacha.Decrypt(ciphertext, nonce)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
+			return nil, fmt.Errorf("failed to decrypt %d-byte ciphertext using key %s; %s", len(plaintext), k.ID, err.Error())
 		}
 	}
 
@@ -1169,7 +1181,7 @@ func (k *Key) Encrypt(plaintext []byte, nonce []byte) ([]byte, error) {
 }
 
 // encryptAsymmetric attempts asymmetric encryption using the public key;
-// returns the ciphertext any error
+// returns the ciphertext and any error
 func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -1184,6 +1196,12 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 	var err error
 
 	switch *k.Spec {
+	case KeySpecECCECIES:
+		ciphertext, err = crypto.ECIESEncrypt(*k.PublicKey, plaintext, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt; %s", err.Error())
+		}
+
 	case KeySpecRSA4096:
 		rsa4096key := crypto.RSAKeyPair{}
 		if k.PublicKey != nil {
@@ -1191,7 +1209,7 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 		}
 		ciphertext, err = rsa4096key.Encrypt(plaintext)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
+			return nil, fmt.Errorf("failed to encrypt; %s", err.Error())
 		}
 
 	case KeySpecRSA3072:
@@ -1201,7 +1219,7 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 		}
 		ciphertext, err = rsa3072key.Encrypt(plaintext)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
+			return nil, fmt.Errorf("failed to encrypt; %s", err.Error())
 		}
 
 	case KeySpecRSA2048:
@@ -1211,7 +1229,7 @@ func (k *Key) encryptAsymmetric(plaintext []byte) ([]byte, error) {
 		}
 		ciphertext, err = rsa2048key.Encrypt(plaintext)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt. Error: %s", err.Error())
+			return nil, fmt.Errorf("failed to encrypt; %s", err.Error())
 		}
 	}
 	return ciphertext, nil
@@ -1249,7 +1267,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 		var err error
 		ciphertext, err = aes256.Encrypt(plaintext, nonce)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
+			return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key %s; %s", len(plaintext), k.ID, err.Error())
 		}
 
 	case KeySpecChaCha20:
@@ -1260,7 +1278,7 @@ func (k *Key) encryptSymmetric(plaintext []byte, nonce []byte) ([]byte, error) {
 		var err error
 		ciphertext, err = chacha.Encrypt(plaintext, nonce)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key %s. Error: %s", len(plaintext), k.ID, err.Error())
+			return nil, fmt.Errorf("failed to encrypt %d-byte plaintext using key %s; %s", len(plaintext), k.ID, err.Error())
 		}
 	}
 
@@ -1642,6 +1660,9 @@ func ValidateKeySpec(keySpec *string) (*string, error) {
 
 	case strings.ToUpper(KeySpecECCEd25519DIDKey):
 		return common.StringOrNil(KeySpecECCEd25519DIDKey), nil
+
+	case strings.ToUpper(KeySpecECCECIES):
+		return common.StringOrNil(KeySpecECCECIES), nil
 
 	case strings.ToUpper(KeySpecECCEd25519NKey):
 		return common.StringOrNil(KeySpecECCEd25519NKey), nil

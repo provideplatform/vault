@@ -118,6 +118,7 @@ type Key struct {
 	EphemeralPrivateKey *string `sql:"-" json:"private_key,omitempty"`
 	EphemeralSeed       *string `sql:"-" json:"seed,omitempty"`
 	PublicKeyHex        *string `sql:"-" json:"public_key,omitempty"`
+	Fingerprint         *string `sql:"-" json:"fingerprint,omitempty"`
 	DerivationPath      *string `sql:"-" json:"hd_derivation_path,omitempty"`
 	// HardenedDerivationPath      *string `json:"hardened_hd_derivation_path,omitempty"` <-- may be useful to store this, i.e., m/44'/60'/0'
 
@@ -646,6 +647,13 @@ func (k *Key) Enrich() {
 			Type:  "PUBLIC KEY",
 			Bytes: publicKeyBytes,
 		})))
+
+		if k.PublicKeyHex != nil {
+			fingerprint, err := crypto.SSHFingerprint([]byte(*k.PublicKeyHex))
+			if err == nil {
+				k.Fingerprint = common.StringOrNil(string(fingerprint))
+			}
+		}
 	}
 
 	if k.PublicKey != nil {

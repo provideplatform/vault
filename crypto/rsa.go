@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 
 	"github.com/kthomas/go-pgputil"
+	"github.com/provideplatform/vault/common"
+	"golang.org/x/crypto/ssh"
 )
 
 // RSAKeyPair is the internal struct for an asymmetric keypair
@@ -330,4 +332,21 @@ func (k *RSAKeyPair) Decrypt(ciphertext []byte) ([]byte, error) {
 		return nil, ErrCannotDecrypt
 	}
 	return plaintext, nil
+}
+
+// SSHFingerprint returns the SSH fingerprint for the given RSA public key
+func SSHFingerprint(rsaPublicKeyPEM []byte) ([]byte, error) {
+	publicKey, err := pgputil.DecodeRSAPublicKeyFromPEM(rsaPublicKeyPEM)
+	if err != nil {
+		common.Log.Warningf("failed to decode RSA public key from PEM; %s", err.Error())
+		return nil, err
+	}
+
+	sshPublicKey, err := ssh.NewPublicKey(publicKey)
+	if err != nil {
+		common.Log.Warningf("failed to decode SSH public key for fingerprinting; %s", err.Error())
+		return nil, err
+	}
+
+	return []byte(ssh.FingerprintLegacyMD5(sshPublicKey)), nil
 }

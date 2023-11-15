@@ -8,7 +8,7 @@ require (
 	github.com/ethereum/go-ethereum v1.9.22
 	github.com/gin-gonic/gin v1.7.0
 	github.com/golang-migrate/migrate v3.5.4+incompatible
-	github.com/herumi/bls-eth-go-binary v0.0.0-20210102080045-a126987eca2b
+	github.com/herumi/bls-eth-go-binary v1.32.1
 	github.com/jinzhu/gorm v1.9.16
 	github.com/joho/godotenv v1.3.0
 	github.com/kthomas/go-azure-wrapper v0.0.0-20210624073755-e84cb6805571
@@ -21,7 +21,7 @@ require (
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/provideplatform/ident v0.9.10-0.20210625024122-80a05d6cf1d7
-	github.com/provideplatform/provide-go v0.0.0-20210624064849-d7328258f0d8
+	github.com/provideplatform/provide-go v0.0.0-20231115013605-60e44b8f3e2f
 	github.com/shirou/gopsutil v3.21.11-0.20211107133826-214bc8d94858+incompatible // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tyler-smith/go-bip32 v1.0.0

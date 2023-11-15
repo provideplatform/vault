@@ -1,3 +1,6 @@
+//go:build integration || secret
+// +build integration secret
+
 /*
  * Copyright 2017-2022 Provide Technologies Inc.
  *
@@ -14,16 +17,14 @@
  * limitations under the License.
  */
 
-// +build integration secret
-
 package test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/provideplatform/vault/common"
 	provide "github.com/provideplatform/provide-go/api/vault"
+	"github.com/provideplatform/vault/common"
 )
 
 func TestAPILIstSecretTypeFilter(t *testing.T) {

@@ -1,3 +1,6 @@
+//go:build integration || vault || bls
+// +build integration vault bls
+
 /*
  * Copyright 2017-2022 Provide Technologies Inc.
  *
@@ -13,8 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-// +build integration vault bls
 
 package test
 

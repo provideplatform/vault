@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 /*
  * Copyright 2017-2022 Provide Technologies Inc.
  *
@@ -13,8 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-// +build unit
 
 package test
 
@@ -345,7 +346,7 @@ func TestGetVault(t *testing.T) {
 	}
 }
 
-//TODO refactor vault factory to accept inputs
+// TODO refactor vault factory to accept inputs
 func TestGetAllOrgVaults(t *testing.T) {
 	vlt := vaultFactory()
 	if vlt.ID == uuid.Nil {

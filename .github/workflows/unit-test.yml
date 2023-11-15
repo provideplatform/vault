@@ -29,7 +29,7 @@ jobs:
       - name: Setup golang
         uses: actions/setup-go@v2
         with:
-          go-version: '1.15.1'
+          go-version: '1.16'
       - run: docker-compose -f ./ops/docker-compose-db.yml up -d
         working-directory: vaultyvault
       - run: go mod tidy

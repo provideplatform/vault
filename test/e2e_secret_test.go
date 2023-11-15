@@ -47,10 +47,10 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 	secretType := "filtered"
 	var secretError error
 	_, secretError = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name,
+		"name":        name,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 
 	if secretError != nil {
@@ -60,10 +60,10 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 
 	name2 := fmt.Sprintf("secretname2-%s", common.RandomString(12))
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name2,
+		"name":        name2,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
@@ -73,10 +73,10 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 	name3 := fmt.Sprintf("secretname3-%s", common.RandomString(12))
 	secret3Type := "should_not_appear"
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name3,
+		"name":        name3,
 		"description": description,
-		"secret": secret,
-		"type": secret3Type,
+		"secret":      secret,
+		"type":        secret3Type,
 	})
 	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
@@ -134,10 +134,10 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 	secretType := "filtered"
 	var secretError error
 	_, secretError = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name,
+		"name":        name,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 
 	if secretError != nil {
@@ -148,10 +148,10 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 	name3 := fmt.Sprintf("secretname3-%s", common.RandomString(12))
 	secret3Type := "should_not_appear"
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name3,
+		"name":        name3,
 		"description": description,
-		"secret": secret,
-		"type": secret3Type,
+		"secret":      secret,
+		"type":        secret3Type,
 	})
 	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
@@ -160,11 +160,11 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 
 	name2 := fmt.Sprintf("secretname2-%s", common.RandomString(12))
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name2,
+		"name":        name2,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
-	}
+		"secret":      secret,
+		"type":        secretType,
+	})
 	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
 		return
@@ -221,10 +221,10 @@ func TestAPIListSecrets(t *testing.T) {
 	secretType := "secret type"
 	var secretError error
 	_, secretError = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name,
+		"name":        name,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 
 	if secretError != nil {
@@ -234,10 +234,10 @@ func TestAPIListSecrets(t *testing.T) {
 
 	name2 := fmt.Sprintf("secretname2-%s", common.RandomString(12))
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name2,
+		"name":        name2,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
@@ -283,10 +283,10 @@ func TestAPICreateSecret(t *testing.T) {
 	description := "secret description"
 	secretType := "secret type"
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name,
+		"name":        name,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
@@ -341,10 +341,10 @@ func TestAPICreateSecretMaxSize(t *testing.T) {
 	description := "secret description"
 	secretType := "secret type"
 	createSecretResponse, err := provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name,
+		"name":        name,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 	if err != nil {
 		t.Errorf("failed creating max length secret. Error: %s", err.Error())
@@ -380,10 +380,10 @@ func TestAPICreateSecretNoName(t *testing.T) {
 	description := "secret description"
 	secretType := "secret type"
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name,
+		"name":        name,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 
 }
@@ -407,10 +407,10 @@ func TestAPICreateSecretNoType(t *testing.T) {
 	description := "secret description"
 	secretType := ""
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name,
+		"name":        name,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 
 }
@@ -434,10 +434,10 @@ func TestAPICreateSecretNoData(t *testing.T) {
 	description := "secret description"
 	secretType := "secret type"
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name,
+		"name":        name,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 
 }
@@ -462,10 +462,10 @@ func TestAPICreateAndRetrieveSecret(t *testing.T) {
 	secretType := "secret type"
 
 	createSecretResponse, err := provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": name,
+		"name":        name,
 		"description": description,
-		"secret": secret,
-		"type": secretType,
+		"secret":      secret,
+		"type":        secretType,
 	})
 	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())
@@ -495,10 +495,10 @@ func TestAPIDeleteSecret(t *testing.T) {
 	}
 
 	secretResponse, err := provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
-		"name": "secret to delete",
+		"name":        "secret to delete",
 		"description": "deleted secret",
-		"secret": "secret to be deleted",
-		"type": "test_secret",
+		"secret":      "secret to be deleted",
+		"type":        "test_secret",
 	})
 	if err != nil {
 		t.Errorf("failed to create secret for vault: %s", err.Error())

@@ -21,7 +21,7 @@ require (
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/provideplatform/ident v0.9.10-0.20210625024122-80a05d6cf1d7
-	github.com/provideplatform/provide-go v0.0.0-20231115025119-a525faf20a39
+	github.com/provideplatform/provide-go v0.0.0-20231124233146-30b51fac29fc
 	github.com/shirou/gopsutil v3.21.11-0.20211107133826-214bc8d94858+incompatible // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tyler-smith/go-bip32 v1.0.0

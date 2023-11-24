@@ -432,8 +432,8 @@ github.com/prometheus/tsdb v0.6.2-0.20190402121629-4f204dcbc150/go.mod h1:qhTCs0
 github.com/provideplatform/ident v0.9.10-0.20210625024122-80a05d6cf1d7 h1:6U6YH8d0Q/U0r/c0G3Jo2ADm5qpGdSisXSn4Je7aBDQ=
 github.com/provideplatform/ident v0.9.10-0.20210625024122-80a05d6cf1d7/go.mod h1:a5XNnZ9XxkPxdB5VFEnqVIxJR1l5YxmipBzbcIvy6ZQ=
 github.com/provideplatform/provide-go v0.0.0-20210624064849-d7328258f0d8/go.mod h1:q0/Q8KaZxYg84rdwBIIE7ZwHluzM5zw7zJJoJOqAbzg=
-github.com/provideplatform/provide-go v0.0.0-20231115025119-a525faf20a39 h1:YErkLzJ72G6OTADphFO6XGJ6BeF5SyNyulYQSlqdIEY=
-github.com/provideplatform/provide-go v0.0.0-20231115025119-a525faf20a39/go.mod h1:3XKCmsPvXOLfHQhMwmJGwK7CD/OqW2Y4HMJVfvkBIys=
+github.com/provideplatform/provide-go v0.0.0-20231124233146-30b51fac29fc h1:Lf1A1vqv2YAdEQrsi7Ctsl5H+FRN5qaargW3xNJo4rg=
+github.com/provideplatform/provide-go v0.0.0-20231124233146-30b51fac29fc/go.mod h1:3XKCmsPvXOLfHQhMwmJGwK7CD/OqW2Y4HMJVfvkBIys=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rjeczalik/notify v0.9.1/go.mod h1:rKwnCoCGeuQnwBtTSPL9Dad03Vh2n40ePRrjvIXnJho=
 github.com/rjeczalik/notify v0.9.2 h1:MiTWrPj55mNDHEiIX5YUSKefw/+lCQVoAFmD6oQm5w8=

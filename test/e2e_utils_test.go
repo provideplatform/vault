@@ -103,7 +103,11 @@ func userFactory(email, password string) (*uuid.UUID, error) {
 	if err != nil {
 		return nil, errors.New("failed to create user")
 	}
-	return &resp.ID, nil
+	usrUUID, err := uuid.FromString(*resp.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &usrUUID, nil
 }
 
 func userTokenFactory() (*string, error) {

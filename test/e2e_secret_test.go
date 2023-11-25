@@ -49,7 +49,7 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 	_, secretError = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 
@@ -62,7 +62,7 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name2,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 	if err != nil {
@@ -75,7 +75,7 @@ func TestAPILIstSecretTypeFilter(t *testing.T) {
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name3,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secret3Type,
 	})
 	if err != nil {
@@ -136,7 +136,7 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 	_, secretError = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 
@@ -150,7 +150,7 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name3,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secret3Type,
 	})
 	if err != nil {
@@ -162,7 +162,7 @@ func TestAPILIstSecretTypeFilter_NegativeTest(t *testing.T) {
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name2,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 	if err != nil {
@@ -223,7 +223,7 @@ func TestAPIListSecrets(t *testing.T) {
 	_, secretError = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 
@@ -236,7 +236,7 @@ func TestAPIListSecrets(t *testing.T) {
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name2,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 	if err != nil {
@@ -285,7 +285,7 @@ func TestAPICreateSecret(t *testing.T) {
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 	if err != nil {
@@ -343,7 +343,7 @@ func TestAPICreateSecretMaxSize(t *testing.T) {
 	createSecretResponse, err := provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 	if err != nil {
@@ -382,7 +382,7 @@ func TestAPICreateSecretNoName(t *testing.T) {
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 
@@ -409,7 +409,7 @@ func TestAPICreateSecretNoType(t *testing.T) {
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 
@@ -436,7 +436,7 @@ func TestAPICreateSecretNoData(t *testing.T) {
 	_, err = provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 
@@ -464,7 +464,7 @@ func TestAPICreateAndRetrieveSecret(t *testing.T) {
 	createSecretResponse, err := provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        name,
 		"description": description,
-		"secret":      secret,
+		"value":       secret,
 		"type":        secretType,
 	})
 	if err != nil {
@@ -497,7 +497,7 @@ func TestAPIDeleteSecret(t *testing.T) {
 	secretResponse, err := provide.CreateSecret(*token, vault.ID.String(), map[string]interface{}{
 		"name":        "secret to delete",
 		"description": "deleted secret",
-		"secret":      "secret to be deleted",
+		"value":       "secret to be deleted",
 		"type":        "test_secret",
 	})
 	if err != nil {

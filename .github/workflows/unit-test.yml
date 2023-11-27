@@ -36,6 +36,8 @@ jobs:
         working-directory: vaultyvault
       - run: go mod vendor
         working-directory: vaultyvault
+      - run: make ensure_dependencies
+        working-directory: vaultyvault
       - run: go build -v -o ./.bin/vault_migrate ./cmd/migrate
         working-directory: vaultyvault
       - run: ./.bin/vault_migrate

@@ -31,7 +31,6 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
-	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 
 	"github.com/provideplatform/ident/token"
 	provide "github.com/provideplatform/provide-go/common"
@@ -669,7 +668,7 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 	case KeySpecECCBIP39:
 		var path *accounts.DerivationPath
 		if params.Path != nil {
-			derivationPath, err := hdwallet.ParseDerivationPath(*params.Path)
+			derivationPath, err := accounts.ParseDerivationPath(*params.Path)
 			if err != nil {
 				provide.RenderError(err.Error(), 500, c)
 				return

@@ -17,13 +17,19 @@
 package crypto
 
 import (
+	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/accounts"
-	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/provideplatform/vault/common"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
@@ -53,6 +59,16 @@ const HDWalletCoinCodeBitcoin = uint32(0)
 // HDWalletCoinCodeEthereum from the BIP39 spec
 const HDWalletCoinCodeEthereum = uint32(60)
 
+// DefaultRootDerivationPath is the root path to which custom derivation endpoints
+// are appended. As such, the first account will be at m/44'/60'/0'/0, the second
+// at m/44'/60'/0'/1, etc.
+var DefaultRootDerivationPath = accounts.DefaultRootDerivationPath
+
+// DefaultBaseDerivationPath is the base path from which custom derivation endpoints
+// are incremented. As such, the first account will be at m/44'/60'/0'/0, the second
+// at m/44'/60'/0'/1, etc
+var DefaultBaseDerivationPath = accounts.DefaultBaseDerivationPath
+
 // HDWallet is the internal struct for the top-level node within an HD wallet
 type HDWallet struct {
 	Path     *string `json:"hd_derivation_path,omitempty"` // placeholder for adding more advanced support for hd_derivation_path; not used... yet
@@ -66,6 +82,16 @@ type HDWallet struct {
 	Seed       []byte `json:"-"` // contains the mnemonic seed phrase in bytes
 	PublicKey  []byte `json:"-"` // contains the extended public key; in general it is safest NOT to share this
 	PrivateKey []byte `json:"-"` // contains the extended private key; NEVER share this! it exists here to support ephemeral wallet creation...
+
+	// extra fields needed for internal methods
+
+	fixIssue172 bool
+	mnemonic    string
+	masterKey   *hdkeychain.ExtendedKey
+	url         accounts.URL
+	paths       map[ethcommon.Address]accounts.DerivationPath
+	accounts    []accounts.Account
+	stateLock   sync.RWMutex
 }
 
 // DefaultHDDerivationPath returns the default hd derivation path
@@ -77,7 +103,7 @@ func DefaultHDDerivationPath() *accounts.DerivationPath {
 	index := uint32(0)
 
 	pathstr := fmt.Sprintf("m/%d'/%d'/%d'/%d/%d", purpose, coin, account, change, index)
-	path, err := hdwallet.ParseDerivationPath(pathstr)
+	path, err := accounts.ParseDerivationPath(pathstr)
 	if err != nil {
 		common.Log.Debugf("failed to parse derivation path 1; %s", err.Error())
 	}
@@ -128,7 +154,7 @@ func (o *HDWallet) ResolvePath() (*accounts.DerivationPath, error) {
 		return nil, errors.New("nil hd derivation path")
 	}
 
-	path, err := hdwallet.ParseDerivationPath(*o.Path)
+	path, err := accounts.ParseDerivationPath(*o.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse hd derivation path; %s", err.Error())
 	}
@@ -146,7 +172,7 @@ func (o *HDWallet) DeriveKey(path accounts.DerivationPath) (*Secp256k1, error) {
 	}()
 
 	// first recreate the hd wallet from the mnemonic
-	wallet, err := hdwallet.NewFromMnemonic(string(o.Seed))
+	wallet, err := newFromMnemonic(string(o.Seed))
 	if err != nil {
 		return nil, fmt.Errorf("error generating wallet from mnemonic %s", err.Error())
 	}
@@ -158,17 +184,17 @@ func (o *HDWallet) DeriveKey(path accounts.DerivationPath) (*Secp256k1, error) {
 		return nil, fmt.Errorf("error creating account with path %s; %s", pathstr, err.Error())
 	}
 
-	privatekey, err := wallet.PrivateKeyBytes(acct)
+	privatekey, err := wallet.privateKeyBytes(acct)
 	if err != nil {
 		return nil, fmt.Errorf("error generating private key for path %s; %s", pathstr, err.Error())
 	}
 
-	publickey, err := wallet.PublicKeyBytes(acct)
+	publickey, err := wallet.publicKeyBytes(acct)
 	if err != nil {
 		return nil, fmt.Errorf("error generating public key for path %s; %s", pathstr, err.Error())
 	}
 
-	address, err := wallet.AddressHex(acct)
+	address, err := wallet.addressHex(acct)
 	if err != nil {
 		return nil, fmt.Errorf("error generating address for path %s; %s", pathstr, err.Error())
 	}
@@ -263,7 +289,7 @@ func CreateHDWalletFromSeedPhrase(mnemonic string) (*HDWallet, error) {
 func validateHDWalletMnemonic(mnemonic string) error {
 
 	// make sure we can use the mnemonic to generate a HD wallet
-	_, err := hdwallet.NewFromMnemonic(mnemonic)
+	_, err := newFromMnemonic(mnemonic)
 	if err != nil {
 		return fmt.Errorf("error generating HD wallet from mnemonic %s", err.Error())
 	}
@@ -278,4 +304,230 @@ func GetEntropyFromMnemonic(mnemonic string) ([]byte, error) {
 	}
 
 	return entropy, nil
+}
+
+// newSeedFromMnemonic returns a BIP-39 seed based on a BIP-39 mnemonic.
+func newSeedFromMnemonic(mnemonic string) ([]byte, error) {
+	if mnemonic == "" {
+		return nil, errors.New("mnemonic is required")
+	}
+
+	return bip39.NewSeedWithErrorChecking(mnemonic, "")
+}
+
+// newFromMnemonic returns a new HD wallet from a BIP-39 mnemonic.
+func newFromMnemonic(mnemonic string) (*HDWallet, error) {
+	if mnemonic == "" {
+		return nil, errors.New("mnemonic is required")
+	}
+
+	if !bip39.IsMnemonicValid(mnemonic) {
+		return nil, errors.New("mnemonic is invalid")
+	}
+
+	seed, err := newSeedFromMnemonic(mnemonic)
+	if err != nil {
+		return nil, err
+	}
+
+	wallet, err := newHDWallet(seed)
+	if err != nil {
+		return nil, err
+	}
+	wallet.mnemonic = mnemonic
+
+	return wallet, nil
+}
+
+func newHDWallet(seed []byte) (*HDWallet, error) {
+	masterKey, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
+	if err != nil {
+		return nil, err
+	}
+
+	return &HDWallet{
+		masterKey: masterKey,
+		Seed:      seed,
+		accounts:  []accounts.Account{},
+		paths:     map[ethcommon.Address]accounts.DerivationPath{},
+	}, nil
+}
+
+// Derive implements accounts.Wallet, deriving a new account at the specific
+// derivation path. If pin is set to true, the account will be added to the list
+// of tracked accounts.
+func (w *HDWallet) Derive(path accounts.DerivationPath, pin bool) (accounts.Account, error) {
+	// Try to derive the actual account and update its URL if successful
+	w.stateLock.RLock() // Avoid device disappearing during derivation
+
+	address, err := w.deriveAddress(path)
+
+	w.stateLock.RUnlock()
+
+	// If an error occurred or no pinning was requested, return
+	if err != nil {
+		return accounts.Account{}, err
+	}
+
+	account := accounts.Account{
+		Address: address,
+		URL: accounts.URL{
+			Scheme: "",
+			Path:   path.String(),
+		},
+	}
+
+	if !pin {
+		return account, nil
+	}
+
+	// Pinning needs to modify the state
+	w.stateLock.Lock()
+	defer w.stateLock.Unlock()
+
+	if _, ok := w.paths[address]; !ok {
+		w.accounts = append(w.accounts, account)
+		w.paths[address] = path
+	}
+
+	return account, nil
+}
+
+// deriveAddress derives the account address of the derivation path.
+func (w *HDWallet) deriveAddress(path accounts.DerivationPath) (ethcommon.Address, error) {
+	publicKeyECDSA, err := w.derivePublicKey(path)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+
+	address := crypto.PubkeyToAddress(*publicKeyECDSA)
+	return address, nil
+}
+
+// derivePrivateKey derives the private key of the derivation path.
+func (w *HDWallet) derivePrivateKey(path accounts.DerivationPath) (*ecdsa.PrivateKey, error) {
+	var err error
+	key := w.masterKey
+	for _, n := range path {
+		if w.fixIssue172 && key.IsAffectedByIssue172() {
+			key, err = key.Derive(n)
+		} else {
+			key, err = key.DeriveNonStandard(n)
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	privateKey, err := key.ECPrivKey()
+	privateKeyECDSA := privateKey.ToECDSA()
+	if err != nil {
+		return nil, err
+	}
+
+	return privateKeyECDSA, nil
+}
+
+// derivePublicKey derives the public key of the derivation path.
+func (w *HDWallet) derivePublicKey(path accounts.DerivationPath) (*ecdsa.PublicKey, error) {
+	privateKeyECDSA, err := w.derivePrivateKey(path)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey := privateKeyECDSA.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("failed to get public key")
+	}
+
+	return publicKeyECDSA, nil
+}
+
+// address returns the address of the account.
+func (w *HDWallet) address(account accounts.Account) (ethcommon.Address, error) {
+	publicKey, err := w.publicKey(account)
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+
+	return crypto.PubkeyToAddress(*publicKey), nil
+}
+
+// AddressBytes returns the address in bytes format of the account.
+func (w *HDWallet) addressBytes(account accounts.Account) ([]byte, error) {
+	address, err := w.address(account)
+	if err != nil {
+		return nil, err
+	}
+	return address.Bytes(), nil
+}
+
+// addressHex returns the address in hex string format of the account.
+func (w *HDWallet) addressHex(account accounts.Account) (string, error) {
+	address, err := w.address(account)
+	if err != nil {
+		return "", err
+	}
+	return address.Hex(), nil
+}
+
+// privateKeyBytes returns the ECDSA private key in bytes format of the account.
+func (w *HDWallet) privateKeyBytes(account accounts.Account) ([]byte, error) {
+	privateKey, err := w.privateKey(account)
+	if err != nil {
+		return nil, err
+	}
+
+	return crypto.FromECDSA(privateKey), nil
+}
+
+// PrivateKeyHex return the ECDSA private key in hex string format of the account.
+func (w *HDWallet) privateKeyHex(account accounts.Account) (string, error) {
+	privateKeyBytes, err := w.privateKeyBytes(account)
+	if err != nil {
+		return "", err
+	}
+
+	return hexutil.Encode(privateKeyBytes)[2:], nil
+}
+
+// privateKey returns the ECDSA private key of the account.
+func (w *HDWallet) privateKey(account accounts.Account) (*ecdsa.PrivateKey, error) {
+	path, err := accounts.ParseDerivationPath(account.URL.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	return w.derivePrivateKey(path)
+}
+
+// publicKey returns the ECDSA public key of the account.
+func (w *HDWallet) publicKey(account accounts.Account) (*ecdsa.PublicKey, error) {
+	path, err := accounts.ParseDerivationPath(account.URL.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	return w.derivePublicKey(path)
+}
+
+// publicKeyBytes returns the ECDSA public key in bytes format of the account.
+func (w *HDWallet) publicKeyBytes(account accounts.Account) ([]byte, error) {
+	publicKey, err := w.publicKey(account)
+	if err != nil {
+		return nil, err
+	}
+
+	return crypto.FromECDSAPub(publicKey), nil
+}
+
+// publicKeyHex return the ECDSA public key in hex string format of the account.
+func (w *HDWallet) publicKeyHex(account accounts.Account) (string, error) {
+	publicKeyBytes, err := w.publicKeyBytes(account)
+	if err != nil {
+		return "", err
+	}
+
+	return hexutil.Encode(publicKeyBytes)[4:], nil
 }

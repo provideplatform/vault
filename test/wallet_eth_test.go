@@ -25,10 +25,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
-	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/provideplatform/vault/common"
 	"github.com/provideplatform/vault/crypto"
 	"github.com/provideplatform/vault/vault"
@@ -163,7 +163,7 @@ func TestDeriveAutoKeyFromEthHDWallet(t *testing.T) {
 		return
 	}
 
-	path, _ := hdwallet.ParseDerivationPath(*walletKey.IterativeDerivationPath)
+	path, _ := accounts.ParseDerivationPath(*walletKey.IterativeDerivationPath)
 	iteration := path[4]
 
 	// test a sign with the key
@@ -200,7 +200,7 @@ func TestDeriveAutoKeyFromEthHDWallet_IncorrectVerifyIteration(t *testing.T) {
 		return
 	}
 
-	path, _ := hdwallet.ParseDerivationPath(*walletKey.IterativeDerivationPath)
+	path, _ := accounts.ParseDerivationPath(*walletKey.IterativeDerivationPath)
 	iteration := path[4]
 
 	// test a sign with the key
@@ -248,7 +248,7 @@ func TestDerivedKeyIteration(t *testing.T) {
 		return
 	}
 
-	path, _ := hdwallet.ParseDerivationPath(*dbKey.IterativeDerivationPath)
+	path, _ := accounts.ParseDerivationPath(*dbKey.IterativeDerivationPath)
 	iteration := path[len(path)-1]
 
 	var keyIteration uint32
@@ -272,7 +272,7 @@ func TestDerivedKeyIteration(t *testing.T) {
 			return
 		}
 
-		path, _ := hdwallet.ParseDerivationPath(*dbKey.IterativeDerivationPath)
+		path, _ := accounts.ParseDerivationPath(*dbKey.IterativeDerivationPath)
 		iteration := path[4]
 
 		if iteration != keyIteration+1 {

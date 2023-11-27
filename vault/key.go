@@ -37,7 +37,6 @@ import (
 	dbconf "github.com/kthomas/go-db-config"
 	"github.com/kthomas/go-redisutil"
 	uuid "github.com/kthomas/go.uuid"
-	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	provide "github.com/provideplatform/provide-go/api"
 	providecrypto "github.com/provideplatform/provide-go/crypto"
 	"github.com/provideplatform/vault/common"
@@ -877,7 +876,7 @@ func (k *Key) updateIterativeDerivationPath(db *gorm.DB) error {
 	return redisutil.WithRedlock(key, func() error {
 		db.Model(&k).Find(k) // reload the record
 
-		derivationPath, err := hdwallet.ParseDerivationPath(*k.IterativeDerivationPath)
+		derivationPath, err := accounts.ParseDerivationPath(*k.IterativeDerivationPath)
 		if err != nil {
 			return fmt.Errorf("failed to update iterative hd derivation path on key: %s; failed path: %s", k.ID, *k.IterativeDerivationPath)
 		}
@@ -1285,7 +1284,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 				return nil, err
 			}
 		} else if k.IterativeDerivationPath != nil {
-			_path, _ := hdwallet.ParseDerivationPath(*k.IterativeDerivationPath)
+			_path, _ := accounts.ParseDerivationPath(*k.IterativeDerivationPath)
 			path = &_path
 		} else {
 			path = crypto.DefaultHDDerivationPath()
@@ -1432,7 +1431,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 				return err
 			}
 		} else if k.IterativeDerivationPath != nil {
-			_path, _ := hdwallet.ParseDerivationPath(*k.IterativeDerivationPath)
+			_path, _ := accounts.ParseDerivationPath(*k.IterativeDerivationPath)
 			path = &_path
 		} else {
 			path = crypto.DefaultHDDerivationPath()
@@ -1591,7 +1590,7 @@ func (o *SigningOptions) validateHDWalletOpts() (*accounts.DerivationPath, error
 			pathstr = fmt.Sprintf("m/%d'/%d'/%d'", *purpose, *coin, *account)
 		}
 
-		derivationPath, err := hdwallet.ParseDerivationPath(pathstr)
+		derivationPath, err := accounts.ParseDerivationPath(pathstr)
 		if err != nil {
 			common.Log.Warningf("failed to parse hd derivation path; %s", err.Error())
 			return nil, err

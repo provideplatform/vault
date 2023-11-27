@@ -21,7 +21,7 @@ require (
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/provideplatform/ident v0.9.10-0.20210625024122-80a05d6cf1d7
-	github.com/provideplatform/provide-go v0.0.0-20231127195915-9e7584061c44
+	github.com/provideplatform/provide-go v0.0.0-20231127231557-813a41b6d639
 	github.com/tyler-smith/go-bip32 v1.0.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.15.0

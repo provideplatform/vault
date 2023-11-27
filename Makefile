@@ -6,7 +6,7 @@ clean:
 	go fix ./...
 	go clean -i ./...
 
-build: clean mod
+build: clean mod ensure_dependencies
 	go fmt ./...
 	go build -v -o ./.bin/vault_api ./cmd/api
 	go build -v -o ./.bin/vault_consumer ./cmd/consumer
@@ -14,6 +14,9 @@ build: clean mod
 
 ecs_deploy:
 	./ops/ecs_deploy.sh
+
+ensure_dependencies: mod
+	./ops/ensure_dependencies.sh
 
 install: clean
 	go install ./...

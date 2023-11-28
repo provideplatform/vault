@@ -454,8 +454,8 @@ github.com/prometheus/tsdb v0.6.2-0.20190402121629-4f204dcbc150/go.mod h1:qhTCs0
 github.com/provideplatform/ident v0.9.10-0.20210625024122-80a05d6cf1d7 h1:6U6YH8d0Q/U0r/c0G3Jo2ADm5qpGdSisXSn4Je7aBDQ=
 github.com/provideplatform/ident v0.9.10-0.20210625024122-80a05d6cf1d7/go.mod h1:a5XNnZ9XxkPxdB5VFEnqVIxJR1l5YxmipBzbcIvy6ZQ=
 github.com/provideplatform/provide-go v0.0.0-20210624064849-d7328258f0d8/go.mod h1:q0/Q8KaZxYg84rdwBIIE7ZwHluzM5zw7zJJoJOqAbzg=
-github.com/provideplatform/provide-go v0.0.0-20231127231557-813a41b6d639 h1:Ls6RAp/Sl1Qlctrw8kITqANcAUhBw8XyMYZnBAiYf0E=
-github.com/provideplatform/provide-go v0.0.0-20231127231557-813a41b6d639/go.mod h1:NIqsUgBm9HmVCEf3d6EEkdWhtFaWayOlfabFIH1z12A=
+github.com/provideplatform/provide-go v0.0.0-20231128064227-1e47281359cc h1:tB6wx6zDXZItVbcBQmfu7jNtXsoQU4hN2aMAqfwU61w=
+github.com/provideplatform/provide-go v0.0.0-20231128064227-1e47281359cc/go.mod h1:NIqsUgBm9HmVCEf3d6EEkdWhtFaWayOlfabFIH1z12A=
 github.com/rivo/uniseg v0.2.0 h1:S1pD9weZBuJdFmowNwbpi7BJ8TNftyUImj/0WQi72jY=
 github.com/rjeczalik/notify v0.9.1/go.mod h1:rKwnCoCGeuQnwBtTSPL9Dad03Vh2n40ePRrjvIXnJho=
 github.com/rogpeppe/go-internal v1.9.0 h1:73kH8U+JUqXU8lRuOHeVHaa/SZPifC7BkcraZVejAe8=

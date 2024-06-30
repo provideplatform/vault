@@ -6,4 +6,4 @@ Microservice for state-of-the-art key management with a focus on providing advan
 
 ## Documentation
 
-See the vault microservice docs [here](https://docs.provide.services/vault).
+See the vault microservice docs [here](https://docs.provide.technology/vault).

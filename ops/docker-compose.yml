@@ -74,33 +74,12 @@ services:
     restart: always
     volumes:
       - ./ops/await_tcp.sh:/usr/local/bin/await_tcp.sh:cached
-
-  nats-streaming:
-    image: provide/nats-streaming
-    command: ["-cid", "provide", "--auth", "testtoken", "-SDV"]
-    container_name: nats-streaming
-    depends_on:
-      - nats
-    healthcheck:
-      test: ["CMD", "/usr/local/bin/await_tcp.sh", "localhost:4224"]
-      interval: 1m
-      timeout: 1s
-      retries: 2
-      start_period: 10s
-    hostname: nats-streaming
-    networks:
-      - provide
-    ports:
-      - 4224:4224
-    restart: always
-    volumes:
-      - ./ops/await_tcp.sh:/usr/local/bin/await_tcp.sh:cached
  
   ident:
     image: provide/ident
     container_name: ident
     depends_on:
-      - nats-streaming
+      - nats
       - postgres
       - redis
     environment:
@@ -180,7 +159,7 @@ services:
     depends_on:
       - vault
     environment:
-      - CONSUME_NATS_STREAMING_SUBSCRIPTIONS=true
+      - CONSUME_NATS_STREAMING_SUBSCRIPTIONS=false
       - DATABASE_HOST=postgres
       - DATABASE_NAME=vault_dev
       - DATABASE_USER=vault

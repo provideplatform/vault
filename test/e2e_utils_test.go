@@ -2,7 +2,7 @@
 // +build integration vault secret bls
 
 /*
- * Copyright 2017-2022 Provide Technologies Inc.
+ * Copyright 2017-2024 Provide Technologies Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

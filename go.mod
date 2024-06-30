@@ -1,8 +1,6 @@
 module github.com/provideplatform/vault
 
-go 1.21
-
-toolchain go1.21.5
+go 1.22
 
 require (
 	github.com/Azure/azure-sdk-for-go v55.0.0+incompatible

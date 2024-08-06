@@ -20,9 +20,9 @@ jobs:
         with:
           ref: dev
           path: 'vault'                  
-      - run: docker-compose -f ./ops/docker-compose.yml build --no-cache
+      - run: docker compose -f ./ops/docker-compose.yml build --no-cache
         working-directory: vault
-      - run: docker-compose -f ./ops/docker-compose.yml up -d
+      - run: docker compose -f ./ops/docker-compose.yml up -d
         working-directory: vault
       - run: TAGS=integration ./ops/run_local_tests_long.sh
         working-directory: vault

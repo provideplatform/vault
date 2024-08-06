@@ -30,7 +30,7 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: '1.22'
-      - run: docker-compose -f ./ops/docker-compose-db.yml up -d
+      - run: docker compose -f ./ops/docker-compose-db.yml up -d
         working-directory: vaultyvault
       - run: go mod tidy
         working-directory: vaultyvault
@@ -44,5 +44,5 @@ jobs:
         working-directory: vaultyvault
       - run: go test ./... -v -race -timeout 1800s -tags="$TAGS"
         working-directory: vaultyvault
-      - run: docker-compose -f vaultyvault/ops/docker-compose-db.yml down
+      - run: docker compose -f vaultyvault/ops/docker-compose-db.yml down
       - run: docker volume rm ops_vault-db

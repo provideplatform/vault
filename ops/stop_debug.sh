@@ -16,4 +16,4 @@
 # limitations under the License.
 #
 
-docker-compose -f ./ops/docker-compose-debug.yml down
+docker compose -f ./ops/docker compose-debug.yml down

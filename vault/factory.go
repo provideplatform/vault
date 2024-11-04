@@ -60,7 +60,7 @@ func NewKey(
 		Usage:       common.StringOrNil(keyUsage),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil
 	}
 
@@ -120,7 +120,7 @@ func AES256GCMFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string)
 		Usage:       common.StringOrNil(KeyUsageEncryptDecrypt),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecAES256GCM, *key.Errors[0].Message)
 	}
 
@@ -160,7 +160,7 @@ func BabyJubJubFactory(db *gorm.DB, vaultID *uuid.UUID, name, description string
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCBabyJubJub, *key.Errors[0].Message)
 	}
 
@@ -178,7 +178,7 @@ func C25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (*
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCC25519, *key.Errors[0].Message)
 	}
 
@@ -196,7 +196,7 @@ func Chacha20Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) 
 		Usage:       common.StringOrNil(KeyUsageEncryptDecrypt),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecChaCha20, *key.Errors[0].Message)
 	}
 
@@ -214,7 +214,7 @@ func Ed25519Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCEd25519, *key.Errors[0].Message)
 	}
 
@@ -232,7 +232,7 @@ func Ed25519NKeyFactory(db *gorm.DB, vaultID *uuid.UUID, name, description strin
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCEd25519, *key.Errors[0].Message)
 	}
 
@@ -250,7 +250,7 @@ func Secp256k1Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string)
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCSecp256k1, *key.Errors[0].Message)
 	}
 
@@ -268,7 +268,7 @@ func EthHDWalletFactory(db *gorm.DB, vaultID *uuid.UUID, name, description strin
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecECCBIP39, *key.Errors[0].Message)
 	}
 
@@ -286,7 +286,7 @@ func RSA4096Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecRSA4096, *key.Errors[0].Message)
 	}
 
@@ -304,7 +304,7 @@ func RSA3072Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecRSA3072, *key.Errors[0].Message)
 	}
 
@@ -322,7 +322,7 @@ func RSA2048Factory(db *gorm.DB, vaultID *uuid.UUID, name, description string) (
 		Usage:       common.StringOrNil(KeyUsageSignVerify),
 	}
 
-	if !key.createPersisted(db) {
+	if !key.CreatePersisted(db) {
 		return nil, fmt.Errorf("error creating/persisting %s key: %v", KeySpecRSA2048, *key.Errors[0].Message)
 	}
 

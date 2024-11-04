@@ -57,7 +57,7 @@ func (v *Vault) ListSecretsQuery(db *gorm.DB) *gorm.DB {
 	return db.Select("secrets.id, secrets.created_at, secrets.vault_id, secrets.name, secrets.value, secrets.description, secrets.type").Where("secrets.vault_id = ?", v.ID)
 }
 
-func (v *Vault) resolveMasterKey(db *gorm.DB) (*Key, error) {
+func (v *Vault) ResolveMasterKey(db *gorm.DB) (*Key, error) {
 	if v.MasterKeyID == nil {
 		return nil, fmt.Errorf("unable to resolve master key for vault: %s; nil master key id", v.ID)
 	}
@@ -103,7 +103,7 @@ func (v *Vault) createMasterKey(tx *gorm.DB) error {
 		Description: common.StringOrNil(fmt.Sprintf("AES-256-GCM master key for vault %s", v.ID)),
 	}
 
-	if !masterKey.createPersisted(tx) {
+	if !masterKey.CreatePersisted(tx) {
 		err := fmt.Errorf("failed to create master key for vault: %s; %s", v.ID, *masterKey.Errors[0].Message)
 		return err
 	}

@@ -25,15 +25,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/kthomas/go-redisutil"
 
 	"github.com/provideplatform/ident/common"
-	"github.com/provideplatform/ident/token"
-	"github.com/provideplatform/vault/sealer"
-	"github.com/provideplatform/vault/vault"
+	"github.com/provideplatform/vault/api"
 
-	provide "github.com/provideplatform/provide-go/common"
 	util "github.com/provideplatform/provide-go/common/util"
 )
 
@@ -43,10 +39,10 @@ const jwtVerifierRefreshInterval = 60 * time.Second
 const jwtVerifierGracePeriod = 60 * time.Second
 
 var (
-	cancelF     context.CancelFunc
-	closing     uint32
-	shutdownCtx context.Context
-	sigs        chan os.Signal
+	cancelF context.CancelFunc
+	closing uint32
+	ctx     context.Context
+	sigs    chan os.Signal
 
 	srv *http.Server
 )
@@ -67,7 +63,7 @@ func main() {
 	common.Log.Debugf("starting vault API...")
 	installSignalHandlers()
 
-	runAPI()
+	srv, _ = api.RunGin()
 
 	startAt := time.Now()
 	gracePeriodEndAt := startAt.Add(jwtVerifierGracePeriod)
@@ -88,10 +84,7 @@ func main() {
 			}
 		case sig := <-sigs:
 			common.Log.Debugf("received signal: %s", sig)
-			srv.Shutdown(shutdownCtx)
 			shutdown()
-		case <-shutdownCtx.Done():
-			close(sigs)
 		default:
 			time.Sleep(runloopSleepInterval)
 		}
@@ -104,53 +97,21 @@ func main() {
 func installSignalHandlers() {
 	common.Log.Debug("installing signal handlers for vault API")
 	sigs = make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	shutdownCtx, cancelF = context.WithCancel(context.Background())
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancelF = context.WithCancel(context.Background())
 }
 
 func shutdown() {
 	if atomic.AddUint32(&closing, 1) == 1 {
 		common.Log.Debug("shutting down vault API")
-		cancelF()
+
+		signal.Stop(sigs)
+		close(sigs)
+
+		if srv != nil {
+			srv.Shutdown(ctx)
+		}
 	}
-}
-
-func runAPI() {
-	r := gin.New()
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
-	r.Use(provide.CORSMiddleware())
-
-	r.GET("/status", statusHandler)
-
-	r.Use(token.AuthMiddleware())
-	r.Use(common.AccountingMiddleware())
-	r.Use(common.RateLimitingMiddleware())
-	r.Use(vault.AuditLogMiddleware())
-
-	vault.InstallAPI(r)
-
-	err := sealer.AutoUnseal()
-	if err != nil {
-		common.Log.Warningf("error automatically unsealing vault; %s", err.Error())
-	}
-
-	srv = &http.Server{
-		Addr:    util.ListenAddr,
-		Handler: r,
-	}
-
-	if util.ServeTLS {
-		go srv.ListenAndServeTLS(util.CertificatePath, util.PrivateKeyPath)
-	} else {
-		go srv.ListenAndServe()
-	}
-
-	common.Log.Debugf("listening on %s", util.ListenAddr)
-}
-
-func statusHandler(c *gin.Context) {
-	provide.Render(nil, 204, c)
 }
 
 func shuttingDown() bool {

@@ -194,7 +194,7 @@ func (s *Secret) resolveMasterKey(db *gorm.DB) (*Key, error) {
 		return nil, fmt.Errorf("unable to resolve master key for secret: %s; current key is master; vault id: %s", s.ID, s.VaultID)
 	}
 
-	masterKey, err := s.vault.resolveMasterKey(db)
+	masterKey, err := s.vault.ResolveMasterKey(db)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve master key for secret: %s; %s", s.ID, err.Error())
 	}

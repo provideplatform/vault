@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package vault
+package providers
 
 import (
 	"encoding/binary"
@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -32,15 +33,52 @@ import (
 	"github.com/kthomas/go-pgputil"
 	uuid "github.com/kthomas/go.uuid"
 
+	"github.com/provideplatform/ident/common"
 	"github.com/provideplatform/ident/token"
 	provide "github.com/provideplatform/provide-go/common"
-	"github.com/provideplatform/vault/common"
+	util "github.com/provideplatform/provide-go/common/util"
 	"github.com/provideplatform/vault/crypto"
 	"github.com/provideplatform/vault/sealer"
+	"github.com/provideplatform/vault/vault"
 )
 
-// InstallAPI installs the handlers using the given gin Engine
-func InstallAPI(r *gin.Engine) {
+func RunGin() (*http.Server, error) {
+	r := gin.New()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	r.Use(provide.CORSMiddleware())
+
+	r.GET("/status", statusHandler)
+
+	r.Use(token.AuthMiddleware())
+	r.Use(common.AccountingMiddleware())
+	r.Use(common.RateLimitingMiddleware())
+	r.Use(vault.AuditLogMiddleware())
+
+	installAPI(r)
+
+	err := sealer.AutoUnseal()
+	if err != nil {
+		common.Log.Warningf("error automatically unsealing vault; %s", err.Error())
+	}
+
+	srv := &http.Server{
+		Addr:    util.ListenAddr,
+		Handler: r,
+	}
+
+	if util.ServeTLS {
+		go srv.ListenAndServeTLS(util.CertificatePath, util.PrivateKeyPath)
+	} else {
+		go srv.ListenAndServe()
+	}
+
+	common.Log.Debugf("listening on %s", util.ListenAddr)
+	return srv, err
+}
+
+// install the handlers using the given gin Engine
+func installAPI(r *gin.Engine) {
 	installSealUnsealAPI(r)
 	installVaultsAPI(r)
 	installKeysAPI(r)
@@ -184,7 +222,7 @@ func vaultKeyEncryptHandler(c *gin.Context) {
 		return
 	}
 
-	params := &KeyEncryptDecryptRequestResponse{}
+	params := &vault.KeyEncryptDecryptRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -204,8 +242,8 @@ func vaultKeyEncryptHandler(c *gin.Context) {
 		nonce = nil
 	}
 
-	var key = &Key{}
-	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var key = &vault.Key{}
+	key = vault.GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -220,7 +258,7 @@ func vaultKeyEncryptHandler(c *gin.Context) {
 
 	encryptedDataHex := hex.EncodeToString(encryptedData)
 
-	provide.Render(&KeyEncryptDecryptRequestResponse{
+	provide.Render(&vault.KeyEncryptDecryptRequestResponse{
 		Data: common.StringOrNil(string(encryptedDataHex)),
 	}, 200, c)
 }
@@ -239,7 +277,7 @@ func vaultKeyDecryptHandler(c *gin.Context) {
 		return
 	}
 
-	params := &KeyEncryptDecryptRequestResponse{}
+	params := &vault.KeyEncryptDecryptRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -256,8 +294,8 @@ func vaultKeyDecryptHandler(c *gin.Context) {
 		provide.RenderError("error decoding encrypted string to binary", 422, c)
 		return
 	}
-	var key = &Key{}
-	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var key = &vault.Key{}
+	key = vault.GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -272,7 +310,7 @@ func vaultKeyDecryptHandler(c *gin.Context) {
 
 	decryptedDataString := string(decryptedData[:])
 
-	provide.Render(&KeyEncryptDecryptRequestResponse{
+	provide.Render(&vault.KeyEncryptDecryptRequestResponse{
 		Data: common.StringOrNil(decryptedDataString),
 	}, 200, c)
 }
@@ -285,8 +323,8 @@ func vaultsListHandler(c *gin.Context) {
 		return
 	}
 
-	var vaults []*Vault
-	//vaults = GetVaults(bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var vaults []*vault.Vault
+	//vaults = vault.GetVaults(bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	var query *gorm.DB
 
@@ -300,9 +338,9 @@ func vaultsListHandler(c *gin.Context) {
 		query = db.Where("user_id = ?", bearer.UserID)
 	}
 
-	provide.Paginate(c, query, &Vault{}).Find(&vaults)
+	provide.Paginate(c, query, &vault.Vault{}).Find(&vaults)
 	for _, vault := range vaults {
-		_, err := vault.resolveMasterKey(db)
+		_, err := vault.ResolveMasterKey(db)
 		if err != nil {
 			provide.RenderError(err.Error(), 500, c)
 			return
@@ -326,7 +364,7 @@ func createVaultHandler(c *gin.Context) {
 		return
 	}
 
-	vault := &Vault{}
+	vault := &vault.Vault{}
 	err = json.Unmarshal(buf, &vault)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -390,7 +428,7 @@ func deleteVaultHandler(c *gin.Context) {
 	tx := db.Begin()
 	defer tx.RollbackUnlessCommitted()
 
-	var vault = &Vault{}
+	var vault = &vault.Vault{}
 
 	tx = tx.Where("id = ?", c.Param("id"))
 	if bearer.UserID != nil {
@@ -430,7 +468,7 @@ func vaultKeysListHandler(c *gin.Context) {
 		return
 	}
 
-	var vault = &Vault{}
+	var vlt = &vault.Vault{}
 
 	db := dbconf.DatabaseConnection()
 	query := db.Where("id = ?", c.Param("id"))
@@ -442,14 +480,14 @@ func vaultKeysListHandler(c *gin.Context) {
 	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
 		query = query.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID)
 	}
-	query.Find(&vault)
+	query.Find(&vlt)
 
-	if vault.ID == uuid.Nil {
+	if vlt.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
 		return
 	}
 
-	keysQuery := vault.ListKeysQuery(db)
+	keysQuery := vlt.ListKeysQuery(db)
 	if c.Query("spec") != "" {
 		keysQuery = keysQuery.Where("keys.spec = ?", c.Query("spec"))
 	}
@@ -458,8 +496,8 @@ func vaultKeysListHandler(c *gin.Context) {
 	}
 	keysQuery = keysQuery.Order("keys.created_at ASC")
 
-	var keys []*Key
-	provide.Paginate(c, keysQuery, &Key{}).Find(&keys)
+	var keys []*vault.Key
+	provide.Paginate(c, keysQuery, &vault.Key{}).Find(&keys)
 	for _, key := range keys {
 		key.Enrich()
 	}
@@ -481,7 +519,7 @@ func createVaultKeyHandler(c *gin.Context) {
 		return
 	}
 
-	key := &Key{}
+	key := &vault.Key{}
 	err = json.Unmarshal(buf, &key)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -499,7 +537,7 @@ func createVaultKeyHandler(c *gin.Context) {
 	}
 
 	// ensure the key spec is valid and correct the case
-	keySpec, err := ValidateKeySpec(key.Spec)
+	keySpec, err := vault.ValidateKeySpec(key.Spec)
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
@@ -509,18 +547,17 @@ func createVaultKeyHandler(c *gin.Context) {
 	}
 
 	db := dbconf.DatabaseConnection()
-	vault := &Vault{}
-	vault = GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	vlt := &vault.Vault{}
+	vlt = vault.GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
-	if vault == nil || vault.ID == uuid.Nil {
+	if vlt == nil || vlt.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
 		return
 	}
 
-	key.VaultID = &vault.ID
-	key.vault = vault
+	key.VaultID = &vlt.ID
 
-	if key.createPersisted(db) {
+	if key.CreatePersisted(db) {
 		provide.Render(key, 201, c)
 	} else {
 		obj := map[string]interface{}{}
@@ -537,8 +574,8 @@ func deleteVaultKeyHandler(c *gin.Context) {
 		return
 	}
 
-	var key = &Key{}
-	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var key = &vault.Key{}
+	key = vault.GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -563,7 +600,7 @@ func vaultKeyDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	vault := &Vault{}
+	vlt := &vault.Vault{}
 
 	db := dbconf.DatabaseConnection()
 	query := db.Where("id = ?", c.Param("id"))
@@ -575,15 +612,15 @@ func vaultKeyDetailsHandler(c *gin.Context) {
 	} else if bearer.UserID != nil && *bearer.UserID != uuid.Nil {
 		query = query.Where("id = ? AND user_id = ?", c.Param("id"), bearer.UserID)
 	}
-	query.Find(&vault)
+	query.Find(&vlt)
 
-	if vault.ID == uuid.Nil {
+	if vlt.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
 		return
 	}
 
-	key := &Key{}
-	vault.KeyDetailsQuery(db, c.Param("keyId")).Find(&key)
+	key := &vault.Key{}
+	vlt.KeyDetailsQuery(db, c.Param("keyId")).Find(&key)
 	if key == nil || key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
 		return
@@ -608,14 +645,14 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 		return
 	}
 
-	params := &KeyDeriveRequest{}
+	params := &vault.KeyDeriveRequest{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
 		return
 	}
 
-	key := GetVaultKey(
+	key := vault.GetVaultKey(
 		c.Param("keyId"),
 		c.Param("id"),
 		bearer.ApplicationID,
@@ -628,10 +665,10 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 		return
 	}
 
-	var derivedKey *Key
+	var derivedKey *vault.Key
 
 	switch *key.Spec {
-	case KeySpecChaCha20:
+	case vault.KeySpecChaCha20:
 		// handle empty nonces - replace with random 32-bit integer
 		// and convert to bigendian 16-byte array
 		nonceAsBytes := make([]byte, 16)
@@ -666,7 +703,7 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 			provide.RenderError(err.Error(), 500, c)
 			return
 		}
-	case KeySpecECCBIP39:
+	case vault.KeySpecECCBIP39:
 		var path *accounts.DerivationPath
 		if params.Path != nil {
 			derivationPath, err := accounts.ParseDerivationPath(*params.Path)
@@ -679,7 +716,7 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 			path = crypto.DefaultHDDerivationPath()
 		}
 
-		secp256k1Derived, err := key.deriveSecp256k1KeyFromHDWallet(*path)
+		secp256k1Derived, err := key.DeriveSecp256k1KeyFromHDWallet(*path)
 		if err != nil {
 			provide.RenderError(err.Error(), 500, c)
 			return
@@ -711,7 +748,7 @@ func vaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	params := &KeySignVerifyRequestResponse{}
+	params := &vault.KeySignVerifyRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -723,8 +760,8 @@ func vaultKeySignHandler(c *gin.Context) {
 		return
 	}
 
-	var key = &Key{}
-	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var key = &vault.Key{}
+	key = vault.GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -758,7 +795,7 @@ func vaultKeySignHandler(c *gin.Context) {
 		path = *key.DerivationPath
 	}
 
-	provide.Render(&KeySignVerifyRequestResponse{
+	provide.Render(&vault.KeySignVerifyRequestResponse{
 		Signature:      common.StringOrNil(string(sighex)),
 		Address:        common.StringOrNil(address),
 		DerivationPath: common.StringOrNil(path),
@@ -779,7 +816,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	params := &KeySignVerifyRequestResponse{}
+	params := &vault.KeySignVerifyRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -791,8 +828,8 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	var key = &Key{}
-	key = GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var key = &vault.Key{}
+	key = vault.GetVaultKey(c.Param("keyId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if key.ID == uuid.Nil {
 		provide.RenderError("key not found", 404, c)
@@ -818,7 +855,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 	err = key.Verify(msg, sig, params.Options)
 	verified := err == nil
 
-	provide.Render(&KeySignVerifyRequestResponse{
+	provide.Render(&vault.KeySignVerifyRequestResponse{
 		Verified: &verified,
 	}, 200, c)
 }
@@ -832,22 +869,22 @@ func vaultSecretsListHandler(c *gin.Context) {
 	}
 
 	db := dbconf.DatabaseConnection()
-	var vault = &Vault{}
-	vault = GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var vlt = &vault.Vault{}
+	vlt = vault.GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
-	if vault.ID == uuid.Nil {
+	if vlt.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
 		return
 	}
 
-	secretsQuery := vault.ListSecretsQuery(db)
+	secretsQuery := vlt.ListSecretsQuery(db)
 	if c.Query("type") != "" {
 		secretsQuery = secretsQuery.Where("secrets.type = ?", c.Query("type"))
 	}
 	secretsQuery = secretsQuery.Order("secrets.created_at ASC")
 
-	var secrets []*Secret
-	provide.Paginate(c, secretsQuery, &Secret{}).Find(&secrets)
+	var secrets []*vault.Secret
+	provide.Paginate(c, secretsQuery, &vault.Secret{}).Find(&secrets)
 	for _, secret := range secrets {
 		secret.Value = nil
 	}
@@ -862,8 +899,8 @@ func vaultSecretDetailsHandler(c *gin.Context) {
 		return
 	}
 
-	var secret = &Secret{}
-	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var secret = &vault.Secret{}
+	secret = vault.GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if secret.ID == uuid.Nil {
 		provide.RenderError("secret not found", 404, c)
@@ -894,7 +931,7 @@ func createVaultSecretHandler(c *gin.Context) {
 		return
 	}
 
-	secret := &Secret{}
+	secret := &vault.Secret{}
 	err = json.Unmarshal(buf, &secret)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -908,16 +945,15 @@ func createVaultSecretHandler(c *gin.Context) {
 
 	db := dbconf.DatabaseConnection()
 
-	var vault = &Vault{}
-	vault = GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var vlt = &vault.Vault{}
+	vlt = vault.GetVault(db, c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
-	if vault == nil || vault.ID == uuid.Nil {
+	if vlt == nil || vlt.ID == uuid.Nil {
 		provide.RenderError("vault not found", 404, c)
 		return
 	}
 
-	secret.VaultID = &vault.ID
-	secret.vault = vault
+	secret.VaultID = &vlt.ID
 
 	if secret.Create(db) {
 		provide.Render(secret, 201, c)
@@ -936,8 +972,8 @@ func deleteVaultSecretHandler(c *gin.Context) {
 		return
 	}
 
-	var secret = &Secret{}
-	secret = GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
+	var secret = &vault.Secret{}
+	secret = vault.GetVaultSecret(c.Param("secretId"), c.Param("id"), bearer.ApplicationID, bearer.OrganizationID, bearer.UserID)
 
 	if secret.ID == uuid.Nil {
 		provide.RenderError("secret not found", 404, c)
@@ -970,7 +1006,7 @@ func blsAggregateHandler(c *gin.Context) {
 		return
 	}
 
-	params := &BLSAggregateRequestResponse{}
+	params := &vault.BLSAggregateRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -985,7 +1021,7 @@ func blsAggregateHandler(c *gin.Context) {
 		return
 	}
 
-	provide.Render(&BLSAggregateRequestResponse{
+	provide.Render(&vault.BLSAggregateRequestResponse{
 		AggregateSignature: sig,
 	}, 201, c)
 }
@@ -1005,7 +1041,7 @@ func blsAggregateVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	params := &BLSAggregateVerifyRequestResponse{}
+	params := &vault.BLSAggregateVerifyRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -1022,7 +1058,7 @@ func blsAggregateVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	provide.Render(&KeySignVerifyRequestResponse{
+	provide.Render(&vault.KeySignVerifyRequestResponse{
 		Verified: &verified,
 	}, 200, c)
 
@@ -1043,7 +1079,7 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	params := &DetachedVerifyRequestResponse{}
+	params := &vault.DetachedVerifyRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -1057,7 +1093,7 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	}
 
 	// ensure the key spec is valid and correct the case
-	keySpec, err := ValidateKeySpec(params.Spec)
+	keySpec, err := vault.ValidateKeySpec(params.Spec)
 	if err != nil {
 		provide.RenderError(err.Error(), 422, c)
 		return
@@ -1081,7 +1117,7 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	isRSAKeySpec := *params.Spec == KeySpecRSA2048 || *params.Spec == KeySpecRSA3072 || *params.Spec == KeySpecRSA4096
+	isRSAKeySpec := *params.Spec == vault.KeySpecRSA2048 || *params.Spec == vault.KeySpecRSA3072 || *params.Spec == vault.KeySpecRSA4096
 	if isRSAKeySpec {
 		if params.Options.Algorithm == nil {
 			provide.RenderError("algorithm option required for RSA key spec", 422, c)
@@ -1125,11 +1161,11 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	opts := params.Options
 
 	// generate a vault key from the parameters
-	key := &Key{}
+	key := &vault.Key{}
 	key.PublicKey = &publicKey
 	key.Spec = params.Spec
-	key.Usage = common.StringOrNil(KeyUsageSignVerify)
-	key.Type = common.StringOrNil(KeyTypeAsymmetric)
+	key.Usage = common.StringOrNil(vault.KeyUsageSignVerify)
+	key.Type = common.StringOrNil(vault.KeyTypeAsymmetric)
 
 	verified := false
 
@@ -1138,7 +1174,11 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 		verified = true
 	}
 
-	provide.Render(&DetachedVerifyRequestResponse{
+	provide.Render(&vault.DetachedVerifyRequestResponse{
 		Verified: &verified,
 	}, 200, c)
+}
+
+func statusHandler(c *gin.Context) {
+	provide.Render(nil, 204, c)
 }

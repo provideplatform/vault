@@ -512,7 +512,7 @@ func (k *Key) resolveMasterKey(db *gorm.DB) (*Key, error) {
 		return nil, fmt.Errorf("unable to resolve master key: %s; current key is master; vault id: %s", k.ID, k.VaultID)
 	}
 
-	masterKey, err := k.vault.resolveMasterKey(db)
+	masterKey, err := k.vault.ResolveMasterKey(db)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve master key for key: %s; %s", k.ID, err.Error())
 	}
@@ -702,7 +702,7 @@ func (k *Key) Enrich() {
 }
 
 // Generate key material and persist the key to the vault
-func (k *Key) createPersisted(db *gorm.DB) bool {
+func (k *Key) CreatePersisted(db *gorm.DB) bool {
 	err := k.create()
 	if err != nil {
 		k.Errors = append(k.Errors, &provide.Error{
@@ -1056,7 +1056,7 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 
 // derives a secp256k1 keypair from the underlying master key,
 // assuming the key implements the BIP39 spec, using the given derivation path
-func (k *Key) deriveSecp256k1KeyFromHDWallet(path accounts.DerivationPath) (*crypto.Secp256k1, error) {
+func (k *Key) DeriveSecp256k1KeyFromHDWallet(path accounts.DerivationPath) (*crypto.Secp256k1, error) {
 	if k.Spec == nil || *k.Spec != KeySpecECCBIP39 {
 		return nil, fmt.Errorf("failed to derive HD wallet from key: %s; nil or invalid key spec", k.ID)
 	}
@@ -1292,7 +1292,7 @@ func (k *Key) Sign(payload []byte, opts *SigningOptions) ([]byte, error) {
 		}
 
 		// derive the secp256k1 key using the keyindex
-		secp256k1Derived, err := k.deriveSecp256k1KeyFromHDWallet(*path)
+		secp256k1Derived, err := k.DeriveSecp256k1KeyFromHDWallet(*path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to sign %d-byte payload using key: %s; error generating derived key %s", len(payload), k.ID, err.Error())
 		}
@@ -1439,7 +1439,7 @@ func (k *Key) Verify(payload, sig []byte, opts *SigningOptions) error {
 		}
 
 		// derive the secp256k1 key for verification
-		secp256k1Derived, err := k.deriveSecp256k1KeyFromHDWallet(*path)
+		secp256k1Derived, err := k.DeriveSecp256k1KeyFromHDWallet(*path)
 		if err != nil {
 			return fmt.Errorf("failed to verify signature of %d-byte payload using key: %s; failed to derive hd wallet key; %s", len(payload), k.ID, err.Error())
 		}

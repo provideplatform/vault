@@ -34,9 +34,9 @@ func init() {
 	if vault.IsSealed() {
 		common.Log.Debug("vault is sealed, unsealing vault")
 
-		unsealerKey := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
+		sealUnsealKey := "traffic charge swing glimpse will citizen push mutual embrace volcano siege identify gossip battle casual exit enrich unlock muscle vast female initial please day"
 
-		err := vault.SetUnsealerKey(unsealerKey)
+		err := vault.SetUnsealerKey(sealUnsealKey)
 		if err != nil {
 			common.Log.Debugf("error unsealing vault %s", err.Error())
 		} else {

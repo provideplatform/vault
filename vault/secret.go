@@ -18,6 +18,7 @@ package vault
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,7 +27,7 @@ import (
 	uuid "github.com/kthomas/go.uuid"
 	provide "github.com/provideplatform/provide-go/api"
 	"github.com/provideplatform/vault/common"
-	vaultcrypto "github.com/provideplatform/vault/crypto"
+	"github.com/provideplatform/vault/sealer"
 )
 
 // MaxSecretLengthInBytes is the maximum allowable length of a secret to be stored (currently set to 1GB)
@@ -182,20 +183,20 @@ func (s *Secret) Delete(db *gorm.DB) bool {
 func (s *Secret) resolveMasterKey(db *gorm.DB) (*Key, error) {
 	err := s.resolveVault(db)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve vault for master key resolution without vault id for secret: %s", s.ID)
+		return nil, fmt.Errorf("failed to resolve vault for master key resolution for secret: %s", s.ID)
 	}
 
 	if s.vault == nil || s.vault.ID == uuid.Nil {
 		return nil, fmt.Errorf("failed to resolve master key without vault id for secret: %s", s.ID)
 	}
 
-	if s.vault.MasterKeyID != nil && s.vault.MasterKeyID.String() == s.ID.String() {
-		return nil, fmt.Errorf("unable to resolve master key: %s; current key is master; vault id: %s", s.ID, s.VaultID)
+	if s.vault.MasterKeyID != nil && strings.EqualFold(s.vault.MasterKeyID.String(), s.ID.String()) {
+		return nil, fmt.Errorf("unable to resolve master key for secret: %s; current key is master; vault id: %s", s.ID, s.VaultID)
 	}
 
 	masterKey, err := s.vault.resolveMasterKey(db)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve master key for key: %s; %s", s.ID, err.Error())
+		return nil, fmt.Errorf("failed to resolve master key for secret: %s; %s", s.ID, err.Error())
 	}
 
 	return masterKey, err
@@ -208,7 +209,7 @@ func (s *Secret) resolveVault(db *gorm.DB) error {
 	}
 
 	if s.vault != nil {
-		common.Log.Tracef("resolved cached pointer to vault %s within local key %s", s.vault.ID, s.ID)
+		common.Log.Tracef("resolved cached pointer to vault %s for secret %s", s.vault.ID, s.ID)
 		return nil
 	}
 
@@ -232,7 +233,7 @@ func (s *Secret) encryptFields() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if unsealerKey == nil {
+	if sealer.IsSealed() {
 		return fmt.Errorf("vault is sealed")
 	}
 
@@ -246,11 +247,12 @@ func (s *Secret) encryptFields() error {
 
 	masterKey, err := s.resolveMasterKey(dbconf.DatabaseConnection())
 	if err != nil {
+		// TODO-- check error type to ensure the master key does not exist
 		common.Log.Tracef("encrypting master key fields for vault: %s", s.VaultID)
 
 		if masterKey.Seed != nil {
 			// seal the data with the unsealer key
-			seed, err := seal(*masterKey.Seed)
+			seed, err := sealer.Seal(*masterKey.Seed)
 			if err != nil {
 				return err
 			}
@@ -259,7 +261,7 @@ func (s *Secret) encryptFields() error {
 
 		if masterKey.PrivateKey != nil {
 			// seal the data with the unsealer key
-			privateKey, err := seal(*masterKey.PrivateKey)
+			privateKey, err := sealer.Seal(*masterKey.PrivateKey)
 			if err != nil {
 				return err
 			}
@@ -286,7 +288,7 @@ func (s *Secret) decryptFields() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if unsealerKey == nil {
+	if sealer.IsSealed() {
 		return fmt.Errorf("vault is sealed")
 	}
 
@@ -300,13 +302,13 @@ func (s *Secret) decryptFields() error {
 
 	masterKey, err := s.resolveMasterKey(dbconf.DatabaseConnection())
 	if err != nil {
+		// FIXME-- is this branch actually needed? setting seed/privkey on master key below...
+
+		// TODO-- check error type to ensure the master key does not exist
 		common.Log.Tracef("decrypting master key fields for vault: %s", s.VaultID)
 
 		if s.Value != nil {
-			masterVaultKey := vaultcrypto.AES256GCM{}
-			masterVaultKey.PrivateKey = unsealerKey
-			encryptedData := *s.Value
-			decryptedData, err := masterVaultKey.Decrypt(encryptedData[NonceSizeSymmetric:], encryptedData[0:NonceSizeSymmetric])
+			decryptedData, err := sealer.Decrypt(*s.Value)
 			if err != nil {
 				return err
 			}
@@ -315,7 +317,7 @@ func (s *Secret) decryptFields() error {
 
 		if masterKey.Seed != nil {
 			// unseal the data with the unsealer key
-			seed, err := unseal(*masterKey.Seed)
+			seed, err := sealer.Unseal(*masterKey.Seed)
 			if err != nil {
 				return err
 			}
@@ -324,13 +326,12 @@ func (s *Secret) decryptFields() error {
 
 		if masterKey.PrivateKey != nil {
 			// unseal the data with the unsealer key
-			privateKey, err := unseal(*masterKey.PrivateKey)
+			privateKey, err := sealer.Unseal(*masterKey.PrivateKey)
 			if err != nil {
 				return err
 			}
 			masterKey.PrivateKey = &privateKey
 		}
-
 	} else {
 		common.Log.Tracef("decrypting secret fields with master key %s for vault: %s", masterKey.ID, s.VaultID)
 

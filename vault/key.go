@@ -41,6 +41,7 @@ import (
 	providecrypto "github.com/provideplatform/provide-go/crypto"
 	"github.com/provideplatform/vault/common"
 	"github.com/provideplatform/vault/crypto"
+	"github.com/provideplatform/vault/sealer"
 	"golang.org/x/crypto/chacha20"
 )
 
@@ -87,7 +88,7 @@ const KeySpecECCSecp256k1 = "secp256k1"
 // KeySpecBLS12381 BLS12-381 key curve
 const KeySpecBLS12381 = "BLS12-381"
 
-// NonceSizeSymmetric chacha20 & aes256 encrypt/decrypt nonce size
+// NonceSizeSymmetric nonce size for encrypt/decrypt
 const NonceSizeSymmetric = 12
 
 // const KeySpecECCSecp256r1 = "ECC-NIST-P256"
@@ -483,7 +484,7 @@ func (k *Key) resolveVault(db *gorm.DB) error {
 	}
 
 	if k.vault != nil {
-		common.Log.Tracef("resolved cached pointer to vault %s within local key %s", k.vault.ID, k.ID)
+		common.Log.Tracef("resolved cached pointer to vault %s for key %s", k.vault.ID, k.ID)
 		return nil
 	}
 
@@ -527,7 +528,7 @@ func (k *Key) decryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	if unsealerKey == nil {
+	if sealer.IsSealed() {
 		return fmt.Errorf("vault is sealed")
 	}
 
@@ -545,7 +546,7 @@ func (k *Key) decryptFields() error {
 
 		if k.Seed != nil {
 			// unseal the data with the unsealer key
-			seed, err := unseal(*k.Seed)
+			seed, err := sealer.Unseal(*k.Seed)
 			if err != nil {
 				return err
 			}
@@ -554,7 +555,7 @@ func (k *Key) decryptFields() error {
 
 		if k.PrivateKey != nil {
 			// unseal the data with the unsealer key
-			privateKey, err := unseal(*k.PrivateKey)
+			privateKey, err := sealer.Unseal(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
@@ -591,7 +592,7 @@ func (k *Key) encryptFields() error {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	if unsealerKey == nil {
+	if sealer.IsSealed() {
 		return fmt.Errorf("vault is sealed")
 	}
 
@@ -609,7 +610,7 @@ func (k *Key) encryptFields() error {
 
 		if k.Seed != nil {
 			// seal the data with the unsealer key
-			seed, err := seal(*k.Seed)
+			seed, err := sealer.Seal(*k.Seed)
 			if err != nil {
 				return err
 			}
@@ -618,7 +619,7 @@ func (k *Key) encryptFields() error {
 
 		if k.PrivateKey != nil {
 			// seal the data with the unsealer key
-			privateKey, err := seal(*k.PrivateKey)
+			privateKey, err := sealer.Seal(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
@@ -1053,8 +1054,8 @@ func (k *Key) decryptSymmetric(ciphertext, nonce []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-// deriveSecp256k1KeyFromHDWallet derives a secp256k1 keypair from the underlying
-// master key, assuming the key implements the BIP39 spec, using the given derivation path
+// derives a secp256k1 keypair from the underlying master key,
+// assuming the key implements the BIP39 spec, using the given derivation path
 func (k *Key) deriveSecp256k1KeyFromHDWallet(path accounts.DerivationPath) (*crypto.Secp256k1, error) {
 	if k.Spec == nil || *k.Spec != KeySpecECCBIP39 {
 		return nil, fmt.Errorf("failed to derive HD wallet from key: %s; nil or invalid key spec", k.ID)

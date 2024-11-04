@@ -30,6 +30,7 @@ import (
 
 	"github.com/provideplatform/ident/common"
 	"github.com/provideplatform/ident/token"
+	"github.com/provideplatform/vault/sealer"
 	"github.com/provideplatform/vault/vault"
 
 	provide "github.com/provideplatform/provide-go/common"
@@ -129,7 +130,7 @@ func runAPI() {
 
 	vault.InstallAPI(r)
 
-	err := vault.AutoUnseal()
+	err := sealer.AutoUnseal()
 	if err != nil {
 		common.Log.Warningf("error automatically unsealing vault; %s", err.Error())
 	}

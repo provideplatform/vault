@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package vault
+package sealer
 
 import (
 	"bytes"
@@ -27,18 +27,20 @@ import (
 
 	"github.com/provideplatform/vault/common"
 	vaultcrypto "github.com/provideplatform/vault/crypto"
-	"github.com/provideplatform/vault/vault/providers"
+	"github.com/provideplatform/vault/sealer/providers"
 )
+
+// nonce size for encrypt/decrypt
+const NonceSizeSymmetric = 12 // FIXME-- remove this after completing audit/repackage of vault constants...
 
 var (
 	// provider is the SealUnseal provider
 	provider providers.SealUnsealKeyProvider
 
-	// unsealerKey is the encryption/decryption key for the vault keys,
-	// which are used to decrypt the private keys/seeds
-	unsealerKey []byte
+	// key for encrypt/decrypt operations of the master keys for each vault instance
+	sealUnsealKey []byte
 
-	// unsealerCloakingKey will ensure Unsealer Key is encrypted in memory until required
+	// cloaking key used to keep seal/unseal key encrypted in memory until required
 	unsealerCloakingKey []byte
 )
 
@@ -108,7 +110,7 @@ func ClearUnsealerKey(passphrase string) error {
 	}
 	common.Log.Debugf("sealing vault; valid vault unsealing key received")
 
-	unsealerKey = nil
+	sealUnsealKey = nil
 	unsealerCloakingKey = nil
 	return nil
 }
@@ -142,12 +144,22 @@ func CreateUnsealerKey() (*SealUnsealRequestResponse, error) {
 	return &response, nil
 }
 
-// IsSealed checks to see if the vault is sealed (true) or unsealed (false)
-func IsSealed() bool {
-	if unsealerKey == nil {
-		return true
+// Decrypt the given data using symmetric master key
+func Decrypt(val []byte) ([]byte, error) {
+	key := vaultcrypto.AES256GCM{}
+	key.PrivateKey = sealUnsealKey
+
+	data, err := key.Decrypt(val[NonceSizeSymmetric:], val[0:NonceSizeSymmetric])
+	if err != nil {
+		return nil, err
 	}
-	return false
+
+	return data, nil
+}
+
+// Read the sealed or unsealed state of the vault
+func IsSealed() bool {
+	return sealUnsealKey == nil
 }
 
 // SetUnsealerKey sets the unsealer key; this only possible with a SEALED vault
@@ -157,7 +169,7 @@ func SetUnsealerKey(passphrase string) error {
 	}
 
 	// we can't unseal an unsealed vault
-	if unsealerKey != nil {
+	if sealUnsealKey != nil {
 		return nil
 	}
 
@@ -201,26 +213,26 @@ func SetUnsealerKey(passphrase string) error {
 	}
 
 	// get the original 32-byte entropy from the seed phrase - we will use this as the AES encryption key for the vaults
-	unsealerKeySeed, err := vaultcrypto.GetEntropyFromMnemonic(passphrase)
+	sealUnsealKeySeed, err := vaultcrypto.GetEntropyFromMnemonic(passphrase)
 	if err != nil {
 		return fmt.Errorf("error unsealing vault; recovering entropy from BIP39 passphrase failed")
 	}
 
-	if len(unsealerKeySeed) != common.UnsealerKeyRequiredBytes {
+	if len(sealUnsealKeySeed) != common.UnsealerKeyRequiredBytes {
 		return fmt.Errorf("error unsealing vault; 32-byte entropy required for AES encryption and is minimum required for vault security")
 	}
 
 	// encrypt the unsealer key with the cloaking key
-	cloakedUnsealerKey, err := cloakingKey.Encrypt(unsealerKeySeed, nil)
+	cloakedUnsealerKey, err := cloakingKey.Encrypt(sealUnsealKeySeed, nil)
 	if err != nil {
 		return fmt.Errorf("error unsealing vault; failed to encrypt unsealer with cloaking key")
 	}
 
 	// wipe the unsealer key seed in memory before garbage collection
-	unsealerKeySeed, _ = common.RandomBytes(32)
+	sealUnsealKeySeed, _ = common.RandomBytes(32)
 
 	// set the vault unsealer key
-	unsealerKey = cloakedUnsealerKey
+	sealUnsealKey = cloakedUnsealerKey
 	return nil
 }
 
@@ -235,9 +247,9 @@ func getUnsealerKey() ([]byte, error) {
 	}
 
 	// decrypt the unsealer key with the cloaking key
-	encryptedUnsealerKey := unsealerKey
+	encryptedUnsealerKey := sealUnsealKey
 
-	unsealerKey, err := cloakingKey.Decrypt(
+	sealUnsealKey, err := cloakingKey.Decrypt(
 		encryptedUnsealerKey[NonceSizeSymmetric:],
 		encryptedUnsealerKey[0:NonceSizeSymmetric],
 	)
@@ -246,11 +258,11 @@ func getUnsealerKey() ([]byte, error) {
 		return nil, fmt.Errorf("error decrypting unsealer key %s", err.Error())
 	}
 
-	return unsealerKey, nil
+	return sealUnsealKey, nil
 }
 
-func seal(unsealedKey []byte) ([]byte, error) {
-	if unsealerKey == nil {
+func Seal(unsealedKey []byte) ([]byte, error) {
+	if sealUnsealKey == nil {
 		return nil, fmt.Errorf("vault is sealed")
 	}
 
@@ -273,37 +285,29 @@ func seal(unsealedKey []byte) ([]byte, error) {
 	return sealedKey, nil
 }
 
-// unseal decrypts the sealed material with the unsealer key
-func unseal(sealedKey []byte) ([]byte, error) {
-	if unsealerKey == nil || len(unsealerKey) == 0 {
+// decrypt the sealed material using the seal/unseal key
+func Unseal(sealedKey []byte) ([]byte, error) {
+	if len(sealUnsealKey) == 0 {
 		return nil, fmt.Errorf("vault is sealed")
 	}
 
-	if sealedKey == nil || len(sealedKey) == 0 {
+	if len(sealedKey) == 0 {
 		return nil, fmt.Errorf("error unsealing vault; no sealed key")
 	}
 
 	var err error
-	unsealerKey := vaultcrypto.AES256GCM{}
-	unsealerKey.PrivateKey, err = getUnsealerKey()
+	sealUnsealKey := vaultcrypto.AES256GCM{}
+	sealUnsealKey.PrivateKey, err = getUnsealerKey()
 	if err != nil {
 		return nil, fmt.Errorf("error unsealing vault %s", err.Error())
 	}
 
 	common.Log.Debugf("resolved %d-byte sealed key", len(sealedKey))
 
-	unsealedKey, err := unsealerKey.Decrypt(sealedKey[NonceSizeSymmetric:], sealedKey[0:NonceSizeSymmetric])
+	unsealedKey, err := sealUnsealKey.Decrypt(sealedKey[NonceSizeSymmetric:], sealedKey[0:NonceSizeSymmetric])
 	if err != nil {
 		return nil, fmt.Errorf("error unsealing vault; %s", err.Error())
 	}
 
 	return unsealedKey, nil
-}
-
-// vaultIsSealed returns true if the vault is sealed
-func vaultIsSealed() bool {
-	if unsealerKey == nil {
-		return true
-	}
-	return false
 }

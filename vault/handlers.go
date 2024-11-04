@@ -36,6 +36,7 @@ import (
 	provide "github.com/provideplatform/provide-go/common"
 	"github.com/provideplatform/vault/common"
 	"github.com/provideplatform/vault/crypto"
+	"github.com/provideplatform/vault/sealer"
 )
 
 // InstallAPI installs the handlers using the given gin Engine
@@ -90,7 +91,7 @@ func createUnsealerKeyHandler(c *gin.Context) {
 		return
 	}
 
-	key, err := CreateUnsealerKey()
+	key, err := sealer.CreateUnsealerKey()
 	if err != nil {
 		provide.RenderError(err.Error(), 500, c)
 		return
@@ -111,7 +112,7 @@ func unsealHandler(c *gin.Context) {
 		return
 	}
 
-	params := &SealUnsealRequestResponse{}
+	params := &sealer.SealUnsealRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -123,7 +124,7 @@ func unsealHandler(c *gin.Context) {
 		return
 	}
 
-	err = SetUnsealerKey(*params.UnsealerKey)
+	err = sealer.SetUnsealerKey(*params.UnsealerKey)
 	if err != nil {
 		msg := fmt.Sprintf("failed to unseal vault; %s", err.Error())
 		common.Log.Warning(msg)
@@ -146,7 +147,7 @@ func sealHandler(c *gin.Context) {
 		return
 	}
 
-	params := &SealUnsealRequestResponse{}
+	params := &sealer.SealUnsealRequestResponse{}
 	err = json.Unmarshal(buf, &params)
 	if err != nil {
 		provide.RenderError(err.Error(), 400, c)
@@ -158,7 +159,7 @@ func sealHandler(c *gin.Context) {
 		return
 	}
 
-	err = ClearUnsealerKey(*params.UnsealerKey)
+	err = sealer.ClearUnsealerKey(*params.UnsealerKey)
 	if err != nil {
 		msg := fmt.Sprintf("failed to seal vault; %s", err.Error())
 		common.Log.Warning(msg)
@@ -172,7 +173,7 @@ func sealHandler(c *gin.Context) {
 func vaultKeyEncryptHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -227,7 +228,7 @@ func vaultKeyEncryptHandler(c *gin.Context) {
 func vaultKeyDecryptHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -279,7 +280,7 @@ func vaultKeyDecryptHandler(c *gin.Context) {
 func vaultsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -320,7 +321,7 @@ func createVaultHandler(c *gin.Context) {
 		return
 	}
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -372,7 +373,7 @@ func createVaultHandler(c *gin.Context) {
 func deleteVaultHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -424,7 +425,7 @@ func deleteVaultHandler(c *gin.Context) {
 func vaultKeysListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -469,7 +470,7 @@ func vaultKeysListHandler(c *gin.Context) {
 func createVaultKeyHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -531,7 +532,7 @@ func createVaultKeyHandler(c *gin.Context) {
 func deleteVaultKeyHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -557,7 +558,7 @@ func deleteVaultKeyHandler(c *gin.Context) {
 func vaultKeyDetailsHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -596,7 +597,7 @@ func vaultKeyDetailsHandler(c *gin.Context) {
 func vaultKeyDeriveHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -699,7 +700,7 @@ func vaultKeyDeriveHandler(c *gin.Context) {
 func vaultKeySignHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -767,7 +768,7 @@ func vaultKeySignHandler(c *gin.Context) {
 func vaultKeyVerifyHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -825,7 +826,7 @@ func vaultKeyVerifyHandler(c *gin.Context) {
 func vaultSecretsListHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -856,7 +857,7 @@ func vaultSecretsListHandler(c *gin.Context) {
 func vaultSecretDetailsHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -882,7 +883,7 @@ func vaultSecretDetailsHandler(c *gin.Context) {
 func createVaultSecretHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -930,7 +931,7 @@ func createVaultSecretHandler(c *gin.Context) {
 func deleteVaultSecretHandler(c *gin.Context) {
 	bearer := token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -958,7 +959,7 @@ func deleteVaultSecretHandler(c *gin.Context) {
 func blsAggregateHandler(c *gin.Context) {
 	_ = token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -993,7 +994,7 @@ func blsAggregateHandler(c *gin.Context) {
 func blsAggregateVerifyHandler(c *gin.Context) {
 	_ = token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}
@@ -1031,7 +1032,7 @@ func verifyDetachedVerifyHandler(c *gin.Context) {
 	// path is protected by valid ident token, but no bearer parameters are required
 	_ = token.InContext(c)
 
-	if vaultIsSealed() {
+	if sealer.IsSealed() {
 		provide.RenderError("vault is sealed", 403, c)
 		return
 	}

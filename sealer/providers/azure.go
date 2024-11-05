@@ -104,7 +104,7 @@ func (p *AzureSealUnsealProvider) targetCredentials() *provide.TargetCredentials
 	}
 }
 
-func (p *AzureSealUnsealProvider) Seed() (*string, error) {
+func (p *AzureSealUnsealProvider) Seed() ([]byte, error) {
 	var bundle *keyvault.SecretBundle
 	var err error
 
@@ -118,22 +118,22 @@ func (p *AzureSealUnsealProvider) Seed() (*string, error) {
 		}
 	}
 
-	return bundle.Value, nil
+	return []byte(*bundle.Value), nil
 }
 
-func (p *AzureSealUnsealProvider) ValidationHash() (*string, error) {
+func (p *AzureSealUnsealProvider) ValidationHash() ([]byte, error) {
 	seed, err := p.Seed()
 	if err != nil {
 		return nil, fmt.Errorf("validation hash not calculated by seal/unseal provider using configured Azure key vault; %s", err.Error())
 	}
 
 	hash := crypto.SHA256.New()
-	_, err = hash.Write([]byte(*seed))
+	_, err = hash.Write(seed)
 	if err != nil {
 		return nil, fmt.Errorf("validation hash not calculated by seal/unseal provider using configured Azure key vault; %s", err.Error())
 	}
 
-	return common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(hash.Sum(nil)))), nil
+	return []byte(fmt.Sprintf("0x%s", hex.EncodeToString(hash.Sum(nil)))), nil
 }
 
 func (p *AzureSealUnsealProvider) createSecretBundle() (*keyvault.SecretBundle, error) {

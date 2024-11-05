@@ -22,6 +22,6 @@ import (
 	"github.com/provideplatform/vault/api/providers"
 )
 
-func RunGin() (*http.Server, error) {
-	return providers.RunGin()
+func StartGin() (*http.Server, error) {
+	return providers.StartGin()
 }

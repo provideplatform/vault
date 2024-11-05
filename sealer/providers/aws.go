@@ -56,21 +56,21 @@ func (p *AWSSealUnsealProvider) targetCredentials() *provide.TargetCredentials {
 	return nil
 }
 
-func (p *AWSSealUnsealProvider) Seed() (*string, error) {
+func (p *AWSSealUnsealProvider) Seed() ([]byte, error) {
 	return nil, errors.New("AWS KMS provider not implemented")
 }
 
-func (p *AWSSealUnsealProvider) ValidationHash() (*string, error) {
+func (p *AWSSealUnsealProvider) ValidationHash() ([]byte, error) {
 	seed, err := p.Seed()
 	if err != nil {
 		return nil, fmt.Errorf("validation hash not calculated by seal/unseal provider using configured AWS KMS instance; %s", err.Error())
 	}
 
 	hash := crypto.SHA256.New()
-	_, err = hash.Write([]byte(*seed))
+	_, err = hash.Write(seed)
 	if err != nil {
 		return nil, fmt.Errorf("validation hash not calculated by seal/unseal provider using configured AWS KMS instance; %s", err.Error())
 	}
 
-	return common.StringOrNil(fmt.Sprintf("0x%s", hex.EncodeToString(hash.Sum(nil)))), nil
+	return []byte(fmt.Sprintf("0x%s", hex.EncodeToString(hash.Sum(nil)))), nil
 }

@@ -30,20 +30,20 @@ func InitEnvironmentSealUnsealProvider(params map[string]interface{}) *Environme
 	return &EnvironmentSealUnsealProvider{}
 }
 
-func (p *EnvironmentSealUnsealProvider) Seed() (*string, error) {
+func (p *EnvironmentSealUnsealProvider) Seed() ([]byte, error) {
 	seed := os.Getenv("SEAL_UNSEAL_KEY")
 	if seed == "" {
 		return nil, errors.New("failed to fetch or create seed using configured SEAL_UNSEAL_KEY environment variable")
 	}
 
-	return &seed, nil
+	return []byte(seed), nil
 }
 
-func (p *EnvironmentSealUnsealProvider) ValidationHash() (*string, error) {
+func (p *EnvironmentSealUnsealProvider) ValidationHash() ([]byte, error) {
 	hash := os.Getenv("SEAL_UNSEAL_VALIDATION_HASH")
 	if hash == "" {
 		return nil, errors.New("validation hash not provided by environent seal/unseal provider using configured SEAL_UNSEAL_VALIDATION_HASH environment variable")
 	}
 
-	return &hash, nil
+	return []byte(hash), nil
 }

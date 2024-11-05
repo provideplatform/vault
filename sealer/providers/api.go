@@ -35,8 +35,8 @@ const SealUnsealKeyProviderEnvironment = "environment"
 
 // SealUnsealKeyProvider interface
 type SealUnsealKeyProvider interface {
-	Seed() (*string, error)
-	ValidationHash() (*string, error)
+	Seed() ([]byte, error)
+	ValidationHash() ([]byte, error)
 }
 
 // InitUnsealProvider initializes a seal/unseal provider

@@ -63,7 +63,7 @@ func main() {
 	common.Log.Debugf("starting vault API...")
 	installSignalHandlers()
 
-	srv, _ = api.RunGin()
+	srv, _ = api.StartGin()
 
 	startAt := time.Now()
 	gracePeriodEndAt := startAt.Add(jwtVerifierGracePeriod)

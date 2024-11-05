@@ -546,7 +546,7 @@ func (k *Key) decryptFields() error {
 
 		if k.Seed != nil {
 			// unseal the data with the unsealer key
-			seed, err := sealer.Unseal(*k.Seed)
+			seed, err := sealer.UnsealKey(*k.Seed)
 			if err != nil {
 				return err
 			}
@@ -555,7 +555,7 @@ func (k *Key) decryptFields() error {
 
 		if k.PrivateKey != nil {
 			// unseal the data with the unsealer key
-			privateKey, err := sealer.Unseal(*k.PrivateKey)
+			privateKey, err := sealer.UnsealKey(*k.PrivateKey)
 			if err != nil {
 				return err
 			}
@@ -610,7 +610,7 @@ func (k *Key) encryptFields() error {
 
 		if k.Seed != nil {
 			// seal the data with the unsealer key
-			seed, err := sealer.Seal(*k.Seed)
+			seed, err := sealer.SealKey(*k.Seed)
 			if err != nil {
 				return err
 			}
@@ -619,7 +619,7 @@ func (k *Key) encryptFields() error {
 
 		if k.PrivateKey != nil {
 			// seal the data with the unsealer key
-			privateKey, err := sealer.Seal(*k.PrivateKey)
+			privateKey, err := sealer.SealKey(*k.PrivateKey)
 			if err != nil {
 				return err
 			}

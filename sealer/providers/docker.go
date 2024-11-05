@@ -34,22 +34,22 @@ func InitDockerSealUnsealProvider(params map[string]interface{}) *DockerSealUnse
 	return &DockerSealUnsealProvider{}
 }
 
-func (p *DockerSealUnsealProvider) Seed() (*string, error) {
+func (p *DockerSealUnsealProvider) Seed() ([]byte, error) {
 	seed, err := getEnv("SEAL_UNSEAL_KEY_SECRET_PATH")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch or create seed using configured docker SEAL_UNSEAL_KEY_SECRET_PATH environment variable; %s", err.Error())
 	}
 
-	return seed, nil
+	return []byte(*seed), nil
 }
 
-func (p *DockerSealUnsealProvider) ValidationHash() (*string, error) {
+func (p *DockerSealUnsealProvider) ValidationHash() ([]byte, error) {
 	hash, err := getEnv("SEAL_UNSEAL_VALIDATION_HASH")
 	if err != nil {
 		return nil, fmt.Errorf("validation hash not provided by docker seal/unseal provider using configured SEAL_UNSEAL_VALIDATION_HASH environment variable; %s", err.Error())
 	}
 
-	return hash, nil
+	return []byte(*hash), nil
 }
 
 // getEnv gets environment data, including from docker secrets in-memory file system

@@ -42,7 +42,7 @@ import (
 	"github.com/provideplatform/vault/vault"
 )
 
-func RunGin() (*http.Server, error) {
+func StartGin() (*http.Server, error) {
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
@@ -138,7 +138,7 @@ func createUnsealerKeyHandler(c *gin.Context) {
 	provide.Render(key, 201, c)
 }
 
-// unsealHandler enables unlocking the master key for all vaults
+// unseal the vault, allowing the use of master key material for tenant vault instances
 func unsealHandler(c *gin.Context) {
 	// TODO what elements are required in the token to enable the locking/ unlocking of the vault?
 	// currently, it's just a valid token from IDENT and a valid unsealer key
@@ -157,12 +157,12 @@ func unsealHandler(c *gin.Context) {
 		return
 	}
 
-	if params.UnsealerKey == nil {
+	if params.SealUnsealKey == nil {
 		provide.RenderError("unsealer key material required", 422, c)
 		return
 	}
 
-	err = sealer.SetUnsealerKey(*params.UnsealerKey)
+	err = sealer.Unseal([]byte(*params.SealUnsealKey))
 	if err != nil {
 		msg := fmt.Sprintf("failed to unseal vault; %s", err.Error())
 		common.Log.Warning(msg)
@@ -173,7 +173,7 @@ func unsealHandler(c *gin.Context) {
 	provide.Render(nil, 204, c)
 }
 
-// sealHandler enables locking the master key for all vaults
+// seal the vault, preventing the use of master key material for tenant vault instances
 func sealHandler(c *gin.Context) {
 	// TODO what elements are required in the token to enable the locking/ unlocking of the vault?
 	// currently, it's just a valid token from IDENT and a valid unsealer key
@@ -192,12 +192,12 @@ func sealHandler(c *gin.Context) {
 		return
 	}
 
-	if params.UnsealerKey == nil {
+	if params.SealUnsealKey == nil {
 		provide.RenderError("unsealer key material required", 422, c)
 		return
 	}
 
-	err = sealer.ClearUnsealerKey(*params.UnsealerKey)
+	err = sealer.Seal(*params.SealUnsealKey)
 	if err != nil {
 		msg := fmt.Sprintf("failed to seal vault; %s", err.Error())
 		common.Log.Warning(msg)

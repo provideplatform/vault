@@ -247,37 +247,18 @@ func (s *Secret) encryptFields() error {
 
 	masterKey, err := s.resolveMasterKey(dbconf.DatabaseConnection())
 	if err != nil {
-		// TODO-- check error type to ensure the master key does not exist
-		common.Log.Tracef("encrypting master key fields for vault: %s", s.VaultID)
+		return err
+	}
 
-		if masterKey.Seed != nil {
-			// seal the data with the unsealer key
-			seed, err := sealer.SealKey(*masterKey.Seed)
-			if err != nil {
-				return err
-			}
-			masterKey.Seed = &seed
-		}
+	masterKey.decryptFields()
+	defer masterKey.encryptFields()
 
-		if masterKey.PrivateKey != nil {
-			// seal the data with the unsealer key
-			privateKey, err := sealer.SealKey(*masterKey.PrivateKey)
-			if err != nil {
-				return err
-			}
-			masterKey.PrivateKey = &privateKey
+	if s.Value != nil {
+		encryptedSecret, err := masterKey.Encrypt(*s.Value, nil)
+		if err != nil {
+			return err
 		}
-	} else {
-		masterKey.decryptFields()
-		defer masterKey.encryptFields()
-
-		if s.Value != nil {
-			encryptedSecret, err := masterKey.Encrypt(*s.Value, nil)
-			if err != nil {
-				return err
-			}
-			s.Value = &encryptedSecret
-		}
+		s.Value = &encryptedSecret
 	}
 
 	s.setEncrypted(true)
@@ -302,48 +283,20 @@ func (s *Secret) decryptFields() error {
 
 	masterKey, err := s.resolveMasterKey(dbconf.DatabaseConnection())
 	if err != nil {
-		// FIXME-- is this branch actually needed? setting seed/privkey on master key below...
+		return err
+	}
 
-		// TODO-- check error type to ensure the master key does not exist
-		common.Log.Tracef("decrypting master key fields for vault: %s", s.VaultID)
+	common.Log.Tracef("decrypting secret fields with master key %s for vault: %s", masterKey.ID, s.VaultID)
 
-		if s.Value != nil {
-			decryptedData, err := sealer.Decrypt(*s.Value)
-			if err != nil {
-				return err
-			}
-			s.Value = &decryptedData
+	masterKey.decryptFields()
+	defer masterKey.encryptFields()
+
+	if s.Value != nil {
+		decryptedData, err := masterKey.Decrypt(*s.Value)
+		if err != nil {
+			return err
 		}
-
-		if masterKey.Seed != nil {
-			// unseal the data with the unsealer key
-			seed, err := sealer.UnsealKey(*masterKey.Seed)
-			if err != nil {
-				return err
-			}
-			masterKey.Seed = &seed
-		}
-
-		if masterKey.PrivateKey != nil {
-			// unseal the data with the unsealer key
-			privateKey, err := sealer.UnsealKey(*masterKey.PrivateKey)
-			if err != nil {
-				return err
-			}
-			masterKey.PrivateKey = &privateKey
-		}
-	} else {
-		common.Log.Tracef("decrypting secret fields with master key %s for vault: %s", masterKey.ID, s.VaultID)
-
-		masterKey.decryptFields()
-		defer masterKey.encryptFields()
-		if s.Value != nil {
-			decryptedData, err := masterKey.Decrypt(*s.Value)
-			if err != nil {
-				return err
-			}
-			s.Value = &decryptedData
-		}
+		s.Value = &decryptedData
 	}
 
 	s.setEncrypted(false)

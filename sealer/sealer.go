@@ -107,19 +107,6 @@ func CreateUnsealerKey() (*SealUnsealRequestResponse, error) {
 	return &response, nil
 }
 
-// Decrypt the given data using symmetric master key
-func Decrypt(val []byte) ([]byte, error) {
-	key := vaultcrypto.AES256GCM{}
-	key.PrivateKey = sealUnsealKey
-
-	data, err := key.Decrypt(val[NonceSizeSymmetric:], val[0:NonceSizeSymmetric])
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
 // Read the sealed or unsealed state of the vault
 func IsSealed() bool {
 	return len(sealUnsealKey) == 0
